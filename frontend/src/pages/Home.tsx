@@ -1,6 +1,10 @@
+import Hero from "../components/Hero"
+
 const Home = () => {
     return (
-        <div></div>
+        <div className='bg-linear-to-r from-green-50 to-white'>
+            <Hero />
+        </div>
     )
 }
 
