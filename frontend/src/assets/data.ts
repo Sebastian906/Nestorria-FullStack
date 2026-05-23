@@ -194,10 +194,26 @@ export const assets: Record<string, string> = {
 };
 
 export const cities: string[] = [
-    "Abu Dhabi",
-    "New York",
-    "Toronto",
-    "Los Angeles"
+    "Bogotá",
+    "Medellín",
+    "Cali",
+    "Barranquilla",
+    "Cartagena",
+    "Bucaramanga",
+    "Manizales",
+    "Pereira",
+    "Armenia",
+    "Santa Marta",
+    "Cúcuta",
+    "Ibagué",
+    "Villavicencio",
+    "Pasto",
+    "Neiva",
+    "Montería",
+    "Sincelejo",
+    "Valledupar",
+    "Riohacha",
+    "Quibdó"
 ];
 
 export const dummyAgentData: Agent = {
