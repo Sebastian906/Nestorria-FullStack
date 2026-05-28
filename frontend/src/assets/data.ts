@@ -48,6 +48,11 @@ import pImg2 from "../assets/pImg2.png";
 import pImg3 from "../assets/pImg3.png";
 import pImg4 from "../assets/pImg4.png";
 import createPrp from "../assets/createPrp.png";
+import client1 from '../assets/client1.jpg';
+import client2 from '../assets/client2.jpg';
+import client3 from '../assets/client3.jpg';
+import client4 from '../assets/client4.jpg';
+import about from '../assets/about.png'
 
 // Blogs
 import blog1 from "../assets/blogs/blog1.jpg";
@@ -190,7 +195,12 @@ export const assets: Record<string, string> = {
     user2,
     user3,
     user4,
-    createPrp
+    createPrp,
+    client1,
+    client2,
+    client3,
+    client4,
+    about
 };
 
 export const cities: string[] = [
