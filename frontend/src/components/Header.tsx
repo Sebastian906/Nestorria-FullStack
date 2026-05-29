@@ -2,6 +2,8 @@ import { Link, useLocation } from "react-router-dom"
 import { assets } from "../assets/data"
 import Navbar from "./Navbar"
 import { useEffect, useState } from "react"
+import { useClerk, UserButton, useUser } from "@clerk/react"
+import { useAppContext } from "../context/AppContext"
 
 const Header = () => {
 
@@ -9,6 +11,29 @@ const Header = () => {
     const [menuOpened, setMenuOpened] = useState<boolean>(false)
     const [showSearch, setShowSearch] = useState<boolean>(false)
     const location = useLocation()
+    const { navigate } = useAppContext()
+    const { user } = useUser()
+    const { openSignIn } = useClerk();
+
+    const BookingIcon = () => (
+        <svg
+            xmlns="http://www.w3.org/2000/svg"
+            width="24"
+            height="24"
+            viewBox="0 0 36 36"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            className="lucide lucide-scroll-text-icon lucide-scroll-text"
+        >
+            <path d="M15 12h-5" />
+            <path d="M15 8h-5" />
+            <path d="M19 17V5a2 2 0 0 0-2-2H4" />
+            <path d="M8 21h12a2 2 0 0 0 2-2v-1a1 1 0 0 0-1-1H11a1 1 0 0 0-1 1v1a2 2 0 1 1-4 0V5a2 2 0 1 0-4 0v2a1 1 0 0 0 1 1h3" />
+        </svg>
+    )
 
     const toggleMenu = () => setMenuOpened(prev => !prev)
 
@@ -54,11 +79,10 @@ const Header = () => {
                     <div className='flex sm:flex-1 items-center sm:justify-end gap-x-4 sm:gap-x-8'>
                         {/* SEARCH BAR */}
                         <div className='relative hidden xl:flex items-center'>
-                            <div className={`${active ? 'bg-secondary/10' : 'bg-white'} transition-all duration-300 ease-in-out ring-1 ring-slate-900/10 rounded-full overflow-hidden ${
-                                showSearch
+                            <div className={`${active ? 'bg-secondary/10' : 'bg-white'} transition-all duration-300 ease-in-out ring-1 ring-slate-900/10 rounded-full overflow-hidden ${showSearch
                                 ? 'w-66.5 opacity-100 px-4 py-2'
                                 : 'w-11 opacity-0 px-0 py-0'
-                            }`}>
+                                }`}>
                                 <input
                                     type="text"
                                     placeholder='Type here...'
@@ -94,15 +118,28 @@ const Header = () => {
                             )}
                         </>
                         { /* USER PROFILE */}
-                        <div>
+                        <div className='group relative top-1'>
                             {/* USER */}
                             <div>
-                                <div>
-                                    <button className='btn-secondary flexCenter gap-2 rounded-full'>
+                                {user ? (
+                                    <UserButton>
+                                        <UserButton.MenuItems>
+                                            <UserButton.Action
+                                                label='My Bookings'
+                                                labelIcon={<BookingIcon />}
+                                                onClick={() => navigate('/my-bookings')}
+                                            />
+                                        </UserButton.MenuItems>
+                                    </UserButton>
+                                ) : (
+                                    <button
+                                        onClick={() => openSignIn()}
+                                        className='btn-secondary flexCenter gap-2 rounded-full'
+                                    >
                                         Login
                                         <img src={assets.user} alt='user' />
                                     </button>
-                                </div>
+                                )}
                             </div>
                         </div>
                     </div>
