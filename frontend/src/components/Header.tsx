@@ -122,7 +122,16 @@ const Header = () => {
                             {/* USER */}
                             <div>
                                 {user ? (
-                                    <UserButton>
+                                    <UserButton
+                                        appearance={{
+                                            elements: {
+                                                userButtonAvatarBox: {
+                                                    width: '42px',
+                                                    height: '42px'
+                                                }
+                                            }
+                                        }}
+                                    >
                                         <UserButton.MenuItems>
                                             <UserButton.Action
                                                 label='My Bookings'
