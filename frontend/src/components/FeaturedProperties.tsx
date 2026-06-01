@@ -53,7 +53,7 @@ const FeaturedProperties = () => {
                 className='h-122 md:h-133.25 xl:h-105.5 mt-5'
             >
                 {properties.slice(0, 6).map((property) => (
-                    <SwiperSlide key={property.title}>
+                    <SwiperSlide key={property._id}>
                         {/* @ts-ignore */}
                         <Item property={property} />
                     </SwiperSlide>
