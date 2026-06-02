@@ -5,7 +5,7 @@ import { assets } from "../assets/data"
 const Item = ({ property }) => {
     return (
         <Link
-            to={'/listing' + property._id}
+            to={`/listing/${property._id}`}
             className='block rounded-lg bg-white ring-1 ring-slate-900/5'
         >
             {/* IMAGE */}
