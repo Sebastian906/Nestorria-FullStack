@@ -35,7 +35,7 @@ const Header = () => {
         </svg>
     )
 
-    const toggleMenu = () => setMenuOpened(prev => !prev)
+    const toggleMenu = () => setMenuOpened((prev) => !prev)
 
     useEffect(() => {
         const handleScroll = () => {
