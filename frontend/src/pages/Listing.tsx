@@ -63,12 +63,12 @@ const Listing = () => {
                             <input
                                 type="number"
                                 placeholder="Min"
-                                className='bg-white border-slate-900/10 outline-none text-gray-30 medium-14 h-10 w-full rounded px-2 placeholder:opacity-60'
+                                className='bg-white border-slate-900/10 outline-none text-gray-30 medium-14 h-10 w-18 rounded px-2 placeholder:opacity-60'
                             />
                             <input
                                 type="number"
                                 placeholder="Max"
-                                className='bg-white border-slate-900/10 outline-none text-gray-30 medium-14 h-10 w-full rounded px-2 placeholder:opacity-60'
+                                className='bg-white border-slate-900/10 outline-none text-gray-30 medium-14 h-10 w-18 rounded px-2 placeholder:opacity-60'
                             />
                             <button
                                 type="button"

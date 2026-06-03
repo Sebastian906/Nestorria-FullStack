@@ -80,6 +80,10 @@ body {
         @apply relative after:w-2/5 after:h-1 after:rounded-full after:bg-secondary after:absolute after:-bottom-0.5 after:right-3;
     }
 
+    .shadow-rd {
+        box-shadow: 0 8px 20px -8px rgba(0,0,0,0.2);
+    }
+
     .h1 {
         @apply text-[45px] md:text-[51px] font-bold;
     }
