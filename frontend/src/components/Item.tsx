@@ -1,11 +1,15 @@
 import { Link } from "react-router-dom"
 import { assets } from "../assets/data"
+import { useAppContext } from "../context/AppContext"
 
 {/* @ts-ignore */ }
 const Item = ({ property }) => {
+
+    const { currency } = useAppContext()
+
     return (
         <Link
-            to={`/listing/${property._id}`}
+            to={`/listing/{currency}{property._id}`}
             className='block rounded-lg bg-white ring-1 ring-slate-900/5'
         >
             {/* IMAGE */}
@@ -21,7 +25,7 @@ const Item = ({ property }) => {
                 <div className='flexBetween'>
                     <h5 className='bold-16 my-1'>{property.propertyType}</h5>
                     <div className='bold-15 text-secondary'>
-                        ${property.price.sale} | ${property.price.rent}.00 <span className='text-xs'>/night</span>
+                        {currency}{property.price.sale} | {currency}{property.price.rent}.00 <span className='text-xs'>/night</span>
                     </div>
                 </div>
                 <h4 className='h4 line-clamp-1'>{property.title}</h4>

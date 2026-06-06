@@ -6,7 +6,7 @@ import { assets } from "../assets/data"
 
 const PropertyDetails = () => {
 
-    const { properties } = useAppContext()
+    const { properties, currency } = useAppContext()
     const [property, setProperty] = useState<any>(null)
     const { id } = useParams()
 
@@ -17,7 +17,7 @@ const PropertyDetails = () => {
 
     return (
         property && (
-            <div className='bg-linear-to-r from-[#F0FDF4] to-white py-28'>
+            <div className='bg-linear-to-r from-[#F0FDF4] to-white py-16 pt-28'>
                 <div className='max-padd-container'>
                     {/* IMAGE */}
                     <PropertyImages property={property} />
@@ -36,7 +36,7 @@ const PropertyDetails = () => {
                             <div className='flex justify-between flex-col md:flex-row sm:items-end mt-3'>
                                 <h3 className='h3'>{property.title}</h3>
                                 <div className='bold-18'>
-                                    ${property.price.sale} | ${property.price.rent}.00/night
+                                    {currency}{property.price.sale} | {currency}{property.price.rent}.00/night
                                 </div>
                             </div>
                             <div className='flex justify-between items-start my-1'>

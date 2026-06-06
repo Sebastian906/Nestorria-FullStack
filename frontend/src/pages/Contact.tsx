@@ -2,7 +2,7 @@ import { assets } from "../assets/data"
 
 const Contact = () => {
     return (
-        <div className='bg-linear-to-r from-[#F0FDF4] to-white py-28'>
+        <div className='bg-linear-to-r from-[#F0FDF4] to-white py-16 pt-28'>
             <form className="flex flex-col items-center text-sm text-slate-800">
                 <p className="text-xs bg-black/80 text-white font-medium px-3 py-1 rounded-full">Contact Us</p>
                 <h1 className="text-4xl font-bold py-4 text-center">Let’s Get In Touch.</h1>
