@@ -2,7 +2,7 @@ import { Link, useLocation } from "react-router-dom"
 import { assets } from "../assets/data"
 import Navbar from "./Navbar"
 import { useEffect, useState } from "react"
-import { useClerk, UserButton, useUser } from "@clerk/react"
+import { useClerk, UserButton } from "@clerk/react"
 import { useAppContext } from "../context/AppContext"
 
 const Header = () => {
@@ -11,8 +11,7 @@ const Header = () => {
     const [menuOpened, setMenuOpened] = useState<boolean>(false)
     const [showSearch, setShowSearch] = useState<boolean>(false)
     const location = useLocation()
-    const { navigate } = useAppContext()
-    const { user } = useUser()
+    const { navigate, user } = useAppContext()
     const { openSignIn } = useClerk();
 
     const BookingIcon = () => (

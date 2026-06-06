@@ -15,7 +15,7 @@ const Listing = () => {
     ]
 
     return (
-        <div className='bg-linear-to-r from-[#F0FDF4] to-white py-28'>
+        <div className='bg-linear-to-r from-[#F0FDF4] to-white py-16 pt-28'>
             <div className='max-padd-container flex flex-col sm:flex-row gap-8 mb-16'>
                 {/* LEFT SIDE - FILTERS */}
                 <div className='bg-secondary/10 ring-1 ring-slate-900/5 p-6 sm:min-w-60 rounded-xl h-fit'>

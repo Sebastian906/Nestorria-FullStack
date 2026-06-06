@@ -1,10 +1,13 @@
 import { createContext, useContext, useEffect, useState, type ReactNode } from "react"
 import { useNavigate, type NavigateFunction } from "react-router-dom"
 import { dummyProperties, type Property } from "../assets/data"
+import { useUser } from "@clerk/react"
 
 interface AppContextType {
     navigate: NavigateFunction;
     properties: Property[];
+    currency: string;
+    user: any; // Replace 'any' with the actual user type if available
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined)
@@ -14,8 +17,9 @@ interface AppContextProviderProps {
 }
 
 export const AppContextProvider = ({ children }: AppContextProviderProps) => {
+    const currency = import.meta.env.VITE_APP_CURRENCY
     const navigate = useNavigate()
-
+    const { user } = useUser()
     const [properties, setProperties] = useState<Property[]>([])
 
     const getProperties = () => {
@@ -28,7 +32,9 @@ export const AppContextProvider = ({ children }: AppContextProviderProps) => {
 
     const value: AppContextType = {
         navigate,
-        properties
+        properties,
+        currency,
+        user
     }
 
     return (
