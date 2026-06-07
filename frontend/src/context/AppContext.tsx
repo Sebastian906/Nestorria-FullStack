@@ -19,7 +19,7 @@ interface AppContextProviderProps {
 }
 
 export const AppContextProvider = ({ children }: AppContextProviderProps) => {
-    const currency = import.meta.env.VITE_APP_CURRENCY
+    const currency: string = import.meta.env.VITE_CURRENCY ?? '$'
     const navigate = useNavigate()
     const { user } = useUser()
     const [properties, setProperties] = useState<Property[]>([])
