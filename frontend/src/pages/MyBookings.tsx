@@ -20,12 +20,13 @@ const MyBookings = () => {
     }, [user])
 
     return (
-        <div className='max-padd-container bg-linear-to-r from-[#F0FDF4] to-white py-16 pt-28'>
-            {bookings?.map((booking) => (
-                <div
-                    key={booking._id}
-                    className='bg-white ring-1 ring-slate-900/5 p-2 pr-4 mt-3 rounded-lg'
-                >
+        <div className='bg-linear-to-r from-[#F0FDF4] to-white py-16 pt-28 w-full'>
+            <div className='max-padd-container'>
+                {bookings?.map((booking) => (
+                    <div
+                        key={booking._id}
+                        className='bg-white ring-1 ring-slate-900/5 p-2 pr-4 mt-3 rounded-lg'
+                    >
                     {/* PROPERTY LIST */}
                     <div className='flexStart gap-3 mb-3'>
                         <img
@@ -87,7 +88,8 @@ const MyBookings = () => {
                         </div>
                     </div>
                 </div>
-            ))}
+                ))}
+            </div>
         </div>
     )
 }

@@ -7,7 +7,9 @@ interface AppContextType {
     navigate: NavigateFunction;
     properties: Property[];
     currency: string;
-    user: any; // Replace 'any' with the actual user type if available
+    user: any;
+    showAgencyReg: boolean;
+    setShowAgencyReg: (show: boolean) => void;
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined)
@@ -21,6 +23,7 @@ export const AppContextProvider = ({ children }: AppContextProviderProps) => {
     const navigate = useNavigate()
     const { user } = useUser()
     const [properties, setProperties] = useState<Property[]>([])
+    const [showAgencyReg, setShowAgencyReg] = useState<boolean>(false)
 
     const getProperties = () => {
         setProperties(dummyProperties)
@@ -34,7 +37,9 @@ export const AppContextProvider = ({ children }: AppContextProviderProps) => {
         navigate,
         properties,
         currency,
-        user
+        user,
+        showAgencyReg,
+        setShowAgencyReg
     }
 
     return (

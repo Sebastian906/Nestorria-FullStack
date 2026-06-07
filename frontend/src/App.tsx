@@ -7,11 +7,17 @@ import Blog from "./pages/Blog"
 import Contact from "./pages/Contact"
 import PropertyDetails from "./pages/PropertyDetails"
 import MyBookings from "./pages/MyBookings"
+import { useAppContext } from "./context/AppContext"
+import AgencyReg from "./components/AgencyReg"
 
 const App = () => {
+
+  const { showAgencyReg } = useAppContext();
+
   return (
     <main>
       <Header />
+      {showAgencyReg && <AgencyReg />}
       <Routes>
         <Route path='/' element={<Home />} />
         <Route path='/listing' element={<Listing />} />
