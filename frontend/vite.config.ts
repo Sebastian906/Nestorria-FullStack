@@ -19,4 +19,7 @@ export default defineVitestConfig({
       exclude: ['node_modules/', 'src/assets/'],
     },
   },
+  server: {
+    port: 5173,
+  }
 })
