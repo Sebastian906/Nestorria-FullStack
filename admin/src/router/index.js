@@ -4,7 +4,7 @@ import AddProperty from '../pages/AddProperty.vue'
 import ListProperty from '../pages/ListProperty.vue'
 
 const routes = [
-    { path: '/', redirect: '/dashboard' },
+    { path: '/', component: Dashboard },
     { path: '/dashboard', component: Dashboard },
     { path: '/add-property', component: AddProperty },
     { path: '/list-property', component: ListProperty },
