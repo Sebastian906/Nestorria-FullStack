@@ -9,9 +9,11 @@ import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 import jakarta.persistence.Column;
 import jakarta.persistence.EntityListeners;
 import jakarta.persistence.MappedSuperclass;
+import lombok.Getter;
 
 @MappedSuperclass
 @EntityListeners(AuditingEntityListener.class)
+@Getter
 public abstract class Auditable {
 
     @CreatedDate
@@ -21,12 +23,4 @@ public abstract class Auditable {
     @LastModifiedDate
     @Column(name = "updated_at", nullable = false)
     private Instant updatedAt;
-
-    public Instant getCreatedAt() {
-        return createdAt;
-    }
-
-    public Instant getUpdateAt() {
-        return updatedAt;
-    }
 }
