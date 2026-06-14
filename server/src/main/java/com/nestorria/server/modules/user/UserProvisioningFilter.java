@@ -1,9 +1,8 @@
 package com.nestorria.server.modules.user;
 
-import jakarta.servlet.FilterChain;
-import jakarta.servlet.ServletException;
-import jakarta.servlet.http.HttpServletRequest;
-import jakarta.servlet.http.HttpServletResponse;
+import java.io.IOException;
+
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.oauth2.jwt.Jwt;
@@ -11,7 +10,10 @@ import org.springframework.security.oauth2.server.resource.authentication.JwtAut
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
-import java.io.IOException;
+import jakarta.servlet.FilterChain;
+import jakarta.servlet.ServletException;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
 
 @Component
 public class UserProvisioningFilter extends OncePerRequestFilter {
@@ -31,9 +33,6 @@ public class UserProvisioningFilter extends OncePerRequestFilter {
         if (authentication instanceof JwtAuthenticationToken jwtAuth) {
             Jwt jwt = jwtAuth.getToken();
             String userId = jwt.getSubject();
-
-            // At the top of the file, add the import:
-            // import org.springframework.dao.DataIntegrityViolationException;
             
             userRepository.findById(userId).ifPresentOrElse(
                 existing -> syncIfChanged(existing, jwt),
@@ -55,6 +54,11 @@ public class UserProvisioningFilter extends OncePerRequestFilter {
         String email = jwt.getClaimAsString("email");
         String name = jwt.getClaimAsString("name");
         String image = jwt.getClaimAsString("image_url");
+
+        if (email == null || name == null || image == null) {  
+            logger.warn("Incomplete JWT claims for user {}: email={}, name={}, image={}");  
+            return; 
+        }  
 
         User user = new User(userId, name, email, image);
         userRepository.save(user);
