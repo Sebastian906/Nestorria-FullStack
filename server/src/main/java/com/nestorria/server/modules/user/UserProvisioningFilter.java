@@ -32,9 +32,19 @@ public class UserProvisioningFilter extends OncePerRequestFilter {
             Jwt jwt = jwtAuth.getToken();
             String userId = jwt.getSubject();
 
+            // At the top of the file, add the import:
+            // import org.springframework.dao.DataIntegrityViolationException;
+            
             userRepository.findById(userId).ifPresentOrElse(
                 existing -> syncIfChanged(existing, jwt),
-                () -> createFromClaims(userId, jwt)
+                () -> {
+                    try {
+                        createFromClaims(userId, jwt);
+                    } catch (DataIntegrityViolationException e) {
+                        // Lost race - another request created the user; sync instead
+                        userRepository.findById(userId).ifPresent(user -> syncIfChanged(user, jwt));
+                    }
+                }
             );
         }
 
