@@ -18,22 +18,16 @@ public class OpenApiConfig {
     public OpenAPI customOpenAPI() {
         return new OpenAPI()
             .info(new Info()
-                    .title("Nestorria API")
-                    .version("v1")
-                    .description("API REST para la plataforma inmobiliaria Nestorria"))
-         return new OpenAPI()
-             .info(new Info()
-                     .title("Nestorria API")
-                     .version("v1")
-                     .description("API REST para la plataforma inmobiliaria Nestorria"))
-             .components(new Components()
-                     .addSecuritySchemes(SECURITY_SCHEME_NAME,
+                .title("Nestorria API")
+                .version("v1")
+                .description("API REST para la plataforma inmobiliaria Nestorria"))
+            .addSecurityItem(new SecurityRequirement().addList(SECURITY_SCHEME_NAME))
             .components(new Components()
-                    .addSecuritySchemes(SECURITY_SCHEME_NAME,
-                            new SecurityScheme()
-                                    .name(SECURITY_SCHEME_NAME)
-                                    .type(SecurityScheme.Type.HTTP)
-                                    .scheme("bearer")
-                                    .bearerFormat("JWT")));
+                .addSecuritySchemes(SECURITY_SCHEME_NAME,
+                    new SecurityScheme()
+                        .name(SECURITY_SCHEME_NAME)
+                        .type(SecurityScheme.Type.HTTP)
+                        .scheme("bearer")
+                        .bearerFormat("JWT")));
     }
 }
