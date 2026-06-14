@@ -21,7 +21,13 @@ public class OpenApiConfig {
                     .title("Nestorria API")
                     .version("v1")
                     .description("API REST para la plataforma inmobiliaria Nestorria"))
-            .addSecurityItem(new SecurityRequirement().addList(SECURITY_SCHEME_NAME))
+         return new OpenAPI()
+             .info(new Info()
+                     .title("Nestorria API")
+                     .version("v1")
+                     .description("API REST para la plataforma inmobiliaria Nestorria"))
+             .components(new Components()
+                     .addSecuritySchemes(SECURITY_SCHEME_NAME,
             .components(new Components()
                     .addSecuritySchemes(SECURITY_SCHEME_NAME,
                             new SecurityScheme()
