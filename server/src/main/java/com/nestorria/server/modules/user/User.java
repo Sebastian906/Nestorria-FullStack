@@ -14,12 +14,20 @@ import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
+import lombok.AccessLevel;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
 
 @Entity
 @Table(name = "users")
+@Getter
+@Setter
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class User extends Auditable {
 
     @Id
+    @Setter(AccessLevel.NONE)
     @Column(length = 50)
     private String id;
 
@@ -43,59 +51,11 @@ public class User extends Auditable {
     @Column(name = "recent_searched_cities", columnDefinition = "text[]")
     private List<String> recentSearchedCities = new ArrayList<>();
 
-    protected User() {
-        // requerido por JPA
-    }
-
     public User(String id, String username, String email, String image) {
         this.id = id;
         this.username = username;
         this.email = email;
         this.image = image;
         this.role = UserRole.USER;
-    }
-
-    public String getId() {
-        return id;
-    }
-
-    public String getUsername() {
-        return username;
-    }
-
-    public void setUsername(String username) {
-        this.username = username;
-    }
-
-    public String getEmail() {
-        return email;
-    }
-
-    public void setEmail(String email) {
-        this.email = email;
-    }
-
-    public String getImage() {
-        return image;
-    }
-
-    public void setImage(String image) {
-        this.image = image;
-    }
-
-    public UserRole getRole() {
-        return role;
-    }
-
-    public void setRole(UserRole role) {
-        this.role = role;
-    }
-
-    public List<String> getRecentSearchedCities() {
-        return recentSearchedCities;
-    }
-
-    public void setRecentSearchedCities(List<String> recentSearchedCities) {
-        this.recentSearchedCities = recentSearchedCities;
     }
 }
