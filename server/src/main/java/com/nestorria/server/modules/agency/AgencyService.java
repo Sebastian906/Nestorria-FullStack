@@ -43,7 +43,7 @@ public class AgencyService {
         userRepository.save(owner);
 
         try {
-            Agency saved = agencyRepository.save(agency);
+            Agency saved = agencyRepository.saveAndFlush(agency);
             return AgencyResponse.fromEntity(saved);
         } catch (org.springframework.dao.DataIntegrityViolationException e) {
             throw new ConflictException("El usuario ya tiene una agencia registrada");
