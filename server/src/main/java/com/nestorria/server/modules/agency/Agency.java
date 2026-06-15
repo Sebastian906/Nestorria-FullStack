@@ -27,7 +27,7 @@ public class Agency extends Auditable {
 
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
-    private String Id;
+    private String id;
 
     @NotBlank
     @Column(nullable = false)

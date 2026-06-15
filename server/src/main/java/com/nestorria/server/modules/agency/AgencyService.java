@@ -42,8 +42,12 @@ public class AgencyService {
         owner.setRole(UserRole.AGENCY_OWNER);
         userRepository.save(owner);
 
-        Agency saved = agencyRepository.save(agency);
-        return AgencyResponse.fromEntity(saved);
+        try {
+            Agency saved = agencyRepository.save(agency);
+            return AgencyResponse.fromEntity(saved);
+        } catch (org.springframework.dao.DataIntegrityViolationException e) {
+            throw new ConflictException("El usuario ya tiene una agencia registrada");
+        }
     }
 
     @Transactional(readOnly = true)
