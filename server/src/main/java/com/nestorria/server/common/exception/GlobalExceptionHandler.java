@@ -33,4 +33,9 @@ public class GlobalExceptionHandler {
         body.put("message", message);
         return body;
     }
+
+    @ExceptionHandler(ConflictException.class)
+    public ResponseEntity<Map<String, Object>> handleConflict(ConflictException ex) {
+        return ResponseEntity.status(HttpStatus.CONFLICT).body(errorBody(ex.getMessage()));
+    }
 }

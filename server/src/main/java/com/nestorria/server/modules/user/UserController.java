@@ -12,10 +12,12 @@ import org.springframework.web.bind.annotation.RestController;
 import com.nestorria.server.modules.user.dto.AddRecentSearchRequest;
 import com.nestorria.server.modules.user.dto.UserProfileResponse;
 
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 
 @RestController
 @RequestMapping("/api/users")
+@Tag(name = "Users", description = "Gestión de usuarios")
 public class UserController {
 
     private final UserService userService;
