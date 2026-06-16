@@ -4,6 +4,7 @@ import java.io.IOException;
 import java.util.List;
 import java.util.Map;
 
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
@@ -27,6 +28,7 @@ public class PropertyService {
     private final PropertyRepository propertyRepository;
     private final AgencyRepository agencyRepository;
     private final Cloudinary cloudinary;
+    private PropertyService self;
 
     public PropertyService(
             PropertyRepository propertyRepository,
@@ -37,11 +39,16 @@ public class PropertyService {
         this.cloudinary = cloudinary;
     }
 
+    @Autowired
+    public void setSelf(PropertyService self) {
+        this.self = self;
+    }
+
     public PropertyResponse create(String userId, CreatePropertyRequest request, List<MultipartFile> files) {
         Agency agency = agencyRepository.findByOwnerId(userId)
                 .orElseThrow(() -> new ResourceNotFoundException("No se encontró una agencia para este usuario"));
         List<String> imageUrls = uploadImages(files);
-        return persistProperty(agency, request, imageUrls);
+        return self.persistProperty(agency, request, imageUrls);
     }
 
     @Transactional
