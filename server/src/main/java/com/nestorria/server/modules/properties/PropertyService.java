@@ -37,13 +37,15 @@ public class PropertyService {
         this.cloudinary = cloudinary;
     }
 
-    @Transactional
     public PropertyResponse create(String userId, CreatePropertyRequest request, List<MultipartFile> files) {
         Agency agency = agencyRepository.findByOwnerId(userId)
-            .orElseThrow(() -> new ResourceNotFoundException("No se encontró una agencia para este usuario"));
-
+                .orElseThrow(() -> new ResourceNotFoundException("No se encontró una agencia para este usuario"));
         List<String> imageUrls = uploadImages(files);
+        return persistProperty(agency, request, imageUrls);
+    }
 
+    @Transactional
+    protected PropertyResponse persistProperty(Agency agency, CreatePropertyRequest request, List<String> imageUrls) {
         Property property = new Property(
             agency,
             request.title(),
@@ -58,7 +60,6 @@ public class PropertyService {
             request.amenities()
         );
         property.setImages(imageUrls);
-
         return PropertyResponse.fromEntity(propertyRepository.save(property));
     }
 
@@ -116,10 +117,20 @@ public class PropertyService {
 
     @SuppressWarnings("unchecked")
     private String uploadSingle(MultipartFile file) {
+        if (file == null || file.isEmpty()) {
+            throw new IllegalArgumentException("El archivo de imagen está vacío");
+        }
+        String contentType = file.getContentType();
+        if (contentType == null || !contentType.startsWith("image/")) {
+            throw new IllegalArgumentException("Solo se permiten archivos de imagen");
+        }
         try {
             Map<String, Object> result = cloudinary.uploader().upload(
                 file.getBytes(),
-                Map.of("folder", "nestorria/properties")
+                Map.of(
+                    "folder", "nestorria/properties",
+                    "resource_type", "image"
+                )
             );
             return (String) result.get("secure_url");
         } catch (IOException e) {
