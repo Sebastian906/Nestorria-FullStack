@@ -11,6 +11,8 @@ import org.springframework.data.repository.query.Param;
 
 import com.nestorria.server.modules.properties.Property;
 
+import jakarta.persistence.LockModeType;
+
 public interface BookingRepository extends JpaRepository<Booking, String> {
 
     @Query("""
@@ -34,7 +36,7 @@ public interface BookingRepository extends JpaRepository<Booking, String> {
     @Query("SELECT b FROM Booking b JOIN FETCH b.property JOIN FETCH b.agency WHERE b.agency.id = :agencyId ORDER BY b.createdAt DESC")
     List<Booking> findByAgencyId(@Param("agencyId") String agencyId);
 
-    @Lock(LockModelType.PESSIMISTIC_WRITE)
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("SELECT p FROM Property p WHERE p.id = :id")
     Optional<Property> findByIdWithLock(@Param("id") String id);
 

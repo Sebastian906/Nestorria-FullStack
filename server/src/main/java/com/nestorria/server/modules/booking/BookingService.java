@@ -55,7 +55,7 @@ public class BookingService {
     public BookingResponse createBooking(String userId, CreateBookingRequest request) {
         validateDateRange(request.checkInDate(), request.checkOutDate());
 
-        Property property = propertyRepository.findByIdWithLock(request.propertyId())
+        Property property = bookingRepository.findByIdWithLock(request.propertyId())
             .orElseThrow(() -> new ResourceNotFoundException("Propiedad no encontrada: " + request.propertyId()));
 
         if (!isPropertyAvailable(request.propertyId(), request.checkInDate(), request.checkOutDate())) {
@@ -101,9 +101,9 @@ public class BookingService {
 
         List<Booking> bookings = bookingRepository.findByAgencyId(agency.getId());
 
-        int totalRevenue = bookings.stream()
+        long totalRevenue = bookings.stream()
             .filter(Booking::isPaid)
-            .mapToInt(Booking::getTotalPrice)
+            .mapToLong(Booking::getTotalPrice)
             .sum();
 
         List<BookingResponse> bookingResponses = bookings.stream()

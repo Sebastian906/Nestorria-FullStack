@@ -76,7 +76,7 @@ public class Booking extends Auditable {
     private boolean isPaid = false;
 
     public Booking(User user, Property property, Agency agency, LocalDate checkInDate,
-                    LocalDate checkOutDate, int totalPrice, int guests) {
+                    LocalDate checkOutDate, long totalPrice, int guests) {
         this.user = user;
         this.property = property;
         this.agency = agency;
