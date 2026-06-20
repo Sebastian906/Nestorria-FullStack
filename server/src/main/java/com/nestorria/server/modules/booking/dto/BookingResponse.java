@@ -13,7 +13,7 @@ public record BookingResponse(
     AgencyResponse agency,
     LocalDate checkInDate,
     LocalDate checkOutDate,
-    int totalPrice,
+    long totalPrice,
     int guests,
     BookingStatus status,
     String paymentMethod,

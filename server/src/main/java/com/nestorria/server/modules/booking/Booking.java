@@ -58,7 +58,7 @@ public class Booking extends Auditable {
 
     @Min(0)
     @Column(name = "total_price", nullable = false)
-    private int totalPrice;
+    private long totalPrice;
 
     @Min(1)
     @Column(nullable = false)
@@ -87,10 +87,19 @@ public class Booking extends Auditable {
     }
 
     public void cancel() {
+        if (this.status == BookingStatus.CANCELLED) {
+            throw new IllegalStateException("Booking is already cancelled");
+        }
         this.status = BookingStatus.CANCELLED;
     }
 
     public void confirm() {
+        if (this.status == BookingStatus.CANCELLED) {
+            throw new IllegalStateException("Cannot confirm a cancelled booking");
+        }
+        if (this.status == BookingStatus.CONFIRMED) {
+            return;
+        }
         this.status = BookingStatus.CONFIRMED;
     }
 

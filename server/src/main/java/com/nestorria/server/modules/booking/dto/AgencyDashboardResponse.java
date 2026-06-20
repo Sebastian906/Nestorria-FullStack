@@ -4,6 +4,6 @@ import java.util.List;
 
 public record AgencyDashboardResponse(
     int totalBookings,
-    int totalRevenue,
+    long totalRevenue,
     List<BookingResponse> bookings
 ) {}
