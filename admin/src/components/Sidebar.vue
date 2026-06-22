@@ -7,7 +7,7 @@ import { assets } from '../assets/assets'
 
 const router = useRouter()
 const route = useRoute()
-const { isOwner, user } = useAppContext()
+const { isOwner, roleLoaded, user } = useAppContext()
 
 const navItems = [
     {
@@ -28,6 +28,7 @@ const navItems = [
 ]
 
 const checkAuth = () => {
+    if (!roleLoaded.value) return
     if (!isOwner.value) {
         if (route.path !== '/') {
             router.replace({ path: '/' })
@@ -39,9 +40,7 @@ onMounted(() => {
     checkAuth()
 })
 
-watch(isOwner, () => {
-    checkAuth()
-})
+watch([isOwner, roleLoaded], checkAuth)
 
 const userButtonAppearance = {
     elements: {

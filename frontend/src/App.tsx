@@ -9,6 +9,7 @@ import PropertyDetails from "./pages/PropertyDetails"
 import MyBookings from "./pages/MyBookings"
 import { useAppContext } from "./context/AppContext"
 import AgencyReg from "./components/AgencyReg"
+import { Toaster } from "react-hot-toast"
 
 const App = () => {
 
@@ -18,6 +19,7 @@ const App = () => {
     <main>
       <Header />
       {showAgencyReg && <AgencyReg />}
+      <Toaster position='bottom-right'/>
       <Routes>
         <Route path='/' element={<Home />} />
         <Route path='/listing' element={<Listing />} />
