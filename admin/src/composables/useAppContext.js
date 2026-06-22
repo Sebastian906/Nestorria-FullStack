@@ -28,6 +28,9 @@ export function useAppContext() {
             }
             try {
                 const token = await auth.getToken.value()
+                if (!token) {
+                    return
+                }
                 const { data } = await axios.get('/api/users/me', {
                     headers: { Authorization: `Bearer ${token}` }
                 })

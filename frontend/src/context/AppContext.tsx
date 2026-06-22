@@ -38,6 +38,9 @@ export const AppContextProvider = ({ children }: { children: ReactNode }) => {
     const getUserProfile = async () => {
         try {
             const token = await getToken()
+            if (!token) {
+                return
+            }
             const { data } = await axios.get('/api/users/me', {
                 headers: { Authorization: `Bearer ${token}` }
             })
