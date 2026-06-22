@@ -11,7 +11,7 @@ const Header = () => {
     const [menuOpened, setMenuOpened] = useState<boolean>(false)
     const [showSearch, setShowSearch] = useState<boolean>(false)
     const location = useLocation()
-    const { navigate, user } = useAppContext()
+    const { navigate, user, isOwner, setShowAgencyReg } = useAppContext()
     const { openSignIn } = useClerk();
 
     const BookingIcon = () => (
@@ -76,6 +76,17 @@ const Header = () => {
                     />
                     {/* BUTTONS, SEARCH BAR & PROFILE */}
                     <div className='flex sm:flex-1 items-center sm:justify-end gap-x-4 sm:gap-x-8'>
+                        <div>
+                            {user && (
+                                <button
+                                    onClick={() => isOwner
+                                        ? window.location.assign(import.meta.env.VITE_ADMIN_URL)
+                                        : setShowAgencyReg(true)}
+                                    className={`btn-outline px-2 py-1 text-xs font-semibold ${!active && 'text-primary ring-primary bg-transparent hover:text-black'} bg-secondary/10 hover:bg-white`}>
+                                    {isOwner ? "Dashboard" : "Register Agency"}
+                                </button>
+                            )}
+                        </div>
                         {/* SEARCH BAR */}
                         <div className='relative hidden xl:flex items-center'>
                             <div className={`${active ? 'bg-secondary/10' : 'bg-white'} transition-all duration-300 ease-in-out ring-1 ring-slate-900/10 rounded-full overflow-hidden ${showSearch
