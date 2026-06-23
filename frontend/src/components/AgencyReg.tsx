@@ -19,6 +19,10 @@ const AgencyReg = () => {
         event.preventDefault()
         try {
             const token = await getToken()
+            if (!token) {
+                toast.error('Failed to register agency')
+                return
+            }
             await axios.post('/api/agencies',
                 { name, contact, email, address, city },
                 { headers: { Authorization: `Bearer ${token}` } }
