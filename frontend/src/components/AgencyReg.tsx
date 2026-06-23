@@ -1,15 +1,35 @@
 import { useState } from "react"
 import { useAppContext } from "../context/AppContext"
+import { useAuth } from "@clerk/react"
 import { assets, cities } from "../assets/data"
+import axios from "axios"
+import toast from "react-hot-toast"
 
 const AgencyReg = () => {
 
-    const { setShowAgencyReg } = useAppContext()
+    const { setShowAgencyReg, refreshProfile } = useAppContext()
+    const { getToken } = useAuth()
     const [name, setName] = useState("")
     const [email, setEmail] = useState("")
     const [contact, setContact] = useState("")
     const [address, setAddress] = useState("")
     const [city, setCity] = useState("")
+
+    const onSubmitHandler = async (event: React.FormEvent) => {
+        event.preventDefault()
+        try {
+            const token = await getToken()
+            await axios.post('/api/agencies',
+                { name, contact, email, address, city },
+                { headers: { Authorization: `Bearer ${token}` } }
+            )
+            toast.success('Agency registered successfully')
+            await refreshProfile()
+            setShowAgencyReg(false)
+        } catch (error: any) {
+            toast.error(error?.response?.data?.message ?? 'Failed to register agency')
+        }
+    }
 
     return (
         <div
@@ -18,19 +38,20 @@ const AgencyReg = () => {
         >
             <form
                 onClick={(e) => e.stopPropagation()}
+                onSubmit={onSubmitHandler}
                 className='flexCenter bg-white rounded-xl max-w-4xl max-md:mx-2 relative'
             >
                 <img
                     src={assets.createPrp}
                     alt="createPrp img"
-                    className='w-1/2 rounded-l-xl hidden md:block' 
+                    className='w-1/2 rounded-l-xl hidden md:block'
                 />
                 <div className='flex flex-col md:w-1/2 p-8 md:p-10'>
                     <img
                         onClick={() => setShowAgencyReg(false)}
-                        src={assets.close} 
+                        src={assets.close}
                         alt="close img"
-                        className='absolute top-4 right-4 h-6 w-6 p-1 cursor-pointer bg-secondary/50 rounded-full shadow-emerald-400' 
+                        className='absolute top-4 right-4 h-6 w-6 p-1 cursor-pointer bg-secondary/50 rounded-full shadow-emerald-400'
                     />
                     <h3 className='h3 mb-6'>Register Agency</h3>
                     <div className='flex gap-2 xl:gap-3'>
@@ -41,11 +62,11 @@ const AgencyReg = () => {
                             >
                                 Agency Name
                             </label>
-                            <input 
+                            <input
                                 onChange={(e) => setName(e.target.value)}
                                 value={name}
                                 id='name'
-                                type="text" 
+                                type="text"
                                 placeholder='Type here...'
                                 className='regular-14 border bg-secondary/10 border-slate-900/10 rounded-lg w-full px-3 py-1.5 mt-1 outline-none'
                                 required
