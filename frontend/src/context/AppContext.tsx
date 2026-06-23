@@ -15,6 +15,7 @@ interface AppContextType {
     searchedCities: string[];
     showAgencyReg: boolean;
     setShowAgencyReg: (show: boolean) => void;
+    refreshProfile: () => Promise<void>;
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined)
@@ -72,7 +73,8 @@ export const AppContextProvider = ({ children }: { children: ReactNode }) => {
         isOwner,
         searchedCities,
         showAgencyReg,
-        setShowAgencyReg
+        setShowAgencyReg,
+        refreshProfile: getUserProfile,
     }
 
     return (
