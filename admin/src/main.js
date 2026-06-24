@@ -1,5 +1,7 @@
 import { createApp } from 'vue'
 import './style.css'
+import Toast from 'vue-toastification'
+import 'vue-toastification/dist/index.css'
 import App from './App.vue'
 import router from './router'
 import { clerkPlugin } from '@clerk/vue'
@@ -16,6 +18,7 @@ app.use(clerkPlugin, {
     publishableKey: PUBLISHABLE_KEY
 })
 
+app.use(Toast)
 app.use(router)
 
 app.mount('#app')
