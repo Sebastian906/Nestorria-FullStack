@@ -67,6 +67,7 @@ const handleImageChange = (key, event) => {
     if (previews[key]) URL.revokeObjectURL(previews[key])
     images[key] = file
     previews[key] = URL.createObjectURL(file)
+    event.target.value = ''
 }
 
 onBeforeUnmount(() => {
@@ -76,12 +77,14 @@ onBeforeUnmount(() => {
 })
 
 const handleSubmit = async () => {
+
+    const isBlank = (value) => value === '' || value === null || value === undefined
+
     // Validation
     if (
-        !inputs.title || !inputs.description || !inputs.city ||
-        !inputs.country || !inputs.address || !inputs.area ||
-        !inputs.propertyType || (!inputs.priceRent && !inputs.priceSale) ||
-        !inputs.bedrooms || !inputs.bathrooms
+        !inputs.country || !inputs.address || isBlank(inputs.area) ||
+        !inputs.propertyType || (isBlank(inputs.priceRent) && isBlank(inputs.priceSale)) ||
+        isBlank(inputs.bedrooms) || isBlank(inputs.bathrooms)
     ) {
         toast.error('Please fill all required fields')
         return
@@ -115,8 +118,8 @@ const handleSubmit = async () => {
             address: inputs.address,
             area: Number(inputs.area),
             propertyType: inputs.propertyType,        // already UPPER_SNAKE_CASE
-            priceRent: inputs.priceRent ? Number(inputs.priceRent) : null,
-            priceSale: inputs.priceSale ? Number(inputs.priceSale) : null,
+            priceRent: isBlank(inputs.priceRent) ? null : Number(inputs.priceRent),
+            priceSale: isBlank(inputs.priceSale) ? null : Number(inputs.priceSale),
             bedrooms: Number(inputs.bedrooms),
             bathrooms: Number(inputs.bathrooms),
             garages: Number(inputs.garages) || 0,
