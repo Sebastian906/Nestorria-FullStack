@@ -49,6 +49,7 @@ export function useAppContext() {
 
     return {
         user,
+        auth,
         isOwner,
         roleLoaded,
         currency,
