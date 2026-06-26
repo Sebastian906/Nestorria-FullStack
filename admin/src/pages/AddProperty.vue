@@ -23,6 +23,21 @@ const propertyTypes = [
     { label: 'Land Plot', value: 'LAND_PLOT' },
 ]
 
+const defaultAmenities = () => ({
+    Backyard: false,
+    Balcony: false,
+    'Fitness Center': false,
+    Fireplace: false,
+    Garden: false,
+    Garage: false,
+    'High-Speed Internet': false,
+    Parking: false,
+    'Private Beach': false,
+    'Swimming Pool': false,
+    Terrace: false,
+    'Wi-Fi': false,
+})
+
 const inputs = reactive({
     title: '',
     description: '',
@@ -36,12 +51,7 @@ const inputs = reactive({
     bedrooms: '',
     bathrooms: '',
     garages: '',
-    amenities: {
-        Parking: false,
-        Wifi: false,
-        Backyard: false,
-        Terrace: false,
-    },
+    amenities: defaultAmenities(),
 })
 
 const loading = ref(false)
@@ -52,7 +62,7 @@ const resetForm = () => {
         address: '', area: '', propertyType: '',
         priceRent: '', priceSale: '',
         bedrooms: '', bathrooms: '', garages: '',
-        amenities: { Parking: false, Wifi: false, Backyard: false, Terrace: false },
+        amenities: defaultAmenities(),
     })
     imageKeys.forEach((key) => {
         if (previews[key]) URL.revokeObjectURL(previews[key])
