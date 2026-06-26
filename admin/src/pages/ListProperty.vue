@@ -8,7 +8,7 @@ const { currency, roleLoaded, auth } = useAppContext()
 const toast = useToast()
 
 const properties = ref([])
-const loading = ref(false)
+const loading = ref(true)
 const togglingId = ref(null)
 
 const getToken = () => auth.getToken.value()
