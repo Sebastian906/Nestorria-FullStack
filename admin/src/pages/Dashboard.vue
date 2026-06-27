@@ -1,10 +1,12 @@
 <script setup>
-import { ref, watch } from 'vue'
+import { ref, watch, onMounted } from 'vue'
 import { useAppContext } from '../composables/useAppContext'
+import { useToast } from 'vue-toastification'
 import { assets } from '../assets/assets'
-import { dummyDashboardData } from '../../../frontend/src/assets/data';
+import axios from 'axios'
 
-const { user, currency } = useAppContext()
+const { auth, roleLoaded, currency } = useAppContext()
+const toast = useToast()
 
 const dashboardData = ref({
     bookings: [],
@@ -12,18 +14,35 @@ const dashboardData = ref({
     totalRevenue: 0,
 })
 
-const getDashboardData = () => {
-    dashboardData.value = dummyDashboardData
+const getDashboardData = async () => {
+    try {
+        const token = await auth.getToken.value()
+        const { data } = await axios.get('/api/bookings/agency', {
+            headers: { Authorization: `Bearer ${token}` }
+        })
+        dashboardData.value = data
+    } catch (error) {
+        toast.error(error.response?.data?.message ?? 'No se pudieron cargar los datos del dashboard')
+        console.error(error)
+    }
 }
 
-watch(user, (newUser) => {
-    if (newUser) getDashboardData()
-}, { immediate: true })
+onMounted(() => {
+    if (roleLoaded.value) {
+        getDashboardData()
+        return
+    }
+    const stop = watch(roleLoaded, (loaded) => {
+        if (loaded) {
+            stop()
+            getDashboardData()
+        }
+    })
+})
 </script>
 
 <template>
     <div class="md:px-8 py-6 xl:py-8 m-1 sm:m-3 h-[97vh] overflow-y-scroll lg:w-11/12 bg-white shadow rounded-xl">
-        <!-- STATS -->
         <div class="grid grid-cols-2 gap-4">
             <div class="flexStart gap-7 p-5 bg-[#F0FDF4] lg:min-w-56 rounded-xl">
                 <img :src="assets.house" alt="" class="hidden sm:flex w-8" />
@@ -41,9 +60,7 @@ watch(user, (newUser) => {
             </div>
         </div>
 
-        <!-- LATEST BOOKINGS -->
         <div class="mt-4">
-            <!-- TABLE HEADER -->
             <div
                 class="flex justify-between flex-wrap gap-2 sm:grid grid-cols-[2fr_2fr_1fr_1fr] lg:grid-cols-[0.5fr_2fr_2fr_1fr_1fr] px-6 py-3 bg-secondary border-b border-slate-900/15 rounded-t-xl">
                 <h5 class="h5 hidden lg:block">Index</h5>
@@ -53,35 +70,37 @@ watch(user, (newUser) => {
                 <h5 class="h5">Status</h5>
             </div>
 
-            <!-- TABLE ROWS -->
-            <div>
-                <div v-for="(booking, index) in dashboardData.bookings" :key="booking._id"
-                    class="flex justify-between items-center flex-wrap gap-2 sm:grid grid-cols-[2fr_2fr_1fr_1fr] lg:grid-cols-[0.5fr_2fr_2fr_1fr_1fr] px-6 py-3 bg-secondary/5 text-gray-50 medium-14 border-b border-slate-900/15">
-                    <div class="hidden lg:block">{{ index + 1 }}</div>
+            <div v-if="dashboardData.bookings.length === 0"
+                class="flex justify-center items-center h-24 text-gray-400 text-sm">
+                No bookings yet.
+            </div>
 
-                    <div class="flexStart gap-x-2 max-w-64">
-                        <div class="overflow-hidden rounded-lg">
-                            <img :src="booking.property.images[0]" :alt="booking.property.title"
-                                class="w-16 rounded-lg" />
-                        </div>
-                        <div class="line-clamp-2">{{ booking.property.title }}</div>
+            <div v-for="(booking, index) in dashboardData.bookings" :key="booking.id"
+                class="flex justify-between items-center flex-wrap gap-2 sm:grid grid-cols-[2fr_2fr_1fr_1fr] lg:grid-cols-[0.5fr_2fr_2fr_1fr_1fr] px-6 py-3 bg-secondary/5 text-gray-50 medium-14 border-b border-slate-900/15">
+                <div class="hidden lg:block">{{ index + 1 }}</div>
+
+                <div class="flexStart gap-x-2 max-w-64">
+                    <div class="overflow-hidden rounded-lg">
+                        <img :src="booking.property.images?.[0]" :alt="booking.property.title"
+                            class="w-16 rounded-lg" />
                     </div>
-
-                    <div>
-                        {{ new Date(booking.checkInDate).toLocaleDateString() }}
-                        to
-                        {{ new Date(booking.checkOutDate).toLocaleDateString() }}
-                    </div>
-
-                    <div>{{ currency }}{{ booking.totalPrice }}</div>
-
-                    <button :class="booking.isPaid
-                        ? 'bg-green-400/80 text-white border-green-500/30'
-                        : 'bg-amber-100 text-red-500 border-amber-500/30'"
-                        class="w-22 py-0.5 rounded-full text-xs border">
-                        {{ booking.isPaid ? 'Completed' : 'Pending' }}
-                    </button>
+                    <div class="line-clamp-2">{{ booking.property.title }}</div>
                 </div>
+
+                <div>
+                    {{ new Date(booking.checkInDate + 'T00:00:00').toLocaleDateString() }}
+                    to
+                    {{ new Date(booking.checkOutDate + 'T00:00:00').toLocaleDateString() }}
+                </div>
+
+                <div>{{ currency }}{{ booking.totalPrice }}</div>
+
+                <button :class="(booking.paid ?? booking.isPaid)
+                    ? 'bg-green-400/80 text-white border-green-500/30'
+                    : 'bg-amber-100 text-red-500 border-amber-500/30'"
+                    class="w-22 py-0.5 rounded-full text-xs border">
+                    {{ (booking.paid ?? booking.isPaid) ? 'Completed' : 'Pending' }}
+                </button>
             </div>
         </div>
     </div>

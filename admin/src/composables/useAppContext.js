@@ -41,6 +41,10 @@ export function useAppContext() {
                 roleLoaded.value = true
             }
         }, { immediate: true })
+
+        axios.get('/api/properties/me')
+            .then(({ data }) => { properties.value = data })
+            .catch((error) => console.error('No se pudieron cargar las propiedades', error))
     }
 
     const setProperties = (data) => {
