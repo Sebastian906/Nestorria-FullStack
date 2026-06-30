@@ -1,6 +1,40 @@
-import { assets, cities } from '../assets/data'
+import { useState } from 'react';
+import { assets } from '../assets/data'
+import { useAppContext } from '../context/AppContext'
+import { useAuth } from '@clerk/react';
+import axios from "axios"
 
 const Hero = () => {
+
+    const { navigate, searchedCities, setSearchedCities } = useAppContext();
+    const { getToken } = useAuth()
+
+    const [destination, setDestination] = useState("");
+
+    const onSearch = async (e: any) => {
+        e.preventDefault();
+        const city = destination.trim();
+        if (!city) return;
+
+        navigate(`/listing?destination=${encodeURIComponent(city)}`);
+        // API to save recent searches
+        const token = await getToken();
+        if (token) {
+            await axios.post(`/api/users/me/recent-searches`, { city }, {
+                headers: { Authorization: `Bearer ${token}` },
+            });
+        }
+
+        // Add destination to searchedCities max 3 recent searches
+        setSearchedCities((prevSearchedCities: any) => {
+            const updatedSearchedCities = [...prevSearchedCities, city]
+            if (updatedSearchedCities.length > 3) {
+                updatedSearchedCities.shift()
+            }
+            return updatedSearchedCities
+        })
+    }
+
     return (
         <section className="h-screen w-screen bg-[url('/src/assets/bg.png')] bg-cover bg-center bg-no-repeat">
             <div className='max-padd-container h-screen w-screen'>
@@ -25,7 +59,10 @@ const Hero = () => {
                         </h2>
                     </div>
                     {/* SEARCH BOOKING FORM */}
-                    <form className='bg-mist-50 text-slate-500 rounded-lg px-6 py-4 flex flex-col lg:flex-row gap-4 lg:gap-x-8 max-w-md lg:max-w-full ring-1 ring-slate-900/5 relative'>
+                    <form
+                        onSubmit={onSearch}
+                        className='bg-mist-50 text-slate-500 rounded-lg px-6 py-4 flex flex-col lg:flex-row gap-4 lg:gap-x-8 max-w-md lg:max-w-full ring-1 ring-slate-900/5 relative'
+                    >
                         <div className='flex flex-col w-full'>
                             <div className='flex items-center gap-2'>
                                 <img
@@ -36,6 +73,8 @@ const Hero = () => {
                                 <label htmlFor='destinationInput'>Destination</label>
                             </div>
                             <input
+                                onChange={(e) => setDestination(e.target.value)}
+                                value={destination}
                                 list='destinations'
                                 id='destinationInput'
                                 type='text'
@@ -44,7 +83,7 @@ const Hero = () => {
                                 required
                             />
                             <datalist id='destinations'>
-                                {cities.map((city, index) => (
+                                {searchedCities.map((city, index) => (
                                     <option
                                         value={city}
                                         key={index}

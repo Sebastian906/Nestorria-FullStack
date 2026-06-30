@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useState, type ReactNode } from "react"
+import { createContext, useContext, useEffect, useState, type ReactNode, type Dispatch, type SetStateAction } from "react"
 import { useNavigate, type NavigateFunction } from "react-router-dom"
 import { dummyProperties, type Property } from "../assets/data"
 import { useAuth, useUser } from "@clerk/react"
@@ -13,9 +13,12 @@ interface AppContextType {
     user: any;
     isOwner: boolean;
     searchedCities: string[];
+    setSearchedCities: Dispatch<SetStateAction<string[]>>;
     showAgencyReg: boolean;
     setShowAgencyReg: (show: boolean) => void;
     refreshProfile: () => Promise<void>;
+    searchQuery: string;
+    setSearchQuery: (query: string) => void;
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined)
@@ -33,6 +36,7 @@ export const AppContextProvider = ({ children }: { children: ReactNode }) => {
     const [showAgencyReg, setShowAgencyReg] = useState<boolean>(false)
     const [isOwner, setIsOwner] = useState<boolean>(false)
     const [searchedCities, setSearchedCities] = useState<string[]>([])
+    const [searchQuery, setSearchQuery] = useState<string>('')
 
     const getProperties = () => setProperties(dummyProperties)
 
@@ -72,9 +76,12 @@ export const AppContextProvider = ({ children }: { children: ReactNode }) => {
         user,
         isOwner,
         searchedCities,
+        setSearchedCities,
         showAgencyReg,
         setShowAgencyReg,
         refreshProfile: getUserProfile,
+        searchQuery,
+        setSearchQuery,
     }
 
     return (
