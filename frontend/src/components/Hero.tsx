@@ -13,15 +13,21 @@ const Hero = () => {
 
     const onSearch = async (e: any) => {
         e.preventDefault();
-        navigate(`/listing?destination=${destination}`);
+        const city = destination.trim();
+        if (!city) return;
+
+        navigate(`/listing?destination=${encodeURIComponent(city)}`);
         // API to save recent searches
-        await axios.post(`/api/user/store-recent-search`, { recentSearchedCities: destination }, {
-            headers: { Authorization: `Bearer ${await getToken()}` },
-        });
+        const token = await getToken();
+        if (token) {
+            await axios.post(`/api/users/me/recent-searches`, { city }, {
+                headers: { Authorization: `Bearer ${token}` },
+            });
+        }
 
         // Add destination to searchedCities max 3 recent searches
         setSearchedCities((prevSearchedCities: any) => {
-            const updatedSearchedCities = [...prevSearchedCities, destination]
+            const updatedSearchedCities = [...prevSearchedCities, city]
             if (updatedSearchedCities.length > 3) {
                 updatedSearchedCities.shift()
             }

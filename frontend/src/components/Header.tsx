@@ -41,7 +41,7 @@ const Header = () => {
 
         // Redirect to listing page if not already there
         if (e.target.value && location.pathname !== '/listing') {
-            navigate('listing');
+            navigate('/listing');
         }
     }
 

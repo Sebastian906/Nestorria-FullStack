@@ -91,7 +91,14 @@ const Listing = () => {
     // Filtered & sorted properties
     const filteredProperties = useMemo(() => {
         return (
-            properties.filter(p => matchesType(p) && matchesPrice(p) && matchesSearch(p) && matchesHeroDestination(p)).sort(sortProperties)
+            properties
+                .filter(p =>
+                    matchesType(p) &&
+                    matchesPrice(p) &&
+                    (!heroDestination ? matchesSearch(p) : true) &&
+                    matchesHeroDestination(p)
+                )
+                .sort(sortProperties)
         );
     }, [properties, selectedFilters, selectedSort, searchQuery, heroDestination]);
 
