@@ -11,7 +11,7 @@ const Header = () => {
     const [menuOpened, setMenuOpened] = useState<boolean>(false)
     const [showSearch, setShowSearch] = useState<boolean>(false)
     const location = useLocation()
-    const { navigate, user, isOwner, setShowAgencyReg } = useAppContext()
+    const { navigate, user, isOwner, setShowAgencyReg, searchQuery, setSearchQuery } = useAppContext()
     const { openSignIn } = useClerk();
 
     const BookingIcon = () => (
@@ -35,6 +35,15 @@ const Header = () => {
     )
 
     const toggleMenu = () => setMenuOpened((prev) => !prev)
+
+    const handleSearchChange = (e: any) => {
+        setSearchQuery(e.target.value);
+
+        // Redirect to listing page if not already there
+        if (e.target.value && location.pathname !== '/listing') {
+            navigate('listing');
+        }
+    }
 
     useEffect(() => {
         const handleScroll = () => {
@@ -89,16 +98,20 @@ const Header = () => {
                         </div>
                         {/* SEARCH BAR */}
                         <div className='relative hidden xl:flex items-center'>
+                            {/* SEARCH INPUT */}
                             <div className={`${active ? 'bg-secondary/10' : 'bg-white'} transition-all duration-300 ease-in-out ring-1 ring-slate-900/10 rounded-full overflow-hidden ${showSearch
                                 ? 'w-66.5 opacity-100 px-4 py-2'
                                 : 'w-11 opacity-0 px-0 py-0'
                                 }`}>
                                 <input
+                                    onChange={handleSearchChange}
+                                    value={searchQuery}
                                     type="text"
                                     placeholder='Type here...'
                                     className='w-full text-sm outline-none pr-10 placeholder:text-slate-400'
                                 />
                             </div>
+                            {/* SEARCH TOGGLE BUTTON */}
                             <div
                                 onClick={() => setShowSearch(prev => !prev)}
                                 className={`${active ? 'bg-secondary/10' : 'bg-primary'} absolute right-0 ring-1 ring-slate-900/10 p-2 rounded-full cursor-pointer z-10`}
