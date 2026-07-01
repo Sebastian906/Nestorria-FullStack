@@ -1,6 +1,6 @@
 import { createContext, useContext, useEffect, useState, type ReactNode, type Dispatch, type SetStateAction } from "react"
 import { useNavigate, type NavigateFunction } from "react-router-dom"
-import { dummyProperties, type Property } from "../assets/data"
+import { type Property } from "../assets/data"
 import { useAuth, useUser } from "@clerk/react"
 import axios from "axios"
 import toast from "react-hot-toast"
@@ -38,7 +38,26 @@ export const AppContextProvider = ({ children }: { children: ReactNode }) => {
     const [searchedCities, setSearchedCities] = useState<string[]>([])
     const [searchQuery, setSearchQuery] = useState<string>('')
 
-    const getProperties = () => setProperties(dummyProperties)
+    const getProperties = async () => {
+        try {
+            const { data } = await axios.get('/api/properties/me');
+
+            const mappedProperties = data.map((prop: any) => ({
+                ...prop,
+                _id: prop.id,
+                agency: prop.agency ? {
+                    ...prop.agency,
+                    owner: {
+                        image: prop.agency.ownerImage || "https://images.unsplash.com/photo-1560250097-0b93528c311a"
+                    }
+                } : null
+            }));
+
+            setProperties(mappedProperties);
+        } catch (error: any) {
+            toast.error('No se pudieron cargar las propiedades');
+        }
+    };
 
     const getUserProfile = async () => {
         try {

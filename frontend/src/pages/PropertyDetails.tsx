@@ -3,12 +3,70 @@ import { useAppContext } from "../context/AppContext"
 import { useParams } from "react-router-dom"
 import PropertyImages from "../components/PropertyImages"
 import { assets } from "../assets/data"
+import axios from "axios"
+import { useAuth } from "@clerk/react"
+import toast from "react-hot-toast"
 
 const PropertyDetails = () => {
 
-    const { properties, currency } = useAppContext()
+    const { properties, currency, navigate } = useAppContext()
+    const { getToken } = useAuth()
     const [property, setProperty] = useState<any>(null)
     const { id } = useParams()
+    const [checkInDate, setCheckInDate] = useState<any>(null)
+    const [checkOutDate, setCheckOutDate] = useState<any>(null)
+    const [guests, setGuests] = useState<number>(1)
+    const [isAvailable, setIsAvailable] = useState<boolean | null>(null)
+
+    const checkAvailability = async () => {
+        try {
+            // Check if checkInDate is greater than checkOutDate
+            if (checkInDate > checkOutDate) {
+                toast.error("checkInDate should be less than checkOutDate");
+                return
+            }
+            const { data } = await axios.post(`/api/bookings/check-availability`, {
+                propertyId: id,
+                checkInDate,
+                checkOutDate
+            }, {
+                headers: { Authorization: `Bearer ${await getToken()}` },
+            });
+            if (data.isAvailable) {
+                setIsAvailable(true);
+                toast.success("Property is available");
+            } else {
+                toast.error("Property is not available for the selected dates");
+            }
+        } catch (error: any) {
+            toast.error(error.message);
+        }
+    };
+
+    // Book Property if isAvailable
+    const onSubmitHandler = async (e: any) => {
+        try {
+            e.preventDefault()
+            if (!isAvailable) { 
+                return checkAvailability()
+            } else {
+                await axios.post(`/api/bookings`, {
+                    propertyId: id,
+                    checkInDate,
+                    checkOutDate,
+                    guests,
+                    paymentMethod: "Pay at check-in"
+                }, {
+                    headers: { Authorization: `Bearer ${await getToken()}` },
+                });
+                toast.success("Booking confirmed successfully!");
+                navigate('/my-bookings')
+                scrollTo(0, 0)
+            }
+        } catch (error: any) {
+            toast.error(error.response?.data?.message || error.message);
+        }
+    }
 
     useEffect(() => {
         const property = properties.find((property) => property._id === id)
@@ -120,7 +178,10 @@ const PropertyDetails = () => {
                                 ))}
                             </div>
                             {/* FORM | CHECK AVAILABILITY */}
-                            <form className='text-slate-500 bg-secondary/10 rounded-lg px-6 py-4 flex flex-col lg:flex-row gap-4 max-w-md lg:max-w-full ring-1 ring-slate-900/5 relative mt-10'>
+                            <form
+                                onSubmit={onSubmitHandler}
+                                className='text-slate-500 bg-secondary/10 rounded-lg px-6 py-4 flex flex-col lg:flex-row gap-4 max-w-md lg:max-w-full ring-1 ring-slate-900/5 relative mt-10'
+                            >
                                 <div className='flex flex-col w-full'>
                                     <div className='flex items-center gap-2'>
                                         <img
@@ -131,6 +192,8 @@ const PropertyDetails = () => {
                                         <label htmlFor='checkInDate'>Check In</label>
                                     </div>
                                     <input
+                                        onChange={(e) => setCheckInDate(e.target.value)}
+                                        min={new Date().toISOString().split("T")[0]}
                                         type='date'
                                         id='checkInDate'
                                         className='rounded bg-secondary/10 border border-gray-200 px-3 py-1.5 text-sm outline-none'
@@ -146,8 +209,11 @@ const PropertyDetails = () => {
                                         <label htmlFor='checkOutDate'>Check Out</label>
                                     </div>
                                     <input
+                                        onChange={(e) => setCheckOutDate(e.target.value)}
+                                        min={checkInDate}
                                         type='date'
                                         id='checkOutDate'
+                                        disabled={!checkInDate}
                                         className='rounded bg-secondary/10 border border-gray-200 px-3 py-1.5 text-sm outline-none'
                                     />
                                 </div>
@@ -161,6 +227,8 @@ const PropertyDetails = () => {
                                         <label htmlFor='guests'>Guests</label>
                                     </div>
                                     <input
+                                        onChange={(e) => setGuests(Number(e.target.value))}
+                                        value={guests}
                                         type='number'
                                         id='guests'
                                         min={1}
@@ -179,7 +247,7 @@ const PropertyDetails = () => {
                                         width={20}
                                         className='invert'
                                     />
-                                    <span>Search</span>
+                                    <span>{isAvailable ? 'Book Property' : 'Check Dates'}</span>
                                 </button>
                             </form>
                         </div>
