@@ -20,8 +20,11 @@ const PropertyDetails = () => {
 
     const checkAvailability = async () => {
         try {
-            // Check if checkInDate is greater than checkOutDate
-            if (checkInDate > checkOutDate) {
+            if (!checkInDate || !checkOutDate) {
+                toast.error("Please select check-in and check-out dates");
+                return
+            }
+            if (checkInDate >= checkOutDate) {
                 toast.error("checkInDate should be less than checkOutDate");
                 return
             }
@@ -36,9 +39,11 @@ const PropertyDetails = () => {
                 setIsAvailable(true);
                 toast.success("Property is available");
             } else {
+                setIsAvailable(false);
                 toast.error("Property is not available for the selected dates");
             }
         } catch (error: any) {
+            setIsAvailable(false);
             toast.error(error.message);
         }
     };
@@ -192,7 +197,8 @@ const PropertyDetails = () => {
                                         <label htmlFor='checkInDate'>Check In</label>
                                     </div>
                                     <input
-                                        onChange={(e) => setCheckInDate(e.target.value)}
+                                        onChange={(e) => { setCheckInDate(e.target.value); setIsAvailable(null) }}
+                                        value={checkInDate ?? ''}
                                         min={new Date().toISOString().split("T")[0]}
                                         type='date'
                                         id='checkInDate'
@@ -209,7 +215,8 @@ const PropertyDetails = () => {
                                         <label htmlFor='checkOutDate'>Check Out</label>
                                     </div>
                                     <input
-                                        onChange={(e) => setCheckOutDate(e.target.value)}
+                                        onChange={(e) => { setCheckOutDate(e.target.value); setIsAvailable(null) }}
+                                        value={checkOutDate ?? ''}
                                         min={checkInDate}
                                         type='date'
                                         id='checkOutDate'
