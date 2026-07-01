@@ -172,7 +172,7 @@ const PropertyDetails = () => {
                                 <p className='mb-4'>{property.description}</p>
                             </div>
                             <h4 className='h4 mt-6 mb-2'>Amenities</h4>
-                            <div className='flex gap-3'>
+                            <div className='flex flex-wrap gap-3 items-start'>
                                 {property.amenities.map((amenity: any, index: any) => (
                                     <div
                                         key={index}

@@ -11,6 +11,7 @@ import com.nestorria.server.modules.properties.embeddable.PriceDetails;
 public record PropertySummaryResponse(
     String id,
     String title,
+    String description,
     String city,
     String country,
     String address,
@@ -27,6 +28,7 @@ public record PropertySummaryResponse(
         return new PropertySummaryResponse(
             p.getId(),
             p.getTitle(),
+            p.getDescription(),
             p.getCity(),
             p.getCountry(),
             p.getAddress(),
