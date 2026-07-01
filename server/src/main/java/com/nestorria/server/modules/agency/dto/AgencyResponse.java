@@ -9,7 +9,8 @@ public record AgencyResponse(
     String contact,
     String email,
     String city,
-    String ownerId
+    String ownerId,
+    String ownerImage
 ) {
     public static AgencyResponse fromEntity(Agency agency) {
         return new AgencyResponse(
@@ -19,7 +20,8 @@ public record AgencyResponse(
             agency.getContact(),
             agency.getEmail(),
             agency.getCity(),
-            agency.getOwner().getId()
+            agency.getOwner().getId(),
+            agency.getOwner().getImage()
         );
     }
 }
