@@ -26,7 +26,7 @@ const MyBookings = () => {
     const [bookings, setBookings] = useState<ApiBooking[]>([])
     const { currency, user } = useAppContext()
     const { getToken } = useAuth()
-    const [loading, setLoading] = useState(false)
+    const [loading, setLoading] = useState(true)
 
     const getUserBookings = async () => {
         setLoading(true)
@@ -89,7 +89,7 @@ const MyBookings = () => {
                                         alt="pinIcon"
                                         width={13}
                                     />
-                                    <p className='text-sm'>{booking.property.address}</p>
+                                    <p className='text-sm'>{booking.property?.address}</p>
                                 </div>
                             </div>
                         </div>
