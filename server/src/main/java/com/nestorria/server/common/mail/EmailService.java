@@ -1,5 +1,9 @@
 package com.nestorria.server.common.mail;
 
+import java.time.format.DateTimeFormatter;
+import java.time.format.FormatStyle;
+import java.util.Locale;
+
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.mail.javamail.MimeMessageHelper;
 import org.springframework.scheduling.annotation.Async;
@@ -34,12 +38,15 @@ public class EmailService {
             helper.setText(buildBookingHtml(data), true); // true = isHtml
 
             mailSender.send(message);
-            log.info("Correo de confirmación enviado a {}", data.userEmail());
+            log.info("Correo de confirmación enviado (bookingId={})", data.bookingId());
         } catch (Exception e) {
             // El correo falla silenciosamente: la reserva ya fue guardada
-            log.error("Error al enviar correo de confirmación a {}: {}", data.userEmail(), e.getMessage());
+            log.error("Error al enviar correo de confirmación (bookingId={}): {}", data.bookingId(), e.getMessage());
         }
     }
+
+    private static final DateTimeFormatter DATE_FORMATTER =
+        DateTimeFormatter.ofLocalizedDate(FormatStyle.MEDIUM).withLocale(new Locale("es", "ES"));
 
     private String buildBookingHtml(BookingEmailData data) {
         return """
@@ -60,8 +67,8 @@ public class EmailService {
             data.bookingId(),
             data.agencyName(),
             data.propertyAddress(),
-            data.checkInDate(),
-            data.checkOutDate(),
+            data.checkInDate().format(DATE_FORMATTER),
+            data.checkOutDate().format(DATE_FORMATTER),
             appProperties.currency(),
             data.totalPrice(),
             data.nights(),
