@@ -45,6 +45,7 @@ public class EmailService {
         }
     }
 
+    @SuppressWarnings("deprecation")
     private static final DateTimeFormatter DATE_FORMATTER =
         DateTimeFormatter.ofLocalizedDate(FormatStyle.MEDIUM).withLocale(new Locale("es", "ES"));
 
