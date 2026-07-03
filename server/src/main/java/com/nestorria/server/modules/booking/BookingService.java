@@ -10,6 +10,8 @@ import org.springframework.transaction.annotation.Transactional;
 import com.nestorria.server.common.exception.BadRequestException;
 import com.nestorria.server.common.exception.ConflictException;
 import com.nestorria.server.common.exception.ResourceNotFoundException;
+import com.nestorria.server.common.mail.BookingEmailData;
+import com.nestorria.server.common.mail.EmailService;
 import com.nestorria.server.modules.agency.Agency;
 import com.nestorria.server.modules.agency.AgencyRepository;
 import com.nestorria.server.modules.booking.dto.AgencyDashboardResponse;
@@ -28,16 +30,19 @@ public class BookingService {
     private final PropertyRepository propertyRepository;
     private final AgencyRepository agencyRepository;
     private final UserRepository userRepository;
+    private final EmailService emailService;
 
     public BookingService(
             BookingRepository bookingRepository,
             PropertyRepository propertyRepository,
             AgencyRepository agencyRepository,
-            UserRepository userRepository) {
+            UserRepository userRepository,
+            EmailService emailService) {
         this.bookingRepository = bookingRepository;
         this.propertyRepository = propertyRepository;
         this.agencyRepository = agencyRepository;
         this.userRepository = userRepository;
+        this.emailService = emailService;
     }
 
     @Transactional(readOnly = true)
@@ -74,16 +79,26 @@ public class BookingService {
         long totalPrice = (long) (rentPrice * nights);
 
         Booking booking = new Booking(
-            user,
-            property,
-            property.getAgency(),
+            user, property, property.getAgency(),
+            request.checkInDate(), request.checkOutDate(),
+            totalPrice, request.guests()
+        );
+
+        BookingResponse response = BookingResponse.fromEntity(bookingRepository.save(booking));
+
+        emailService.sendBookingConfirmation(new BookingEmailData(
+            booking.getId(),
+            user.getEmail(),
+            property.getAgency().getName(),
+            property.getAddress(),
             request.checkInDate(),
             request.checkOutDate(),
             totalPrice,
+            nights,
             request.guests()
-        );
+        ));
 
-        return BookingResponse.fromEntity(bookingRepository.save(booking));
+        return response;
     }
 
     @Transactional(readOnly = true)
