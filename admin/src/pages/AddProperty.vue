@@ -108,7 +108,7 @@ const handleSubmit = async () => {
 
     loading.value = true
     try {
-        const token = await getToken.value()
+        const token = await getToken()
         if (!token) {
             toast.error('Authentication error. Please log in again.')
             return

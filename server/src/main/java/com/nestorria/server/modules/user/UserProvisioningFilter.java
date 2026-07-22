@@ -55,9 +55,10 @@ public class UserProvisioningFilter extends OncePerRequestFilter {
         String name = jwt.getClaimAsString("name");
         String image = jwt.getClaimAsString("image_url");
 
-        if (email == null || name == null || image == null) {  
-            logger.warn("Incomplete JWT claims for user {}: email={}, name={}, image={}");  
-            return; 
+        if (email == null || name == null || image == null) {
+            logger.warn("Incomplete JWT claims for user " + userId
+                + ": email=" + email + ", name=" + name + ", image=" + image);
+            return;
         }  
 
         User user = new User(userId, name, email, image);

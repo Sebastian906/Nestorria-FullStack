@@ -50,7 +50,19 @@ public class SecurityConfig {
             )
             .oauth2ResourceServer(oauth2 -> oauth2.jwt(Customizer.withDefaults()))
             .addFilterAfter(provisioningFilter, BearerTokenAuthenticationFilter.class);
-
+        http
+            .exceptionHandling(exceptions -> exceptions
+                .authenticationEntryPoint((request, response, authException) -> {
+                    response.setStatus(401);
+                    response.setContentType("application/json");
+                    response.getWriter().write("{\"timestamp\":\"" + java.time.Instant.now() + "\",\"message\":\"No autenticado: " + authException.getMessage() + "\"}");
+                })
+                .accessDeniedHandler((request, response, accessDeniedException) -> {
+                    response.setStatus(403);
+                    response.setContentType("application/json");
+                    response.getWriter().write("{\"timestamp\":\"" + java.time.Instant.now() + "\",\"message\":\"Acceso denegado: " + accessDeniedException.getMessage() + "\"}");
+                })
+            );
         return http.build();
     }
 }
