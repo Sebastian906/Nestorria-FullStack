@@ -55,7 +55,12 @@ export const AppContextProvider = ({ children }: { children: ReactNode }) => {
 
             setProperties(mappedProperties);
         } catch (error: any) {
-            toast.error('No se pudieron cargar las propiedades');
+            // Silenciar errores de red en carga inicial (puede ser offline)
+            if (error.code === 'ERR_NETWORK') {
+                console.warn('Network error loading properties');
+            } else {
+                toast.error('No se pudieron cargar las propiedades');
+            }
         }
     };
 

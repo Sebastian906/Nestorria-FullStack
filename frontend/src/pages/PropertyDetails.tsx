@@ -164,7 +164,7 @@ const PropertyDetails = () => {
                                         alt="ruler icon"
                                         width={18}
                                     />
-                                    400
+                                    {property.area}
                                 </p>
                             </div>
                             <div className="mt-6">

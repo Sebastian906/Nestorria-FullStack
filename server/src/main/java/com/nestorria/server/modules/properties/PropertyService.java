@@ -9,6 +9,8 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
 import com.cloudinary.Cloudinary;
+import com.nestorria.server.common.exception.BadRequestException;
+import com.nestorria.server.common.exception.ConflictException;
 import com.nestorria.server.common.exception.ResourceNotFoundException;
 import com.nestorria.server.modules.agency.Agency;
 import com.nestorria.server.modules.agency.AgencyRepository;
@@ -98,11 +100,11 @@ public class PropertyService {
     @SuppressWarnings("unchecked")
     private String uploadSingle(MultipartFile file) {
         if (file == null || file.isEmpty()) {
-            throw new IllegalArgumentException("El archivo de imagen está vacío");
+            throw new BadRequestException("El archivo de imagen está vacío");
         }
         String contentType = file.getContentType();
         if (contentType == null || !contentType.startsWith("image/")) {
-            throw new IllegalArgumentException("Solo se permiten archivos de imagen");
+            throw new BadRequestException("Solo se permiten archivos de imagen");
         }
         try {
             Map<String, Object> result = cloudinary.uploader().upload(
@@ -114,7 +116,7 @@ public class PropertyService {
             );
             return (String) result.get("secure_url");
         } catch (IOException e) {
-            throw new RuntimeException("Error al subir imagen a Cloudinary: " + e.getMessage(), e);
+            throw new ConflictException("Error al subir imagen a Cloudinary: " + e.getMessage());
         }
     }
 }

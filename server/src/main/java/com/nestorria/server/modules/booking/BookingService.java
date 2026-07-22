@@ -60,7 +60,7 @@ public class BookingService {
     public BookingResponse createBooking(String userId, CreateBookingRequest request) {
         validateDateRange(request.checkInDate(), request.checkOutDate());
 
-        Property property = bookingRepository.findByIdWithLock(request.propertyId())
+        Property property = bookingRepository.findPropertyForUpdate(request.propertyId())
             .orElseThrow(() -> new ResourceNotFoundException("Propiedad no encontrada: " + request.propertyId()));
 
         if (!isPropertyAvailable(request.propertyId(), request.checkInDate(), request.checkOutDate())) {
@@ -76,7 +76,10 @@ public class BookingService {
             .orElseThrow(() -> new ResourceNotFoundException("Usuario no encontrado: " + userId));
 
         long nights = ChronoUnit.DAYS.between(request.checkInDate(), request.checkOutDate());
-        long totalPrice = (long) (rentPrice * nights);
+        if (nights <= 0) {
+            throw new BadRequestException("La reserva debe ser de al menos una noche");
+        }
+        long totalPrice = (long) rentPrice * nights;
 
         Booking booking = new Booking(
             user, property, property.getAgency(),
