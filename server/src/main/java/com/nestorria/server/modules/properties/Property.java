@@ -10,6 +10,7 @@ import com.nestorria.server.common.persistence.Auditable;
 import com.nestorria.server.modules.agency.Agency;
 import com.nestorria.server.modules.properties.embeddable.FacilityDetails;
 import com.nestorria.server.modules.properties.embeddable.PriceDetails;
+import com.nestorria.server.modules.properties.embeddable.PropertyLocation;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Embedded;
@@ -81,6 +82,9 @@ public class Property extends Auditable {
     @Embedded
     private FacilityDetails facilities = new FacilityDetails();
 
+    @Embedded
+    private PropertyLocation location;
+
     @JdbcTypeCode(SqlTypes.ARRAY)
     @Column(columnDefinition = "text[]")
     private List<String> amenities = new ArrayList<>();
@@ -103,7 +107,8 @@ public class Property extends Auditable {
             PropertyType propertyType,
             PriceDetails price,
             FacilityDetails facilities,
-            List<String> amenities
+            List<String> amenities,
+            PropertyLocation location
     ) {
         this.agency = agency;
         this.title = title;
@@ -116,6 +121,7 @@ public class Property extends Auditable {
         this.price = price;
         this.facilities = facilities;
         this.amenities = amenities;
+        this.location = location;
     }
 
     public void toggleAvailability() {

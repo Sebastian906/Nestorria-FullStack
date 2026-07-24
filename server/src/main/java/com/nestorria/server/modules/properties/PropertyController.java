@@ -16,11 +16,14 @@ import org.springframework.web.bind.annotation.RequestPart;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 
+import com.nestorria.server.common.exception.BadRequestException;
 import com.nestorria.server.modules.properties.dto.CreatePropertyRequest;
+import com.nestorria.server.modules.properties.dto.NearbySearchRequest;
 import com.nestorria.server.modules.properties.dto.PropertyResponse;
 import com.nestorria.server.modules.properties.dto.PropertySummaryResponse;
 import com.nestorria.server.modules.properties.dto.ToggleAvailabilityRequest;
 
+import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 
@@ -30,9 +33,11 @@ import jakarta.validation.Valid;
 public class PropertyController {
 
     private final PropertyService propertyService;
+    private final PropertySearchService propertySearchService;
 
-    public PropertyController(PropertyService propertyService) {
+    public PropertyController(PropertyService propertyService, PropertySearchService propertySearchService) {
         this.propertyService = propertyService;
+        this.propertySearchService = propertySearchService;
     }
 
     // POST /api/properties — requiere autenticación y agencia registrada
@@ -66,5 +71,26 @@ public class PropertyController {
 
         propertyService.toggleAvailability(jwt.getSubject(), new ToggleAvailabilityRequest(id));
         return ResponseEntity.noContent().build();
+    }
+
+    @Operation(summary = "Buscar propiedades cercanas por coordenadas (público)")
+    @GetMapping("/nearby")
+    public List<PropertySummaryResponse> findNearby(@Valid NearbySearchRequest request) {
+        if (request.lat() == null || request.lng() == null) {
+            throw new BadRequestException("Los parámetros lat y lng son obligatorios para la búsqueda cercana");
+        }
+        return propertySearchService.findNearby(request.lat(), request.lng(), request.radiusKm());
+    }
+
+    @Operation(summary = "Búsqueda combinada de propiedades con filtros (requiere autenticación)")
+    @GetMapping("/search")
+    public List<PropertySummaryResponse> search(
+            @AuthenticationPrincipal Jwt jwt,
+            @Valid NearbySearchRequest request) {
+        return propertySearchService.findByFilters(
+            request.city(), request.propertyType(),
+            request.minPrice(), request.maxPrice(),
+            request.lat(), request.lng(), request.radiusKm()
+        );
     }
 }

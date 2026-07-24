@@ -7,6 +7,7 @@ import com.nestorria.server.modules.properties.Property;
 import com.nestorria.server.modules.properties.PropertyType;
 import com.nestorria.server.modules.properties.embeddable.FacilityDetails;
 import com.nestorria.server.modules.properties.embeddable.PriceDetails;
+import com.nestorria.server.modules.properties.embeddable.PropertyLocation;
 
 public record PropertyResponse(
     String id,
@@ -22,6 +23,7 @@ public record PropertyResponse(
     List<String> amenities,
     List<String> images,
     boolean isAvailable,
+    PropertyLocation location,
     AgencyResponse agency
 ) {
     public static PropertyResponse fromEntity(Property p) {
@@ -39,6 +41,7 @@ public record PropertyResponse(
             p.getAmenities(),
             p.getImages(),
             p.isAvailable(),
+            p.getLocation(),
             AgencyResponse.fromEntity(p.getAgency())
         );
     }

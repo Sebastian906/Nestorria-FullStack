@@ -4,6 +4,8 @@ import java.util.List;
 
 import com.nestorria.server.modules.properties.PropertyType;
 
+import jakarta.validation.constraints.DecimalMax;
+import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
@@ -21,5 +23,9 @@ public record CreatePropertyRequest(
     @Min(0) int bedrooms,
     @Min(0) int bathrooms,
     @Min(0) int garages,
-    @NotNull List<String> amenities
+    @NotNull List<String> amenities,
+    @DecimalMin("-90.0") @DecimalMax("90.0") Double latitude,
+    @DecimalMin("-180.0") @DecimalMax("180.0") Double longitude,
+    String neighborhood,
+    String postalCode
 ) {}
