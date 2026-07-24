@@ -55,7 +55,7 @@ public interface PropertySearchRepository extends JpaRepository<Property, String
           AND (:maxPrice IS NULL
                OR (p.price_sale IS NOT NULL AND p.price_sale <= :maxPrice)
                OR (p.price_rent IS NOT NULL AND p.price_rent <= :maxPrice))
-        ORDER BY ST_DDistance(
+        ORDER BY ST_Distance(
                    ST_SetSRID(ST_MakePoint(p.location_longitude, p.location_latitude), 4326)::geography,
                    ST_SetSRID(ST_MakePoint(:lng, :lat), 4326)::geography
                  )
