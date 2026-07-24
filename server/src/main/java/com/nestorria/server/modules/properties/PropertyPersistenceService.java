@@ -10,6 +10,7 @@ import com.nestorria.server.modules.properties.dto.CreatePropertyRequest;
 import com.nestorria.server.modules.properties.dto.PropertyResponse;
 import com.nestorria.server.modules.properties.embeddable.FacilityDetails;
 import com.nestorria.server.modules.properties.embeddable.PriceDetails;
+import com.nestorria.server.modules.properties.embeddable.PropertyLocation;
 
 @Service
 public class PropertyPersistenceService {
@@ -22,6 +23,16 @@ public class PropertyPersistenceService {
 
     @Transactional
     public PropertyResponse persistProperty(Agency agency, CreatePropertyRequest request, List<String> imageUrls) {
+        PropertyLocation location = null;
+        if (request.latitude() != null && request.longitude() != null) {
+            location = new PropertyLocation(
+                request.latitude(),
+                request.longitude(),
+                request.neighborhood(),
+                request.postalCode()
+            );
+        }
+
         Property property = new Property(
             agency,
             request.title(),
@@ -33,7 +44,8 @@ public class PropertyPersistenceService {
             request.propertyType(),
             new PriceDetails(request.priceRent(), request.priceSale()),
             new FacilityDetails(request.bedrooms(), request.bathrooms(), request.garages()),
-            request.amenities()
+            request.amenities(),
+            location
         );
         property.setImages(imageUrls);
         return PropertyResponse.fromEntity(propertyRepository.save(property));
