@@ -10,7 +10,7 @@ interface Filters {
 }
 
 const Listing = () => {
-    const { properties, searchQuery } = useAppContext();
+    const { properties, searchQuery, user, favoriteIds } = useAppContext()
     const [selectedFilters, setSelectedFilters] = useState<Filters>({
         propertyType: [],
         priceRange: [],
@@ -18,7 +18,10 @@ const Listing = () => {
 
     const [selectedSort, setSelectedSort] = useState<string | null>(null)
 
-    const [searchParams] = useSearchParams()
+    const [searchParams, setSearchParams] = useSearchParams()
+    const [showOnlyFavorites, setShowOnlyFavorites] = useState<boolean>(
+        () => searchParams.get("favorites") === "true"
+    )
     const heroDestination = (searchParams.get("destination") || "").toLowerCase().trim()
 
     const sortOptions = ['Relevant', 'Low to High', 'High to Low', 'Newest', 'Oldest']
@@ -96,11 +99,12 @@ const Listing = () => {
                     matchesType(p) &&
                     matchesPrice(p) &&
                     (!heroDestination ? matchesSearch(p) : true) &&
-                    matchesHeroDestination(p)
+                    matchesHeroDestination(p) &&
+                    (!showOnlyFavorites || favoriteIds.has(p._id))
                 )
                 .sort(sortProperties)
         );
-    }, [properties, selectedFilters, selectedSort, searchQuery, heroDestination]);
+    }, [properties, selectedFilters, selectedSort, searchQuery, heroDestination, showOnlyFavorites, favoriteIds]);
 
     return (
         <div className='bg-linear-to-r from-[#F0FDF4] to-white py-16 pt-28'>
@@ -185,6 +189,27 @@ const Listing = () => {
                             </button>
                         </div>
                     </div>
+                    {/* FAVORITES FILTER */}
+                    {user && (
+                        <div className='py-4 mt-2 border-t border-slate-900/10'>
+                            <label className='flex items-center gap-3 medium-14 cursor-pointer'>
+                                <input
+                                    type="checkbox"
+                                    checked={showOnlyFavorites}
+                                    onChange={(e) => {
+                                        setShowOnlyFavorites(e.target.checked)
+                                        if (e.target.checked) {
+                                            setSearchParams({ favorites: 'true' })
+                                        } else {
+                                            setSearchParams({})
+                                        }
+                                    }}
+                                    className="w-4 h-4 cursor-pointer"
+                                />
+                                Show Favorites Only
+                            </label>
+                        </div>
+                    )}
                 </div>
                 {/* RIGHT SIDE - PROPERTY LIST */}
                 <div className='min-h-[97vh] overflow-y-scroll rounded-xl w-full'>
