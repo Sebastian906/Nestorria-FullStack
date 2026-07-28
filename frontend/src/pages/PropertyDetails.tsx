@@ -9,7 +9,7 @@ import toast from "react-hot-toast"
 
 const PropertyDetails = () => {
 
-    const { properties, currency, navigate } = useAppContext()
+    const { properties, currency, navigate, user, favoriteIds, toggleFavorite } = useAppContext()
     const { getToken } = useAuth()
     const [property, setProperty] = useState<any>(null)
     const { id } = useParams()
@@ -102,6 +102,31 @@ const PropertyDetails = () => {
                                     {currency}{property.price.sale} | {currency}{property.price.rent}.00/night
                                 </div>
                             </div>
+                            {/* FAVORITE BUTTON */}
+                            {user && (
+                                <button
+                                    onClick={() => toggleFavorite(property._id)}
+                                    className='flex items-center gap-2 px-4 py-2 rounded-lg ring-1 ring-slate-900/10 hover:bg-secondary/10 transition-all'
+                                >
+                                    <svg
+                                        xmlns="http://www.w3.org/2000/svg"
+                                        width="22"
+                                        height="22"
+                                        viewBox="0 0 24 24"
+                                        fill={favoriteIds.has(property._id) ? "currentColor" : "none"}
+                                        stroke="currentColor"
+                                        strokeWidth="2"
+                                        strokeLinecap="round"
+                                        strokeLinejoin="round"
+                                        className={favoriteIds.has(property._id) ? "text-red-500" : "text-gray-400"}
+                                    >
+                                        <path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z" />
+                                    </svg>
+                                    <span className='text-sm font-medium'>
+                                        {favoriteIds.has(property._id) ? 'Saved' : 'Save'}
+                                    </span>
+                                </button>
+                            )}
                             <div className='flex justify-between items-start my-1'>
                                 <h4 className='h4 text-secondary'>{property.propertyType}</h4>
                                 <div className='flex items-baseline gap-2 text-amber-400 relative top-1.5'>

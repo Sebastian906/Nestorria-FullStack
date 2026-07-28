@@ -153,6 +153,16 @@ export interface DashboardData {
     bookings: Booking[];
 }
 
+export interface FavoriteResponse {
+    id: string;
+    propertyId: string;
+    propertyTitle: string;
+    propertyCity: string;
+    propertyImage: string | null;
+    propertyPrice: number | null;
+    favoritedAt: string;
+}
+
 // --- DATOS EXPORTADOS ---
 
 export const assets: Record<string, string> = {

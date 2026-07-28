@@ -6,6 +6,7 @@ import axios from "axios"
 import toast from "react-hot-toast"
 
 axios.defaults.baseURL = import.meta.env.VITE_BACKEND_URL
+
 interface AppContextType {
     navigate: NavigateFunction;
     properties: Property[];
@@ -19,13 +20,11 @@ interface AppContextType {
     refreshProfile: () => Promise<void>;
     searchQuery: string;
     setSearchQuery: (query: string) => void;
+    favoriteIds: Set<string>;
+    toggleFavorite: (propertyId: string) => Promise<boolean>;
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined)
-
-// interface AppContextProviderProps {
-//     children: ReactNode;
-// }
 
 export const AppContextProvider = ({ children }: { children: ReactNode }) => {
     const currency: string = import.meta.env.VITE_CURRENCY ?? '$'
@@ -37,6 +36,7 @@ export const AppContextProvider = ({ children }: { children: ReactNode }) => {
     const [isOwner, setIsOwner] = useState<boolean>(false)
     const [searchedCities, setSearchedCities] = useState<string[]>([])
     const [searchQuery, setSearchQuery] = useState<string>('')
+    const [favoriteIds, setFavoriteIds] = useState<Set<string>>(new Set())
 
     const getProperties = async () => {
         try {
@@ -80,6 +80,56 @@ export const AppContextProvider = ({ children }: { children: ReactNode }) => {
         }
     }
 
+    const loadFavorites = async () => {
+        try {
+            const token = await getToken()
+            if (!token) {
+                setFavoriteIds(new Set())
+                return
+            }
+            const { data } = await axios.get('/api/favorites/me', {
+                headers: { Authorization: `Bearer ${token}` }
+            })
+            const ids = new Set<string>(data.map((fav: any) => fav.propertyId))
+            setFavoriteIds(ids)
+        } catch (error: any) {
+            // Silenciar errores de red
+            if (error.code !== 'ERR_NETWORK') {
+                console.warn('Error loading favorites')
+            }
+        }
+    }
+
+    const toggleFavorite = async (propertyId: string): Promise<boolean> => {
+        try {
+            const token = await getToken()
+            if (!token) {
+                toast.error('Inicia sesión para agregar favoritos')
+                return false
+            }
+            const { data } = await axios.post(`/api/properties/${propertyId}/favorite`, {}, {
+                headers: { Authorization: `Bearer ${token}` }
+            })
+            const favorited: boolean = data.favorited
+
+            setFavoriteIds(prev => {
+                const next = new Set(prev)
+                if (favorited) {
+                    next.add(propertyId)
+                } else {
+                    next.delete(propertyId)
+                }
+                return next
+            })
+
+            toast.success(favorited ? 'Agregado a favoritos' : 'Eliminado de favoritos')
+            return favorited
+        } catch (error: any) {
+            toast.error(error.response?.data?.message || 'No se pudo actualizar favorito')
+            return false
+        }
+    }
+
     useEffect(() => {
         getProperties()
     }, [])
@@ -87,9 +137,11 @@ export const AppContextProvider = ({ children }: { children: ReactNode }) => {
     useEffect(() => {
         if (user) {
             getUserProfile()
+            loadFavorites()
         } else {
             setIsOwner(false)
             setSearchedCities([])
+            setFavoriteIds(new Set())
         }
     }, [user])
 
@@ -106,6 +158,8 @@ export const AppContextProvider = ({ children }: { children: ReactNode }) => {
         refreshProfile: getUserProfile,
         searchQuery,
         setSearchQuery,
+        favoriteIds,
+        toggleFavorite,
     }
 
     return (

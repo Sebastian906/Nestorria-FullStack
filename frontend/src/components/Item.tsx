@@ -1,11 +1,22 @@
 import { Link } from "react-router-dom"
 import { assets } from "../assets/data"
 import { useAppContext } from "../context/AppContext"
+// import { useAuth } from "@clerk/react"
 
 {/* @ts-ignore */ }
 const Item = ({ property }) => {
 
-    const { currency } = useAppContext()
+    const { currency, user, favoriteIds, toggleFavorite } = useAppContext()
+    // const { getToken } = useAuth()
+
+    const handleFavoriteClick = async (e: React.MouseEvent) => {
+        e.preventDefault() // Evitar navegación del Link
+        e.stopPropagation()
+        if (!user) {
+            return
+        }
+        await toggleFavorite(property._id)
+    }
 
     return (
         <Link
@@ -19,6 +30,28 @@ const Item = ({ property }) => {
                     alt={property.title}
                     className='h-52 w-full aspect-square object-cover rounded-t-xl'
                 />
+                {/* FAVORITE ICON */}
+                {user && (
+                    <button
+                        onClick={handleFavoriteClick}
+                        className='absolute top-3 right-3 p-2 rounded-full bg-white/80 backdrop-blur-sm hover:bg-white transition-all shadow-sm'
+                    >
+                        <svg
+                            xmlns="http://www.w3.org/2000/svg"
+                            width="18"
+                            height="18"
+                            viewBox="0 0 24 24"
+                            fill={favoriteIds.has(property._id) ? "currentColor" : "none"}
+                            stroke="currentColor"
+                            strokeWidth="2"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            className={favoriteIds.has(property._id) ? "text-red-500" : "text-gray-500"}
+                        >
+                            <path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z" />
+                        </svg>
+                    </button>
+                )}
             </div>
             {/* INFO */}
             <div className='p-3'>
