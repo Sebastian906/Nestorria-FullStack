@@ -82,14 +82,14 @@ public class PropertyController {
     }
 
     @Operation(summary = "Toggle favorito de una propiedad (requiere autenticación)")
-    @ApiResponse(responseCode = "201", description = "Estado del favorito cambiado exitosamente")
+    @ApiResponse(responseCode = "200", description = "Estado del favorito cambiado exitosamente")
     @PostMapping("/{propertyId}/favorite")
     public ResponseEntity<Map<String, Boolean>> toggleFavorite(
             @AuthenticationPrincipal Jwt jwt,
             @PathVariable String propertyId) {
 
         boolean favorited = favoriteService.toggleFavorite(jwt.getSubject(), propertyId);
-        return ResponseEntity.status(HttpStatus.CREATED).body(Map.of("favorited", favorited));
+        return ResponseEntity.ok(Map.of("favorited", favorited));
     }
 
     @Operation(summary = "Buscar propiedades cercanas por coordenadas (público)")
