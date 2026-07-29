@@ -121,6 +121,8 @@ export interface Property {
     createdAt: string;
     updatedAt: string;
     __v: number;
+    averageRating: number | null;
+    reviewCount: number;
 }
 
 export interface Booking {
@@ -290,7 +292,9 @@ export const dummyProperties: Property[] = [
         "status": "available",
         "createdAt": "2025-04-10T06:26:04.013Z",
         "updatedAt": "2025-04-10T06:26:04.013Z",
-        "__v": 0
+        "__v": 0,
+        "averageRating": null,
+        "reviewCount": 0
     },
     {
         "_id": "67f76452197ac559e4089b8e",
@@ -317,7 +321,9 @@ export const dummyProperties: Property[] = [
         "status": "available",
         "createdAt": "2025-04-10T06:25:22.593Z",
         "updatedAt": "2025-04-10T06:25:22.593Z",
-        "__v": 0
+        "__v": 0,
+        "averageRating": null,
+        "reviewCount": 0
     },
     {
         "_id": "67f76406197ac559e4089b82",
@@ -344,7 +350,9 @@ export const dummyProperties: Property[] = [
         "status": "available",
         "createdAt": "2025-04-10T06:24:06.285Z",
         "updatedAt": "2025-04-10T06:24:06.285Z",
-        "__v": 0
+        "__v": 0,
+        "averageRating": null,
+        "reviewCount": 0
     },
     {
         "_id": "67f763d8197ac559e4089b7a",
@@ -371,7 +379,9 @@ export const dummyProperties: Property[] = [
         "status": "available",
         "createdAt": "2025-04-10T06:23:20.252Z",
         "updatedAt": "2025-04-10T06:23:20.252Z",
-        "__v": 0
+        "__v": 0,
+        "averageRating": null,
+        "reviewCount": 0
     },
     {
         "_id": "67f765aa197ac559e4089b9c",
@@ -398,7 +408,9 @@ export const dummyProperties: Property[] = [
         "status": "available",
         "createdAt": "2025-04-10T06:27:30.013Z",
         "updatedAt": "2025-04-10T06:27:30.013Z",
-        "__v": 0
+        "__v": 0,
+        "averageRating": null,
+        "reviewCount": 0
     },
     {
         "_id": "67f765f4197ac559e4089ba4",
@@ -425,7 +437,9 @@ export const dummyProperties: Property[] = [
         "status": "available",
         "createdAt": "2025-04-10T06:28:50.013Z",
         "updatedAt": "2025-04-10T06:28:50.013Z",
-        "__v": 0
+        "__v": 0,
+        "averageRating": null,
+        "reviewCount": 0
     }
 ];
 
