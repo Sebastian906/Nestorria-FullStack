@@ -14,7 +14,7 @@ interface Review {
     userName: string;
     userImage: string;
     rating: number;
-    comment: string;
+    comment?: string | null;
     isVerified: boolean;
     createdAt: string;
 }
@@ -152,12 +152,10 @@ const PropertyDetails = () => {
     }, [id])
 
     // Calcular rating promedio de las reviews cargadas (fallback si el property no tiene)
-    const averageRating = property?.averageRating ?? (
-        reviews.length > 0
-            ? reviews.reduce((sum, r) => sum + r.rating, 0) / reviews.length
-            : null
-    )
-    const reviewCount = property?.reviewCount ?? reviews.length
+    const reviewCount = reviews.length > 0 ? reviews.length : (property?.reviewCount ?? 0)
+    const averageRating = reviews.length > 0
+        ? reviews.reduce((sum, r) => sum + r.rating, 0) / reviews.length
+        : (property?.averageRating ?? null)
 
     // Renderizar estrellas interactivas para el formulario
     const renderInteractiveStars = () => {
