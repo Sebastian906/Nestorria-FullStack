@@ -7,6 +7,18 @@ import axios from "axios"
 import { useAuth } from "@clerk/react"
 import toast from "react-hot-toast"
 
+interface Review {
+    id: string;
+    propertyId: string;
+    userId: string;
+    userName: string;
+    userImage: string;
+    rating: number;
+    comment?: string | null;
+    isVerified: boolean;
+    createdAt: string;
+}
+
 const PropertyDetails = () => {
 
     const { properties, currency, navigate, user, favoriteIds, toggleFavorite } = useAppContext()
@@ -17,6 +29,14 @@ const PropertyDetails = () => {
     const [checkOutDate, setCheckOutDate] = useState<any>(null)
     const [guests, setGuests] = useState<number>(1)
     const [isAvailable, setIsAvailable] = useState<boolean | null>(null)
+
+    // Reviews state
+    const [reviews, setReviews] = useState<Review[]>([])
+    const [reviewsLoading, setReviewsLoading] = useState<boolean>(true)
+    const [newRating, setNewRating] = useState<number>(5)
+    const [newComment, setNewComment] = useState<string>("")
+    const [submittingReview, setSubmittingReview] = useState<boolean>(false)
+    const [hoveredStar, setHoveredStar] = useState<number>(0)
 
     const checkAvailability = async () => {
         try {
@@ -52,7 +72,7 @@ const PropertyDetails = () => {
     const onSubmitHandler = async (e: any) => {
         try {
             e.preventDefault()
-            if (!isAvailable) { 
+            if (!isAvailable) {
                 return checkAvailability()
             } else {
                 await axios.post(`/api/bookings`, {
@@ -73,10 +93,126 @@ const PropertyDetails = () => {
         }
     }
 
+    // Fetch reviews for this property (public endpoint)
+    const fetchReviews = async () => {
+        setReviewsLoading(true)
+        try {
+            const { data } = await axios.get(`/api/properties/${id}/reviews`)
+            setReviews(data)
+        } catch (error: any) {
+            console.warn("Error loading reviews:", error.message)
+        } finally {
+            setReviewsLoading(false)
+        }
+    }
+
+    // Submit a new review
+    const submitReview = async () => {
+        if (!user) {
+            toast.error("Inicia sesión para dejar una reseña")
+            return
+        }
+        if (newRating < 1 || newRating > 5) {
+            toast.error("La calificación debe ser entre 1 y 5")
+            return
+        }
+        setSubmittingReview(true)
+        try {
+            await axios.post(`/api/properties/${id}/reviews`, {
+                rating: newRating,
+                comment: newComment.trim() || undefined
+            }, {
+                headers: { Authorization: `Bearer ${await getToken()}` },
+            })
+            toast.success("Reseña publicada exitosamente")
+            setNewRating(5)
+            setNewComment("")
+            fetchReviews() // Recargar reviews
+        } catch (error: any) {
+            const message = error.response?.data?.message || error.message
+            if (error.response?.status === 409) {
+                toast.error("Ya has publicado una reseña para esta propiedad")
+            } else {
+                toast.error(message)
+            }
+        } finally {
+            setSubmittingReview(false)
+        }
+    }
+
     useEffect(() => {
         const property = properties.find((property) => property._id === id)
         property && setProperty(property)
     }, [properties])
+
+    useEffect(() => {
+        if (id) {
+            fetchReviews()
+        }
+    }, [id])
+
+    // Calcular rating promedio de las reviews cargadas (fallback si el property no tiene)
+    const reviewCount = reviews.length > 0 ? reviews.length : (property?.reviewCount ?? 0)
+    const averageRating = reviews.length > 0
+        ? reviews.reduce((sum, r) => sum + r.rating, 0) / reviews.length
+        : (property?.averageRating ?? null)
+
+    // Renderizar estrellas interactivas para el formulario
+    const renderInteractiveStars = () => {
+        const stars = []
+        for (let i = 1; i <= 5; i++) {
+            const isActive = i <= (hoveredStar || newRating)
+            stars.push(
+                <button
+                    key={i}
+                    type="button"
+                    onMouseEnter={() => setHoveredStar(i)}
+                    onMouseLeave={() => setHoveredStar(0)}
+                    onClick={() => setNewRating(i)}
+                    className="cursor-pointer transition-transform hover:scale-110"
+                >
+                    <img
+                        src={assets.star}
+                        alt={`${i} star`}
+                        width={24}
+                        className={isActive ? "text-amber-400" : "text-gray-300 opacity-40"}
+                    />
+                </button>
+            )
+        }
+        return stars
+    }
+
+    // Renderizar estrellas de solo lectura
+    const renderReadonlyStars = (rating: number) => {
+        const stars = []
+        for (let i = 1; i <= 5; i++) {
+            stars.push(
+                <img
+                    key={i}
+                    src={assets.star}
+                    alt="star"
+                    width={14}
+                    className={i <= rating ? "text-amber-400" : "text-gray-300 opacity-30"}
+                />
+            )
+        }
+        return stars
+    }
+
+    // Formatear fecha relativa
+    const formatRelativeDate = (dateStr: string) => {
+        const date = new Date(dateStr)
+        const now = new Date()
+        const diffMs = now.getTime() - date.getTime()
+        const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24))
+        if (diffDays === 0) return "Hoy"
+        if (diffDays === 1) return "Ayer"
+        if (diffDays < 7) return `Hace ${diffDays} días`
+        if (diffDays < 30) return `Hace ${Math.floor(diffDays / 7)} semanas`
+        if (diffDays < 365) return `Hace ${Math.floor(diffDays / 30)} meses`
+        return `Hace ${Math.floor(diffDays / 365)} años`
+    }
 
     return (
         property && (
@@ -129,34 +265,20 @@ const PropertyDetails = () => {
                             )}
                             <div className='flex justify-between items-start my-1'>
                                 <h4 className='h4 text-secondary'>{property.propertyType}</h4>
-                                <div className='flex items-baseline gap-2 text-amber-400 relative top-1.5'>
-                                    <h4 className='bold-18 relative bottom-0.5 text-black'>5.0</h4>
-                                    <img
-                                        src={assets.star}
-                                        alt="star icon"
-                                        width={18}
-                                    />
-                                    <img
-                                        src={assets.star}
-                                        alt="star icon"
-                                        width={18}
-                                    />
-                                    <img
-                                        src={assets.star}
-                                        alt="star icon"
-                                        width={18}
-                                    />
-                                    <img
-                                        src={assets.star}
-                                        alt="star icon"
-                                        width={18}
-                                    />
-                                    <img
-                                        src={assets.star}
-                                        alt="star icon"
-                                        width={18}
-                                    />
-                                </div>
+                                {/* RATING DYNAMICO - reemplaza el hardcoded "5.0" */}
+                                {averageRating != null && reviewCount > 0 ? (
+                                    <div className='flex items-center gap-1.5 text-amber-400'>
+                                        <h4 className='bold-18 text-black'>{averageRating.toFixed(1)}</h4>
+                                        <div className='flex items-center gap-0.5'>
+                                            {renderReadonlyStars(Math.round(averageRating))}
+                                        </div>
+                                        <span className='text-xs text-gray-500'>({reviewCount})</span>
+                                    </div>
+                                ) : (
+                                    <div className='flex items-center gap-x-2 text-amber-400 relative top-1.5'>
+                                        <h4 className='bold-18 relative bottom-0.5 text-black'>Sin reviews</h4>
+                                    </div>
+                                )}
                             </div>
                             <div className='flex gap-x-4 mt-3'>
                                 <p className='flexCenter gap-x-2 border-r border-slate-900/50 pr-4 font-medium'>
@@ -282,6 +404,114 @@ const PropertyDetails = () => {
                                     <span>{isAvailable ? 'Book Property' : 'Check Dates'}</span>
                                 </button>
                             </form>
+                            {/* SECCION DE REVIEWS */}
+                            <div className='mt-10 border-t border-slate-900/10 pt-8'>
+                                <h4 className='h4 mb-6'>Reviews & Ratings</h4>
+
+                                {/* Resumen de rating */}
+                                {averageRating != null && reviewCount > 0 && (
+                                    <div className='flex items-center gap-4 mb-6 p-4 bg-secondary/10 rounded-lg'>
+                                        <div className='text-center'>
+                                            <div className='bold-28 text-secondary'>{averageRating.toFixed(1)}</div>
+                                            <div className='flex items-center gap-0.5 mt-1'>
+                                                {renderReadonlyStars(Math.round(averageRating))}
+                                            </div>
+                                            <p className='text-xs text-gray-500 mt-1'>
+                                                {reviewCount} {reviewCount === 1 ? 'review' : 'reviews'}
+                                            </p>
+                                        </div>
+                                    </div>
+                                )}
+
+                                {/* Lista de reviews */}
+                                {reviewsLoading ? (
+                                    <p className='text-gray-500 text-sm'>Loading reviews...</p>
+                                ) : reviews.length === 0 ? (
+                                    <p className='text-gray-500 text-sm mb-6'>
+                                        There aren't any reviews yet. Be the first to leave a review.
+                                    </p>
+                                ) : (
+                                    <div className='space-y-4 mb-8'>
+                                        {reviews.map((review) => (
+                                            <div
+                                                key={review.id}
+                                                className='p-4 rounded-lg border border-slate-900/10'
+                                            >
+                                                <div className='flex items-start gap-3'>
+                                                    <img
+                                                        src={review.userImage || "https://images.unsplash.com/photo-1560250097-0b93528c311a"}
+                                                        alt={review.userName}
+                                                        className='h-10 w-10 rounded-full object-cover'
+                                                    />
+                                                    <div className='flex-1'>
+                                                        <div className='flex items-center gap-2'>
+                                                            <h5 className='font-medium text-sm'>{review.userName}</h5>
+                                                            {review.isVerified && (
+                                                                <span className='text-xs bg-green-100 text-green-700 px-1.5 py-0.5 rounded'>
+                                                                    Verified
+                                                                </span>
+                                                            )}
+                                                        </div>
+                                                        <div className='flex items-center gap-2 mt-0.5'>
+                                                            <div className='flex items-center gap-0.5'>
+                                                                {renderReadonlyStars(review.rating)}
+                                                            </div>
+                                                            <span className='text-xs text-gray-400'>
+                                                                {formatRelativeDate(review.createdAt)}
+                                                            </span>
+                                                        </div>
+                                                        {review.comment && (
+                                                            <p className='text-sm text-gray-600 mt-2'>
+                                                                {review.comment}
+                                                            </p>
+                                                        )}
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                )}
+
+                                {/* Formulario para nueva review */}
+                                {user ? (
+                                    <div className='p-4 rounded-lg border border-slate-900/10 bg-secondary/5'>
+                                        <h5 className='font-medium mb-3'>Leave your review</h5>
+                                        <div className='flex items-center gap-2 mb-3'>
+                                            <span className='text-sm text-gray-500'>Rating:</span>
+                                            <div className='flex items-center gap-1'>
+                                                {renderInteractiveStars()}
+                                            </div>
+                                            <span className='text-sm font-medium ml-2'>
+                                                {hoveredStar || newRating}/5
+                                            </span>
+                                        </div>
+                                        <textarea
+                                            value={newComment}
+                                            onChange={(e) => setNewComment(e.target.value)}
+                                            placeholder="Tell us about your experience (optional)"
+                                            rows={3}
+                                            maxLength={2000}
+                                            className='w-full p-3 border border-gray-300 rounded-lg text-sm outline-none focus:border-secondary resize-none'
+                                        />
+                                        <div className='flex items-center justify-between mt-3'>
+                                            <span className='text-xs text-gray-400'>
+                                                {newComment.length}/2000
+                                            </span>
+                                            <button
+                                                onClick={submitReview}
+                                                disabled={submittingReview || newRating < 1}
+                                                className='btn-secondary rounded-lg px-6 py-1.5 text-sm disabled:opacity-50'
+                                            >
+                                                {submittingReview ? 'Sending...' : 'Publish'}
+                                            </button>
+                                        </div>
+                                    </div>
+                                ) : (
+                                    <p className='text-sm text-gray-500'>
+                                        Login to make a review.
+                                    </p>
+                                )}
+                            </div>
                         </div>
                         {/* RIGHT SIDE */}
                         <div className='flex-1 max-w-sm'>

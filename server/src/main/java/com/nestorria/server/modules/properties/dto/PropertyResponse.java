@@ -24,9 +24,15 @@ public record PropertyResponse(
     List<String> images,
     boolean isAvailable,
     PropertyLocation location,
-    AgencyResponse agency
+    AgencyResponse agency,
+    Double averageRating,
+    int reviewCount
 ) {
     public static PropertyResponse fromEntity(Property p) {
+        return fromEntity(p, null, 0);
+    }
+
+    public static PropertyResponse fromEntity(Property p, Double averageRating, int reviewCount) {
         return new PropertyResponse(
             p.getId(),
             p.getTitle(),
@@ -42,7 +48,9 @@ public record PropertyResponse(
             p.getImages(),
             p.isAvailable(),
             p.getLocation(),
-            AgencyResponse.fromEntity(p.getAgency())
+            AgencyResponse.fromEntity(p.getAgency()),
+            averageRating,
+            reviewCount
         );
     }
 }

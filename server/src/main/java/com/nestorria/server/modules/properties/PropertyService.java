@@ -18,6 +18,8 @@ import com.nestorria.server.modules.properties.dto.CreatePropertyRequest;
 import com.nestorria.server.modules.properties.dto.PropertyResponse;
 import com.nestorria.server.modules.properties.dto.PropertySummaryResponse;
 import com.nestorria.server.modules.properties.dto.ToggleAvailabilityRequest;
+import com.nestorria.server.modules.review.ReviewService;
+import com.nestorria.server.modules.review.ReviewService.RatingAggregate;
 
 @Service
 public class PropertyService {
@@ -28,16 +30,19 @@ public class PropertyService {
     private final AgencyRepository agencyRepository;
     private final Cloudinary cloudinary;
     private final PropertyPersistenceService persistenceService;
+    private final ReviewService reviewService;
 
     public PropertyService(
             PropertyRepository propertyRepository,
             AgencyRepository agencyRepository,
             Cloudinary cloudinary,
-            PropertyPersistenceService persistenceService) {
+            PropertyPersistenceService persistenceService,
+            ReviewService reviewService) {
         this.propertyRepository = propertyRepository;
         this.agencyRepository = agencyRepository;
         this.cloudinary = cloudinary;
         this.persistenceService = persistenceService;
+        this.reviewService = reviewService;
     }
 
     public PropertyResponse create(String userId, CreatePropertyRequest request, List<MultipartFile> files) {
@@ -49,9 +54,21 @@ public class PropertyService {
 
     @Transactional(readOnly = true)
     public List<PropertySummaryResponse> getAllAvailable() {
-        return propertyRepository.findByIsAvailableTrue()
-            .stream()
-            .map(PropertySummaryResponse::fromEntity)
+        List<Property> properties = propertyRepository.findByIsAvailableTrue();
+
+        List<String> propertyIds = properties.stream()
+            .map(Property::getId)
+            .toList();
+
+        Map<String, RatingAggregate> ratings = reviewService.getAverageRatings(propertyIds);
+
+        return properties.stream()
+            .map(p -> {
+                RatingAggregate agg = ratings.get(p.getId());
+                Double avgRating = agg != null ? agg.averageRating() : null;
+                int reviewCount = agg != null ? agg.reviewCount() : 0;
+                return PropertySummaryResponse.fromEntity(p, avgRating, reviewCount);
+            })
             .toList();
     }
 
@@ -60,9 +77,21 @@ public class PropertyService {
         Agency agency = agencyRepository.findByOwnerId(userId)
             .orElseThrow(() -> new ResourceNotFoundException("No se encontró una agencia para este usuario"));
 
-        return propertyRepository.findByAgencyId(agency.getId())
-            .stream()
-            .map(PropertyResponse::fromEntity)
+        List<Property> properties = propertyRepository.findByAgencyId(agency.getId());
+
+        List<String> propertyIds = properties.stream()
+            .map(Property::getId)
+            .toList();
+
+        Map<String, RatingAggregate> ratings = reviewService.getAverageRatings(propertyIds);
+
+        return properties.stream()
+            .map(p -> {
+                RatingAggregate agg = ratings.get(p.getId());
+                Double avgRating = agg != null ? agg.averageRating() : null;
+                int reviewCount = agg != null ? agg.reviewCount() : 0;
+                return PropertyResponse.fromEntity(p, avgRating, reviewCount);
+            })
             .toList();
     }
 

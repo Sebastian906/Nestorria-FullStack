@@ -1,21 +1,61 @@
 import { Link } from "react-router-dom"
 import { assets } from "../assets/data"
 import { useAppContext } from "../context/AppContext"
-// import { useAuth } from "@clerk/react"
 
 {/* @ts-ignore */ }
 const Item = ({ property }) => {
 
     const { currency, user, favoriteIds, toggleFavorite } = useAppContext()
-    // const { getToken } = useAuth()
 
     const handleFavoriteClick = async (e: React.MouseEvent) => {
-        e.preventDefault() // Evitar navegación del Link
+        e.preventDefault()
         e.stopPropagation()
         if (!user) {
             return
         }
         await toggleFavorite(property._id)
+    }
+
+    // Renderizar estrellas llenas, medias y vacías
+    const renderStars = (rating: number) => {
+        const stars = []
+        for (let i = 1; i <= 5; i++) {
+            if (i <= Math.floor(rating)) {
+                // Estrella llena
+                stars.push(
+                    <img
+                        key={i}
+                        src={assets.star}
+                        alt="star"
+                        width={14}
+                        className="text-amber-400"
+                    />
+                )
+            } else if (i - 0.5 <= rating) {
+                // Media estrella (usamos la misma imagen con opacidad reducida)
+                stars.push(
+                    <img
+                        key={i}
+                        src={assets.star}
+                        alt="half star"
+                        width={14}
+                        className="text-amber-400 opacity-50"
+                    />
+                )
+            } else {
+                // Estrella vacía
+                stars.push(
+                    <img
+                        key={i}
+                        src={assets.star}
+                        alt="empty star"
+                        width={14}
+                        className="text-gray-300 opacity-30"
+                    />
+                )
+            }
+        }
+        return stars
     }
 
     return (
@@ -62,6 +102,20 @@ const Item = ({ property }) => {
                     </div>
                 </div>
                 <h4 className='h4 line-clamp-1'>{property.title}</h4>
+                {/* RATING - Solo se muestra si hay reviews */}
+                {property.reviewCount > 0 && property.averageRating != null && (
+                    <div className='flex items-center gap-1.5 mt-1.5'>
+                        <div className='flex items-center gap-0.5'>
+                            {renderStars(property.averageRating)}
+                        </div>
+                        <span className='text-xs text-gray-500 font-medium'>
+                            {property.averageRating.toFixed(1)}
+                        </span>
+                        <span className='text-xs text-gray-400'>
+                            ({property.reviewCount} {property.reviewCount === 1 ? 'review' : 'reviews'})
+                        </span>
+                    </div>
+                )}
                 <div className='flexCenter gap-4 py-2'>
                     <p className='flexCenter gap-x-2 border-r border-slate-900/50 pr-4 font-medium'>
                         <img
