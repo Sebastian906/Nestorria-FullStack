@@ -1,6 +1,7 @@
 import { Link, useLocation } from "react-router-dom"
 import { assets } from "../assets/data"
 import Navbar from "./Navbar"
+import NotificationBell from "./NotificationBell"
 import { useEffect, useState } from "react"
 import { useClerk, UserButton } from "@clerk/react"
 import { useAppContext } from "../context/AppContext"
@@ -138,6 +139,12 @@ const Header = () => {
                                 />
                             </div>
                         </div>
+                        {/* NOTIFICATION BELL */}
+                        {user && (
+                            <div className={`${!active ? 'text-white' : 'text-gray-700'}`}>
+                                <NotificationBell />
+                            </div>
+                        )}
                         {/* MENU TOGGLE */}
                         <>
                             {menuOpened ? (

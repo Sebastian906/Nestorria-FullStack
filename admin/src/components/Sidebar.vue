@@ -4,6 +4,7 @@ import { useRouter, useRoute } from 'vue-router'
 import { UserButton } from '@clerk/vue'
 import { useAppContext } from '../composables/useAppContext'
 import { assets } from '../assets/assets'
+import NotificationBell from './NotificationBell.vue'
 
 const router = useRouter()
 const route = useRoute()
@@ -66,9 +67,10 @@ const userButtonAppearance = {
 
                 <div class="md:hidden flex items-center gap-3 md:bg-primary rounded-b-xl p-2 pl-5 lg:pl-10 md:mt-10">
                     <UserButton :appearance="userButtonAppearance" />
-                    <div class="text-sm font-semibold text-gray-800 capitalize">
+                    <div class="text-sm font-semibold text-gray-800 capitalize flex-1">
                         {{ user?.firstName }} {{ user?.lastName }}
                     </div>
+                    <NotificationBell />
                 </div>
             </div>
 
@@ -88,9 +90,10 @@ const userButtonAppearance = {
         <div
             class="hidden md:flex items-center gap-3 md:bg-primary border-t border-slate-900/15 rounded-b-xl p-2 pl-5 lg:pl-10 md:mt-10">
             <UserButton :appearance="userButtonAppearance" />
-            <div class="text-sm font-semibold text-gray-800 capitalize">
+            <div class="text-sm font-semibold text-gray-800 capitalize flex-1">
                 {{ user?.firstName }} {{ user?.lastName }}
             </div>
+            <NotificationBell />
         </div>
     </div>
 </template>
