@@ -3,9 +3,10 @@ import { reactive, ref, onBeforeUnmount } from 'vue'
 import { useAuth } from '@clerk/vue'
 import axios from 'axios'
 import { useToast } from 'vue-toastification'
+import LocationPicker from '../components/LocationPicker.vue'
 
 const toast = useToast()
-const { getToken } = useAuth()
+const auth = useAuth()
 
 const imageKeys = [1, 2, 3, 4]
 
@@ -14,13 +15,13 @@ const previews = reactive({ 1: null, 2: null, 3: null, 4: null })
 
 // Enum values must match Java's PropertyType exactly
 const propertyTypes = [
-    { label: 'House', value: 'HOUSE' },
-    { label: 'Apartment', value: 'APARTMENT' },
-    { label: 'Villa', value: 'VILLA' },
-    { label: 'Penthouse', value: 'PENTHOUSE' },
-    { label: 'Townhouse', value: 'TOWNHOUSE' },
-    { label: 'Commercial', value: 'COMMERCIAL' },
-    { label: 'Land Plot', value: 'LAND_PLOT' },
+    { label: 'House', value: 'House' },
+    { label: 'Apartment', value: 'Apartment' },
+    { label: 'Villa', value: 'Villa' },
+    { label: 'Penthouse', value: 'Penthouse' },
+    { label: 'Townhouse', value: 'Townhouse' },
+    { label: 'Commercial', value: 'Commercial' },
+    { label: 'Land Plot', value: 'Land Plot' },
 ]
 
 const defaultAmenities = () => ({
@@ -52,6 +53,10 @@ const inputs = reactive({
     bathrooms: '',
     garages: '',
     amenities: defaultAmenities(),
+    latitude: null,
+    longitude: null,
+    neighborhood: '',
+    postalCode: '',
 })
 
 const loading = ref(false)
@@ -63,6 +68,8 @@ const resetForm = () => {
         priceRent: '', priceSale: '',
         bedrooms: '', bathrooms: '', garages: '',
         amenities: defaultAmenities(),
+        latitude: null, longitude: null,
+        neighborhood: '', postalCode: '',
     })
     imageKeys.forEach((key) => {
         if (previews[key]) URL.revokeObjectURL(previews[key])
@@ -108,7 +115,7 @@ const handleSubmit = async () => {
 
     loading.value = true
     try {
-        const token = await getToken()
+        const token = await auth.getToken.value()
         if (!token) {
             toast.error('Authentication error. Please log in again.')
             return
@@ -127,13 +134,17 @@ const handleSubmit = async () => {
             country: inputs.country,
             address: inputs.address,
             area: Number(inputs.area),
-            propertyType: inputs.propertyType,        // already UPPER_SNAKE_CASE
+            propertyType: inputs.propertyType,
             priceRent: isBlank(inputs.priceRent) ? null : Number(inputs.priceRent),
             priceSale: isBlank(inputs.priceSale) ? null : Number(inputs.priceSale),
             bedrooms: Number(inputs.bedrooms),
             bathrooms: Number(inputs.bathrooms),
             garages: Number(inputs.garages) || 0,
             amenities: enabledAmenities,
+            latitude: inputs.latitude,
+            longitude: inputs.longitude,
+            neighborhood: inputs.neighborhood || null,
+            postalCode: inputs.postalCode || null,
         }
 
         const formData = new FormData()
@@ -215,6 +226,30 @@ const handleSubmit = async () => {
                     <h5 class="h5">Area</h5>
                     <input v-model.number="inputs.area" type="number" placeholder="Area (sq ft)" min="1"
                         class="px-3 py-1.5 ring-1 ring-slate-900/10 rounded-lg bg-secondary/5 mt-1 w-full" />
+                </div>
+            </div>
+
+            <!-- LOCATION MAP -->
+            <div>
+                <h5 class="h5">Map Location</h5>
+                <p class="text-xs text-gray-400 mb-1">Click on the map to select the exact location of the property</p>
+                <LocationPicker
+                    v-model:latitude="inputs.latitude"
+                    v-model:longitude="inputs.longitude"
+                    v-model:neighborhood="inputs.neighborhood"
+                    v-model:postalCode="inputs.postalCode"
+                />
+                <div class="flex gap-4 mt-2">
+                    <div class="flex-1">
+                        <label class="text-xs text-gray-500">Neighborhood</label>
+                        <input v-model="inputs.neighborhood" type="text" placeholder="Se completa automáticamente"
+                            class="px-3 py-1.5 ring-1 ring-slate-900/10 rounded-lg bg-secondary/5 mt-1 w-full text-sm" />
+                    </div>
+                    <div class="w-32">
+                        <label class="text-xs text-gray-500">Postal Code</label>
+                        <input v-model="inputs.postalCode" type="text" placeholder="Se completa automáticamente"
+                            class="px-3 py-1.5 ring-1 ring-slate-900/10 rounded-lg bg-secondary/5 mt-1 w-full text-sm" />
+                    </div>
                 </div>
             </div>
 

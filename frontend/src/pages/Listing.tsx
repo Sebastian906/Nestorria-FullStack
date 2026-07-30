@@ -3,6 +3,8 @@ import { assets, type Property } from "../assets/data";
 import Item from "../components/Item";
 import { useAppContext } from "../context/AppContext";
 import { useSearchParams } from "react-router-dom";
+import PropertyMap from "../components/PropertyMap";
+import NearbySearchPanel from "../components/NearbySearchPanel";
 
 interface Filters {
     propertyType: string[];
@@ -22,6 +24,9 @@ const Listing = () => {
     const [showOnlyFavorites, setShowOnlyFavorites] = useState<boolean>(
         () => searchParams.get("favorites") === "true"
     )
+    const [viewMode, setViewMode] = useState<"grid" | "map">("grid");
+    const [nearbyResults, setNearbyResults] = useState<Property[] | null>(null);
+    const [nearbyError, setNearbyError] = useState<string | null>(null);
     const heroDestination = (searchParams.get("destination") || "").toLowerCase().trim()
 
     const sortOptions = ['Relevant', 'Low to High', 'High to Low', 'Newest', 'Oldest']
@@ -108,9 +113,9 @@ const Listing = () => {
 
     return (
         <div className='bg-linear-to-r from-[#F0FDF4] to-white py-16 pt-28'>
-            <div className='max-padd-container flex flex-col sm:flex-row gap-8 mb-16'>
+            <div className='max-padd-container flex flex-col sm:flex-row gap-6 mb-16'>
                 {/* LEFT SIDE - FILTERS */}
-                <div className='bg-secondary/10 ring-1 ring-slate-900/5 p-6 sm:min-w-60 rounded-xl h-fit'>
+                <div className='bg-secondary/10 ring-1 ring-slate-900/5 p-5 sm:min-w-52 sm:max-w-60 rounded-xl h-fit'>
                     {/* SORT */}
                     <div className='pb-2 mt-2'>
                         <h5 className='h5 mb-3'>Sort By</h5>
@@ -189,6 +194,31 @@ const Listing = () => {
                             </button>
                         </div>
                     </div>
+                    {/* NEARBY SEARCH */}
+                    <div className="border-t border-gray-200 pt-4 mt-4">
+                        <NearbySearchPanel
+                            onResults={(results) => {
+                                setNearbyResults(results);
+                                setNearbyError(null);
+                                setViewMode("map");
+                            }}
+                            onError={(msg) => {
+                                setNearbyError(msg);
+                                setNearbyResults(null);
+                            }}
+                        />
+                        {nearbyError && (
+                            <p className="text-red-500 text-xs mt-2">{nearbyError}</p>
+                        )}
+                        {nearbyResults && (
+                            <button
+                                onClick={() => setNearbyResults(null)}
+                                className="text-xs text-gray-500 hover:text-gray-700 mt-2"
+                            >
+                                ← Clean nearby search results
+                            </button>
+                        )}
+                    </div>
                     {/* FAVORITES FILTER */}
                     {user && (
                         <div className='py-4 mt-2 border-t border-slate-900/10'>
@@ -212,19 +242,75 @@ const Listing = () => {
                     )}
                 </div>
                 {/* RIGHT SIDE - PROPERTY LIST */}
-                <div className='min-h-[97vh] overflow-y-scroll rounded-xl w-full'>
-                    {filteredProperties?.length > 0 ? (
-                        <div className='grid gap-6 grid-cols-1 lg:grid-cols-2 xl:grid-cols-3'>
-                            {filteredProperties.map((property) => (
-                                <Item
-                                    key={property._id}
-                                    property={property}
-                                />
-                            ))}
+                <div className="flex-1">
+                    {/* Header con toggle de vista */}
+                    <div className="flex items-center justify-between mb-4">
+                        <p className="text-gray-500">
+                            Showing {(nearbyResults ?? filteredProperties).length} of {properties.length} properties
+                        </p>
+                        <div className="flex items-center gap-1 bg-gray-100 rounded-lg p-1">
+                            <button
+                                onClick={() => setViewMode("grid")}
+                                className={`p-2 rounded-md transition ${viewMode === "grid"
+                                        ? "bg-white shadow-sm text-secondary"
+                                        : "text-gray-400 hover:text-gray-600"
+                                    }`}
+                                title="Grid view"
+                            >
+                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" />
+                                </svg>
+                            </button>
+                            <button
+                                onClick={() => setViewMode("map")}
+                                className={`p-2 rounded-md transition ${viewMode === "map"
+                                        ? "bg-white shadow-sm text-secondary"
+                                        : "text-gray-400 hover:text-gray-600"
+                                    }`}
+                                title="Map view"
+                            >
+                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7" />
+                                </svg>
+                            </button>
                         </div>
-                    ) : (
-                        <div className='text-center text-gray-500 mt-20'>
-                            No matches found.
+                    </div>
+
+                    {/* Vista grid */}
+                    {viewMode === "grid" && (
+                        (nearbyResults ?? filteredProperties).length > 0 ? (
+                            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+                                {(nearbyResults ?? filteredProperties).map((property) => (
+                                    <Item key={property._id} property={property} />
+                                ))}
+                            </div>
+                        ) : (
+                            <p className="text-gray-500 text-center py-10">No matches found</p>
+                        )
+                    )}
+
+                    {/* Vista mapa */}
+                    {viewMode === "map" && (
+                        <div className="rounded-xl overflow-hidden border border-gray-200">
+                            <PropertyMap
+                                properties={nearbyResults ?? filteredProperties}
+                                center={
+                                    nearbyResults && nearbyResults.length > 0
+                                        ? (() => {
+                                            const withCoords = nearbyResults.filter(
+                                                (p) => p.location?.latitude != null && p.location?.longitude != null
+                                            );
+                                            return withCoords.length > 0
+                                                ? [
+                                                    withCoords.reduce((sum, p) => sum + p.location!.latitude!, 0) / withCoords.length,
+                                                    withCoords.reduce((sum, p) => sum + p.location!.longitude!, 0) / withCoords.length,
+                                                ]
+                                                : undefined;
+                                        })()
+                                        : undefined
+                                }
+                                height="600px"
+                            />
                         </div>
                     )}
                 </div>
