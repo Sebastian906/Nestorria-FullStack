@@ -78,7 +78,9 @@ public class Notification extends Auditable {
     }
 
     public void markAsRead() {
-        this.isRead = true;
-        this.readAt = Instant.now();
+        if (!this.isRead) {
+            this.isRead = true;
+            this.readAt = Instant.now();
+        }
     }
 }

@@ -55,7 +55,10 @@ const NotificationBell = () => {
         }
     }, [getToken])
 
+    const requestIdRef = useRef(0)
+
     const fetchNotifications = useCallback(async (pageNum: number = 0, append: boolean = false) => {
+        const requestId = ++requestIdRef.current
         try {
             const token = await getToken()
             if (!token) return
@@ -65,6 +68,8 @@ const NotificationBell = () => {
                 headers: { Authorization: `Bearer ${token}` },
                 params: { page: pageNum, size: 10 }
             })
+
+            if (requestId !== requestIdRef.current) return
 
             if (append) {
                 setNotifications(prev => [...prev, ...data.content])
@@ -181,7 +186,7 @@ const NotificationBell = () => {
         if (diffMins < 60) return `${diffMins}m ago`
         if (diffHours < 24) return `${diffHours}h ago`
         if (diffDays < 7) return `${diffDays}d ago`
-        return date.toLocaleDateString("en-US", { day: "numeric", month: "short" })
+        return date.toLocaleDateString(undefined, { day: "numeric", month: "short" })
     }
 
     return (

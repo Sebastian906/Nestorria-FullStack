@@ -1,8 +1,9 @@
 package com.nestorria.server.common.event;
 
-import org.springframework.context.event.EventListener;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Component;
+import org.springframework.transaction.event.TransactionPhase;
+import org.springframework.transaction.event.TransactionalEventListener;
 
 import com.nestorria.server.modules.notification.NotificationService;
 
@@ -19,7 +20,7 @@ public class NotificationEventListener {
     }
 
     @Async("taskExecutor")
-    @EventListener
+    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
     public void handleNotificationEvent(NotificationEvent event) {
         try {
             notificationService.createNotification(event);

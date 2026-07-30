@@ -20,6 +20,8 @@ import com.nestorria.server.modules.notification.dto.NotificationResponse;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.constraints.Max;
+import jakarta.validation.constraints.Min;
 
 @RestController
 @RequestMapping("/api/notifications")
@@ -37,11 +39,12 @@ public class NotificationController {
     @GetMapping("/me")
     public Page<NotificationResponse> getMyNotifications(
             @AuthenticationPrincipal Jwt jwt,
-            @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "20") int size) {
+            @RequestParam(defaultValue = "0") @Min(0) int page,
+            @RequestParam(defaultValue = "20") @Min(1) @Max(100) int size) {
+        int clampedSize = Math.min(size, 100);
         return notificationService.getUserNotifications(
             jwt.getSubject(),
-            PageRequest.of(page, size)
+            PageRequest.of(page, clampedSize)
         );
     }
 
