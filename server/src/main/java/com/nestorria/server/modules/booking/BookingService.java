@@ -4,6 +4,7 @@ import java.time.LocalDate;
 import java.time.temporal.ChronoUnit;
 import java.util.List;
 
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -22,6 +23,8 @@ import com.nestorria.server.modules.properties.Property;
 import com.nestorria.server.modules.properties.PropertyRepository;
 import com.nestorria.server.modules.user.User;
 import com.nestorria.server.modules.user.UserRepository;
+import com.nestorria.server.common.event.NotificationEvent;
+import com.nestorria.server.modules.notification.NotificationType;
 
 @Service
 public class BookingService {
@@ -31,18 +34,21 @@ public class BookingService {
     private final AgencyRepository agencyRepository;
     private final UserRepository userRepository;
     private final EmailService emailService;
+    private final ApplicationEventPublisher eventPublisher;
 
     public BookingService(
             BookingRepository bookingRepository,
             PropertyRepository propertyRepository,
             AgencyRepository agencyRepository,
             UserRepository userRepository,
-            EmailService emailService) {
+            EmailService emailService,
+            ApplicationEventPublisher eventPublisher) {
         this.bookingRepository = bookingRepository;
         this.propertyRepository = propertyRepository;
         this.agencyRepository = agencyRepository;
         this.userRepository = userRepository;
         this.emailService = emailService;
+        this.eventPublisher = eventPublisher;
     }
 
     @Transactional(readOnly = true)
@@ -87,10 +93,10 @@ public class BookingService {
             totalPrice, request.guests()
         );
 
-        BookingResponse response = BookingResponse.fromEntity(bookingRepository.save(booking));
+        Booking savedBooking = bookingRepository.save(booking);
 
         emailService.sendBookingConfirmation(new BookingEmailData(
-            booking.getId(),
+            savedBooking.getId(),
             user.getEmail(),
             property.getAgency().getName(),
             property.getAddress(),
@@ -101,7 +107,17 @@ public class BookingService {
             request.guests()
         ));
 
-        return response;
+        // Publicar evento de notificación (fire-and-forget)
+        eventPublisher.publishEvent(new NotificationEvent(
+            userId,
+            NotificationType.BOOKING_CONFIRMED,
+            NotificationType.BOOKING_CONFIRMED.defaultTitle(),
+            "Tu reserva en %s ha sido confirmada.".formatted(property.getAddress()),
+            "booking",
+            savedBooking.getId()
+        ));
+
+        return BookingResponse.fromEntity(savedBooking);
     }
 
     @Transactional(readOnly = true)
