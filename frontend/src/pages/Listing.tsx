@@ -246,7 +246,7 @@ const Listing = () => {
                     {/* Header con toggle de vista */}
                     <div className="flex items-center justify-between mb-4">
                         <p className="text-gray-500">
-                            Showing {filteredProperties.length} of {properties.length} properties
+                            Showing {(nearbyResults ?? filteredProperties).length} of {properties.length} properties
                         </p>
                         <div className="flex items-center gap-1 bg-gray-100 rounded-lg p-1">
                             <button
@@ -278,11 +278,15 @@ const Listing = () => {
 
                     {/* Vista grid */}
                     {viewMode === "grid" && (
-                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
-                            {(nearbyResults ?? filteredProperties).map((property) => (
-                                <Item key={property._id} property={property} />
-                            ))}
-                        </div>
+                        (nearbyResults ?? filteredProperties).length > 0 ? (
+                            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+                                {(nearbyResults ?? filteredProperties).map((property) => (
+                                    <Item key={property._id} property={property} />
+                                ))}
+                            </div>
+                        ) : (
+                            <p className="text-gray-500 text-center py-10">No matches found</p>
+                        )
                     )}
 
                     {/* Vista mapa */}
@@ -292,10 +296,17 @@ const Listing = () => {
                                 properties={nearbyResults ?? filteredProperties}
                                 center={
                                     nearbyResults && nearbyResults.length > 0
-                                        ? [
-                                            nearbyResults.reduce((sum, p) => sum + (p.location?.latitude ?? 0), 0) / nearbyResults.length,
-                                            nearbyResults.reduce((sum, p) => sum + (p.location?.longitude ?? 0), 0) / nearbyResults.length,
-                                        ]
+                                        ? (() => {
+                                            const withCoords = nearbyResults.filter(
+                                                (p) => p.location?.latitude != null && p.location?.longitude != null
+                                            );
+                                            return withCoords.length > 0
+                                                ? [
+                                                    withCoords.reduce((sum, p) => sum + p.location!.latitude!, 0) / withCoords.length,
+                                                    withCoords.reduce((sum, p) => sum + p.location!.longitude!, 0) / withCoords.length,
+                                                ]
+                                                : undefined;
+                                        })()
                                         : undefined
                                 }
                                 height="600px"

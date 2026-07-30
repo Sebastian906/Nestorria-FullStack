@@ -56,7 +56,9 @@ const initMap = async () => {
     })
 }
 
+let geocodeRequestId = 0
 const reverseGeocode = async (lat, lng) => {
+    const requestId = ++geocodeRequestId
     loadingReverse.value = true
     try {
         const response = await fetch(
@@ -68,6 +70,8 @@ const reverseGeocode = async (lat, lng) => {
             }
         )
         const data = await response.json()
+
+        if (requestId !== geocodeRequestId) return // stale response, ignore
 
         if (data.address) {
             // Intentar obtener barrio de diferentes campos
@@ -89,7 +93,7 @@ const reverseGeocode = async (lat, lng) => {
     } catch (error) {
         console.warn('Reverse geocoding failed:', error)
     } finally {
-        loadingReverse.value = false
+        if (requestId === geocodeRequestId) loadingReverse.value = false
     }
 }
 
@@ -108,6 +112,7 @@ const loadLeaflet = () => {
         const script = document.createElement('script')
         script.src = 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/leaflet.min.js'
         script.onload = resolve
+        script.onerror = () => reject(new Error('Failed to load Leaflet from CDN'))
         document.head.appendChild(script)
     })
 }
@@ -139,8 +144,12 @@ onBeforeUnmount(() => {
 watch(
     () => [props.latitude, props.longitude],
     ([lat, lng]) => {
-        if (map && lat && lng && marker) {
-            marker.setLatLng([lat, lng])
+        if (map && lat && lng) {
+            if (marker) {
+                marker.setLatLng([lat, lng])
+            } else {
+                marker = window.L.marker([lat, lng]).addTo(map)
+            }
             map.setView([lat, lng], 15)
         }
     }

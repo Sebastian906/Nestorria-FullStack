@@ -145,7 +145,7 @@ export default function NearbySearchPanel({ onResults, onError }: NearbySearchPa
                         Searching...
                     </span>
                 ) : (
-                    "Buscar propiedades cercanas"
+                    "Search nearby properties"
                 )}
             </button>
         </div>

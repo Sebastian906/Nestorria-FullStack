@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import type { Property } from "../assets/data";
 import "leaflet/dist/leaflet.css";
 import L from "leaflet";
+import { useEffect } from "react";
 
 // Fix para iconos de Leaflet con bundlers modernos
 delete (L.Icon.Default.prototype as any)._getIconUrl;
@@ -23,9 +24,11 @@ interface PropertyMapProps {
 // Componente interno para cambiar el centro del mapa programáticamente
 function MapUpdater({ center }: { center?: [number, number] }) {
     const map = useMap();
-    if (center) {
-        map.setView(center, map.getZoom());
-    }
+    useEffect(() => {
+        if (center) {
+            map.setView(center, map.getZoom());
+        }
+    }, [center, map]);
     return null;
 }
 
