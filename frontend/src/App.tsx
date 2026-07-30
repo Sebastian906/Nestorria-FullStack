@@ -7,6 +7,7 @@ import Blog from "./pages/Blog"
 import Contact from "./pages/Contact"
 import PropertyDetails from "./pages/PropertyDetails"
 import MyBookings from "./pages/MyBookings"
+import MapExplorer from "./pages/MapExplorer"
 import { useAppContext } from "./context/AppContext"
 import AgencyReg from "./components/AgencyReg"
 import { Toaster } from "react-hot-toast"
@@ -26,6 +27,7 @@ const App = () => {
         <Route path='/listing/:id' element={<PropertyDetails />} />
         <Route path='/blog' element={<Blog />} />
         <Route path='/contact' element={<Contact />} />
+        <Route path='/map' element={<MapExplorer />} />
         <Route path='/my-bookings' element={<MyBookings />} />
       </Routes>
       <Footer />

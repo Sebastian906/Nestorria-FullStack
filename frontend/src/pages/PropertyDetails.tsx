@@ -6,6 +6,7 @@ import { assets } from "../assets/data"
 import axios from "axios"
 import { useAuth } from "@clerk/react"
 import toast from "react-hot-toast"
+import PropertyMap from "../components/PropertyMap";
 
 interface Review {
     id: string;
@@ -232,6 +233,23 @@ const PropertyDetails = () => {
                                 />
                                 <span>{property.address}</span>
                             </p>
+                            {property.location?.neighborhood && (
+                                <p className="text-gray-500 text-sm mt-1 ml-6">{property.location.neighborhood}</p>
+                            )}
+                            {property.location?.postalCode && (
+                                <p className="text-gray-400 text-xs ml-6">Postal Code: {property.location.postalCode}</p>
+                            )}
+                            {property.location?.latitude != null && property.location?.longitude != null && (
+                                <div className="mt-4 relative overflow-hidden rounded-lg">
+                                    <h3 className="font-semibold text-lg mb-3">Map location</h3>
+                                    <PropertyMap
+                                        properties={[property]}
+                                        center={[property.location.latitude, property.location.longitude]}
+                                        zoom={15}
+                                        height="300px"
+                                    />
+                                </div>
+                            )}
                             <div className='flex justify-between flex-col md:flex-row sm:items-end mt-3'>
                                 <h3 className='h3'>{property.title}</h3>
                                 <div className='bold-18'>
@@ -265,7 +283,7 @@ const PropertyDetails = () => {
                             )}
                             <div className='flex justify-between items-start my-1'>
                                 <h4 className='h4 text-secondary'>{property.propertyType}</h4>
-                                {/* RATING DYNAMICO - reemplaza el hardcoded "5.0" */}
+                                {/* DYNAMIC RATING */}
                                 {averageRating != null && reviewCount > 0 ? (
                                     <div className='flex items-center gap-1.5 text-amber-400'>
                                         <h4 className='bold-18 text-black'>{averageRating.toFixed(1)}</h4>
