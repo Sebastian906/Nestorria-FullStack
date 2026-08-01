@@ -176,7 +176,7 @@ const ContractDetails = () => {
                 <div className='bg-white rounded-xl border border-slate-900/10 p-6 mb-6'>
                     <div className='flex flex-col sm:flex-row sm:items-center justify-between gap-4'>
                         <div>
-                            <h2 className='h2 mb-1'>Rental Contract</h2>
+                            <h2 className='h2 mb-1'>{getContractTypeLabel(contract.contractType)}</h2>
                             <p className='text-sm text-gray-500'>
                                 {getContractTypeLabel(contract.contractType)}
                             </p>

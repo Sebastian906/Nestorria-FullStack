@@ -178,19 +178,30 @@ public class ContractService {
 
     private void publishSigningNotifications(Contract contract, SignatureRole signerRole,
                                              Booking booking,
-                                             String tenantId, String agencyOwnerId) {
+            String tenantId, String agencyOwnerId) {
         String propertyAddress = booking.getProperty().getAddress();
         String contractId = contract.getId();
         boolean bothSigned = contract.getStatus() == ContractStatus.SIGNED;
 
         String messageTemplate = signerRole == SignatureRole.TENANT
-            ? "El inquilino ha firmado el contrato para la propiedad en %s."
-            : "La agencia ha firmado el contrato para la propiedad en %s.";
+                ? "El inquilino ha firmado el contrato para la propiedad en %s."
+                : "La agencia ha firmado el contrato para la propiedad en %s.";
 
         String message = messageTemplate.formatted(propertyAddress);
 
-        // Notify the other party
-        String recipientId = signerRole == SignatureRole.TENANT ? agencyOwnerId : tenantId;
+        if (bothSigned) {
+            String completionMessage = "El contrato para la propiedad en %s ha sido firmado por ambas partes."
+                    .formatted(
+                            propertyAddress);
+            notifyContractSigned(tenantId, completionMessage, contractId);
+            notifyContractSigned(agencyOwnerId, completionMessage, contractId);
+        } else {
+            String recipientId = signerRole == SignatureRole.TENANT ? agencyOwnerId : tenantId;
+            notifyContractSigned(recipientId, message, contractId);
+        }
+    }
+
+    private void notifyContractSigned(String recipientId, String message, String contractId) {
         eventPublisher.publishEvent(new NotificationEvent(
             recipientId,
             NotificationType.CONTRACT_SIGNED,
@@ -199,31 +210,6 @@ public class ContractService {
             "contract",
             contractId
         ));
-
-        // If both parties have signed, notify both with completion message
-        if (bothSigned) {
-            String completionMessage =
-                "El contrato para la propiedad en %s ha sido firmado por ambas partes.".formatted(
-                    propertyAddress);
-
-            eventPublisher.publishEvent(new NotificationEvent(
-                tenantId,
-                NotificationType.CONTRACT_SIGNED,
-                NotificationType.CONTRACT_SIGNED.defaultTitle(),
-                completionMessage,
-                "contract",
-                contractId
-            ));
-
-            eventPublisher.publishEvent(new NotificationEvent(
-                agencyOwnerId,
-                NotificationType.CONTRACT_SIGNED,
-                NotificationType.CONTRACT_SIGNED.defaultTitle(),
-                completionMessage,
-                "contract",
-                contractId
-            ));
-        }
     }
 
     private List<ContractClause> generateDefaultClauses(Contract contract, ContractType type) {
@@ -243,7 +229,7 @@ public class ContractService {
                 new ContractClause(contract,
                     "Responsabilidad por daños",
                     "El inquilino se compromete a mantener la propiedad en buen estado. "
-                    + "Cualquier daño超出 el desgaste natural será descontado del depósito de garantía.",
+                    + "Cualquier daño que exceda el desgaste natural será descontado del depósito de garantía.",
                     3),
                 new ContractClause(contract,
                     "Número máximo de huéspedes",

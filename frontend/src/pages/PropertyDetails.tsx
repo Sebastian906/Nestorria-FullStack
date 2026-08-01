@@ -89,7 +89,7 @@ const PropertyDetails = () => {
                 } catch (contractError: any) {
                     toast.success("Booking confirmed");
                     if (contractError.response?.status === 409) {
-                        toast.error("There is already a contract for this property");
+                        toast.error("There is already a contract for this booking");
                     } else {
                         toast.error(contractError.response?.data?.message || "The contract couldn't be generated");
                     }
