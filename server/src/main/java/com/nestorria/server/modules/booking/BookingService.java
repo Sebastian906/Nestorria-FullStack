@@ -8,6 +8,7 @@ import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.nestorria.server.common.event.NotificationEvent;
 import com.nestorria.server.common.exception.BadRequestException;
 import com.nestorria.server.common.exception.ConflictException;
 import com.nestorria.server.common.exception.ResourceNotFoundException;
@@ -19,12 +20,11 @@ import com.nestorria.server.modules.booking.dto.AgencyDashboardResponse;
 import com.nestorria.server.modules.booking.dto.BookingResponse;
 import com.nestorria.server.modules.booking.dto.CheckAvailabilityRequest;
 import com.nestorria.server.modules.booking.dto.CreateBookingRequest;
+import com.nestorria.server.modules.notification.NotificationType;
 import com.nestorria.server.modules.properties.Property;
 import com.nestorria.server.modules.properties.PropertyRepository;
 import com.nestorria.server.modules.user.User;
 import com.nestorria.server.modules.user.UserRepository;
-import com.nestorria.server.common.event.NotificationEvent;
-import com.nestorria.server.modules.notification.NotificationType;
 
 @Service
 public class BookingService {
@@ -88,10 +88,12 @@ public class BookingService {
         long totalPrice = (long) rentPrice * nights;
 
         Booking booking = new Booking(
-            user, property, property.getAgency(),
-            request.checkInDate(), request.checkOutDate(),
-            totalPrice, request.guests()
+        user, property, property.getAgency(),
+        request.checkInDate(), request.checkOutDate(),
+        totalPrice, request.guests()
         );
+
+        booking.confirm();
 
         Booking savedBooking = bookingRepository.save(booking);
 
