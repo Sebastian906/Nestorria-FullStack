@@ -76,17 +76,25 @@ const PropertyDetails = () => {
             if (!isAvailable) {
                 return checkAvailability()
             } else {
-                await axios.post(`/api/bookings`, {
-                    propertyId: id,
-                    checkInDate,
-                    checkOutDate,
-                    guests,
-                    paymentMethod: "Pay at check-in"
-                }, {
-                    headers: { Authorization: `Bearer ${await getToken()}` },
-                });
-                toast.success("Booking confirmed successfully!");
-                navigate('/my-bookings')
+                const { data: booking } = await axios.post(`/api/bookings`, {
+                    propertyId: id, checkInDate, checkOutDate, guests, paymentMethod: "Pay at check-in"
+                }, { headers: { Authorization: `Bearer ${await getToken()}` } });
+                try {
+                    const { data: contract } = await axios.post(`/api/contracts`,
+                        { bookingId: booking.id, contractType: "RENTAL" },
+                        { headers: { Authorization: `Bearer ${await getToken()}` } }
+                    );
+                    toast.success("Booking and contract created successfully");
+                    navigate(`/contracts/${contract.id}`)
+                } catch (contractError: any) {
+                    toast.success("Booking confirmed");
+                    if (contractError.response?.status === 409) {
+                        toast.error("There is already a contract for this property");
+                    } else {
+                        toast.error(contractError.response?.data?.message || "The contract couldn't be generated");
+                    }
+                    navigate('/my-bookings')
+                }
                 scrollTo(0, 0)
             }
         } catch (error: any) {
@@ -125,14 +133,14 @@ const PropertyDetails = () => {
             }, {
                 headers: { Authorization: `Bearer ${await getToken()}` },
             })
-            toast.success("Reseña publicada exitosamente")
+            toast.success("Review published succesfully")
             setNewRating(5)
             setNewComment("")
             fetchReviews() // Recargar reviews
         } catch (error: any) {
             const message = error.response?.data?.message || error.message
             if (error.response?.status === 409) {
-                toast.error("Ya has publicado una reseña para esta propiedad")
+                toast.error("You have already published a review on this property")
             } else {
                 toast.error(message)
             }

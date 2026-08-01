@@ -183,6 +183,55 @@ export interface FavoriteResponse {
     favoritedAt: string;
 }
 
+export type ContractType = "RENTAL" | "PURCHASE"
+export type ContractStatus = "DRAFT" | "PENDING_SIGNATURE" | "SIGNED" | "EXPIRED"
+export type SignatureRole = "TENANT" | "AGENCY_OWNER"
+
+export interface ContractClause {
+    id: string;
+    title: string;
+    content: string;
+    sortOrder: number;
+}
+
+export interface ContractSignature {
+    id: string;
+    userId: string;
+    userName: string;
+    role: SignatureRole;
+    signedAt: string;
+}
+
+export interface Contract {
+    id: string;
+    bookingId: string;
+    contractType: ContractType;
+    status: ContractStatus;
+    clauses: ContractClause[];
+    signatures: ContractSignature[];
+    generatedAt: string | null;
+    createdAt: string;
+}
+
+export interface ContractSummary {
+    id: string;
+    bookingId: string;
+    contractType: ContractType;
+    status: ContractStatus;
+    propertyTitle: string;
+    signedByTenant: boolean;
+    signedByAgency: boolean;
+    generatedAt: string | null;
+}
+
+export interface ContractWithBooking extends ContractSummary {
+    propertyImage: string;
+    propertyAddress: string;
+    totalPrice: number;
+    checkInDate: string;
+    checkOutDate: string;
+}
+
 // --- DATOS EXPORTADOS ---
 
 export const assets: Record<string, string> = {

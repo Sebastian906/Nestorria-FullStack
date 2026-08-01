@@ -11,6 +11,7 @@ import MapExplorer from "./pages/MapExplorer"
 import { useAppContext } from "./context/AppContext"
 import AgencyReg from "./components/AgencyReg"
 import { Toaster } from "react-hot-toast"
+import ContractDetails from "./pages/ContractDetails"
 
 const App = () => {
 
@@ -29,6 +30,7 @@ const App = () => {
         <Route path='/contact' element={<Contact />} />
         <Route path='/map' element={<MapExplorer />} />
         <Route path='/my-bookings' element={<MyBookings />} />
+        <Route path='/contracts/:id' element={<ContractDetails />} />
       </Routes>
       <Footer />
     </main>
