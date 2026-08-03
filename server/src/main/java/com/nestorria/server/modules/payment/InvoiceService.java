@@ -10,6 +10,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.nestorria.server.common.config.AppProperties;
+import com.nestorria.server.common.event.InvoiceIssuedEvent;
 import com.nestorria.server.common.event.NotificationEvent;
 import com.nestorria.server.common.exception.BadRequestException;
 import com.nestorria.server.common.exception.ResourceNotFoundException;
@@ -26,15 +27,18 @@ import lombok.extern.slf4j.Slf4j;
 public class InvoiceService {
 
     private final InvoiceRepository invoiceRepository;
+    private final InvoiceSequenceRepository invoiceSequenceRepository;
     private final AppProperties appProperties;
     private final EmailService emailService;
     private final ApplicationEventPublisher eventPublisher;
 
     public InvoiceService(InvoiceRepository invoiceRepository,
+                          InvoiceSequenceRepository invoiceSequenceRepository,
                           AppProperties appProperties,
                           EmailService emailService,
                           ApplicationEventPublisher eventPublisher) {
         this.invoiceRepository = invoiceRepository;
+        this.invoiceSequenceRepository = invoiceSequenceRepository;
         this.appProperties = appProperties;
         this.emailService = emailService;
         this.eventPublisher = eventPublisher;
@@ -56,16 +60,10 @@ public class InvoiceService {
 
         Invoice savedInvoice = invoiceRepository.save(invoice);
 
-        emailService.sendInvoiceIssuedEmail(buildInvoiceEmailData(savedInvoice));
-
-        eventPublisher.publishEvent(new NotificationEvent(
-                booking.getUser().getId(),
-                NotificationType.INVOICE_ISSUED,
-                NotificationType.INVOICE_ISSUED.defaultTitle(),
-                "Se ha emitido la factura %s por un monto de %s%s.".formatted(
-                        invoiceNumber, appProperties.currency(), total),
-                "invoice",
-                savedInvoice.getId()));
+        // Evento de dominio: side effects se ejecutan AFTER_COMMIT
+        eventPublisher.publishEvent(new InvoiceIssuedEvent(
+                savedInvoice.getId(),
+                booking.getUser().getId()));
 
         log.info("Factura creada para reserva {}: {} (total: {} cents)",
                 booking.getId(), invoiceNumber, total);
@@ -197,11 +195,18 @@ public class InvoiceService {
 
     private String generateInvoiceNumber() {
         int year = Year.now().getValue();
-        long count = invoiceRepository.countByYear(year);
-        return "INV-%d-%05d".formatted(year, count + 1);
+
+        InvoiceSequence sequence = invoiceSequenceRepository.findByYearForUpdate(year)
+            .orElseGet(() -> invoiceSequenceRepository.save(new InvoiceSequence(year)));
+
+        long assigned = sequence.getNextValue();
+        sequence.setNextValue(assigned + 1);
+        invoiceSequenceRepository.save(sequence);
+
+        return "INV-%d-%05d".formatted(year, assigned);
     }
 
-    InvoiceEmailData buildInvoiceEmailData(Invoice invoice) {
+    public InvoiceEmailData buildInvoiceEmailData(Invoice invoice) {
         return new InvoiceEmailData(
             invoice.getId(),
             invoice.getInvoiceNumber(),

@@ -25,7 +25,8 @@ import com.nestorria.server.modules.booking.dto.CreateBookingRequest;
 import com.nestorria.server.modules.notification.NotificationType;
 import com.nestorria.server.modules.payment.InvoiceService;
 import com.nestorria.server.modules.payment.Invoice;
-import com.nestorria.server.modules.payment.InvoiceService;
+import com.nestorria.server.modules.payment.InvoiceRepository;
+import com.nestorria.server.modules.payment.InvoiceStatus;
 import com.nestorria.server.modules.payment.StripeClient;
 import com.nestorria.server.modules.properties.Property;
 import com.nestorria.server.modules.properties.PropertyRepository;
@@ -42,6 +43,7 @@ public class BookingService {
     private final EmailService emailService;
     private final ApplicationEventPublisher eventPublisher;
     private final InvoiceService invoiceService;
+    private final InvoiceRepository invoiceRepository;
     private final StripeClient stripeClient;
 
     public BookingService(
@@ -52,6 +54,7 @@ public class BookingService {
             EmailService emailService,
             ApplicationEventPublisher eventPublisher,
             InvoiceService invoiceService,
+            InvoiceRepository invoiceRepository,
             StripeClient stripeClient) {
         this.bookingRepository = bookingRepository;
         this.propertyRepository = propertyRepository;
@@ -60,6 +63,7 @@ public class BookingService {
         this.emailService = emailService;
         this.eventPublisher = eventPublisher;
         this.invoiceService = invoiceService;
+        this.invoiceRepository = invoiceRepository;
         this.stripeClient = stripeClient;
     }
 
@@ -133,15 +137,6 @@ public class BookingService {
             savedBooking.getId()
         ));
 
-        eventPublisher.publishEvent(new NotificationEvent(
-            userId,
-            NotificationType.INVOICE_ISSUED,
-            NotificationType.INVOICE_ISSUED.defaultTitle(),
-            "Se ha emitido una factura para tu reserva en %s.".formatted(property.getAddress()),
-            "invoice",
-            savedBooking.getId()
-        ));
-
         return BookingResponse.fromEntity(savedBooking);
     }
 
@@ -184,6 +179,7 @@ public class BookingService {
         }
     }
 
+    @Transactional
     public Map<String, String> createStripeCheckoutSession(String bookingId, String userId, String origin) {
         Booking booking = bookingRepository.findById(bookingId)
             .orElseThrow(() -> new ResourceNotFoundException("Reserva no encontrada: " + bookingId));
@@ -195,7 +191,27 @@ public class BookingService {
                 "No eres parte de esta reserva");
         }
 
-        Invoice invoice = invoiceService.findByBookingId(bookingId);
+        Invoice invoiceLookup = invoiceService.findByBookingId(bookingId);
+
+        // Bloqueo pesimista: garantiza que solo una request puede crear sesión por factura
+        Invoice invoice = invoiceRepository.findByIdForUpdate(invoiceLookup.getId())
+            .orElseThrow(() -> new ResourceNotFoundException(
+                "Factura no encontrada: " + invoiceLookup.getId()));
+
+        if (invoice.getStatus() != InvoiceStatus.PENDING
+                && invoice.getStatus() != InvoiceStatus.OVERDUE) {
+            throw new BadRequestException(
+                "La factura no se puede pagar. Estado actual: " + invoice.getStatus());
+        }
+
+        // Reutilizar sesión activa existente
+        if (invoice.getStripeSessionId() != null) {
+            var existingSession = stripeClient.retrieveCheckoutSession(invoice.getStripeSessionId());
+            if (existingSession != null && "open".equals(existingSession.getStatus())) {
+                return Map.of("url", existingSession.getUrl());
+            }
+            // Sesión expirada o completada → crear nueva
+        }
 
         String propertyAddress = booking.getProperty().getAddress();
         String successUrl = origin + "/processing/my-bookings";
@@ -206,7 +222,7 @@ public class BookingService {
         metadata.put("invoiceId", invoice.getId());
         metadata.put("propertyName", propertyAddress);
 
-        long amountInCents = invoice.getTotal() * 100;
+        long amountInCents = invoice.getAmountDue();
 
         var session = stripeClient.createCheckoutSession(
             amountInCents,
@@ -215,6 +231,9 @@ public class BookingService {
             successUrl,
             cancelUrl
         );
+
+        invoice.setStripeSessionId(session.getId());
+        invoiceRepository.save(invoice);
 
         return Map.of("url", session.getUrl());
     }

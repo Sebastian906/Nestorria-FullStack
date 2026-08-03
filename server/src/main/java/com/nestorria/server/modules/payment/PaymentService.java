@@ -10,12 +10,14 @@ import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import com.nestorria.server.common.event.NotificationEvent;
+import com.nestorria.server.common.event.InvoicePaidEvent;
 import com.nestorria.server.common.exception.BadRequestException;
 import com.nestorria.server.common.exception.ResourceNotFoundException;
 import com.nestorria.server.common.mail.EmailService;
 import com.nestorria.server.modules.booking.Booking;
-import com.nestorria.server.modules.notification.NotificationType;
+import com.nestorria.server.modules.user.User;
+import com.nestorria.server.modules.user.UserRepository;
+import com.nestorria.server.modules.user.UserRole;
 import com.nestorria.server.modules.payment.dto.PaymentIntentResponse;
 import com.nestorria.server.modules.payment.dto.PaymentResponse;
 import com.nestorria.server.modules.payment.dto.ProcessManualPaymentRequest;
@@ -32,6 +34,7 @@ public class PaymentService {
     private final InvoiceService invoiceService;
     private final EmailService emailService;
     private final ApplicationEventPublisher eventPublisher;
+    private final UserRepository userRepository;
 
     @Value("${stripe.webhook-secret}")
     private String webhookSecret;
@@ -41,13 +44,15 @@ public class PaymentService {
                           StripeClient stripeClient,
                           InvoiceService invoiceService,
                           EmailService emailService,
-                          ApplicationEventPublisher eventPublisher) {
+                          ApplicationEventPublisher eventPublisher,
+                          UserRepository userRepository) {
         this.invoiceRepository = invoiceRepository;
         this.paymentTransactionRepository = paymentTransactionRepository;
         this.stripeClient = stripeClient;
         this.invoiceService = invoiceService;
         this.emailService = emailService;
         this.eventPublisher = eventPublisher;
+        this.userRepository = userRepository;
     }
 
     @Transactional
@@ -128,15 +133,15 @@ public class PaymentService {
                     "No se pudo deserializar la Session de Checkout"));
 
         Map<String, String> metadata = session.getMetadata();
-        if (metadata == null || !metadata.containsKey("bookingId")) {
-            log.warn("Checkout Session sin metadata de booking: {}", session.getId());
+        if (metadata == null || metadata.get("invoiceId") == null) {
+            log.warn("Checkout Session sin metadata de factura: {}", session.getId());
             return;
         }
 
-        String bookingId = metadata.get("bookingId");
         String invoiceId = metadata.get("invoiceId");
 
-        Invoice invoice = invoiceRepository.findById(invoiceId)
+        // Lock pesimista: serializa entregas duplicadas del mismo evento
+        Invoice invoice = invoiceRepository.findByIdForUpdate(invoiceId)
             .orElseThrow(() -> new ResourceNotFoundException(
                 "Factura no encontrada: " + invoiceId));
 
@@ -163,17 +168,7 @@ public class PaymentService {
         Booking booking = invoice.getBooking();
         booking.markAsPaid();
 
-        eventPublisher.publishEvent(new NotificationEvent(
-            booking.getUser().getId(),
-            NotificationType.INVOICE_PAID,
-            NotificationType.INVOICE_PAID.defaultTitle(),
-            "La factura %s ha sido pagada exitosamente.".formatted(
-                invoice.getInvoiceNumber()),
-            "invoice",
-            invoice.getId()
-        ));
-
-        emailService.sendInvoicePaidEmail(invoiceService.buildInvoiceEmailData(invoice));
+        publishInvoicePaid(invoice);
 
         log.info("Pago confirmado vía Checkout Session: factura {}, sesión {}",
             invoiceId, session.getId());
@@ -203,28 +198,34 @@ public class PaymentService {
             return;
         }
 
+        // Lock pesimista: serializa entregas duplicadas del mismo evento
+        String invoiceId = transaction.getInvoice().getId();
+        Invoice invoice = invoiceRepository.findByIdForUpdate(invoiceId)
+            .orElseThrow(() -> new ResourceNotFoundException(
+                "Factura no encontrada: " + invoiceId));
+
+        // Re-leer transacción bajo el lock del invoice para estado consistente
+        transaction = paymentTransactionRepository
+            .findByGatewayReference(paymentIntentId)
+            .orElseThrow(() -> new ResourceNotFoundException(
+                "Transacción no encontrada para PaymentIntent: " + paymentIntentId));
+
+        if (transaction.getStatus() == TransactionStatus.SUCCEEDED) {
+            log.info("Transacción ya procesada (post-lock): {}", transaction.getId());
+            return;
+        }
+
         transaction.setStatus(TransactionStatus.SUCCEEDED);
         transaction.setPaidAt(java.time.Instant.now());
         paymentTransactionRepository.save(transaction);
 
-        Invoice invoice = transaction.getInvoice();
         invoice.setStatus(InvoiceStatus.PAID);
         invoiceRepository.save(invoice);
 
         Booking booking = invoice.getBooking();
         booking.markAsPaid();
 
-        eventPublisher.publishEvent(new NotificationEvent(
-            booking.getUser().getId(),
-            NotificationType.INVOICE_PAID,
-            NotificationType.INVOICE_PAID.defaultTitle(),
-            "La factura %s ha sido pagada exitosamente.".formatted(
-                invoice.getInvoiceNumber()),
-            "invoice",
-            invoice.getId()
-        ));
-
-        emailService.sendInvoicePaidEmail(invoiceService.buildInvoiceEmailData(invoice));
+        publishInvoicePaid(invoice);
 
         log.info("Pago confirmado vía PaymentIntent: factura {}, transacción {}",
             invoice.getId(), transaction.getId());
@@ -237,9 +238,19 @@ public class PaymentService {
             .orElseThrow(() -> new ResourceNotFoundException(
                 "Factura no encontrada: " + invoiceId));
 
-        if (!invoice.isParty(userId)) {
+        // Solo agency owner o roles privilegiados pueden registrar pagos manuales
+        User user = userRepository.findById(userId)
+            .orElseThrow(() -> new ResourceNotFoundException(
+                "Usuario no encontrado: " + userId));
+
+        boolean isAgencyOwner = invoice.getBooking().getAgency().getOwner().getId().equals(userId);
+        boolean hasPrivilege = user.getRole() == UserRole.AGENCY_OWNER
+            || user.getRole() == UserRole.MANAGER
+            || user.getRole() == UserRole.ADMINISTRATOR;
+
+        if (!isAgencyOwner && !hasPrivilege) {
             throw new org.springframework.security.access.AccessDeniedException(
-                "No tienes acceso a esta factura");
+                "Solo la agencia o un administrador pueden registrar pagos manuales");
         }
 
         if (invoice.getStatus() != InvoiceStatus.PENDING
@@ -271,17 +282,7 @@ public class PaymentService {
         Booking booking = invoice.getBooking();
         booking.markAsPaid();
 
-        eventPublisher.publishEvent(new NotificationEvent(
-            booking.getUser().getId(),
-            NotificationType.INVOICE_PAID,
-            NotificationType.INVOICE_PAID.defaultTitle(),
-            "La factura %s ha sido pagada exitosamente.".formatted(
-                invoice.getInvoiceNumber()),
-            "invoice",
-            invoice.getId()
-        ));
-
-        emailService.sendInvoicePaidEmail(invoiceService.buildInvoiceEmailData(invoice));
+        publishInvoicePaid(invoice);
 
         log.info("Pago manual registrado: factura {}, método {}",
             invoiceId, request.paymentMethod());
@@ -306,5 +307,11 @@ public class PaymentService {
         return transactions.stream()
             .map(PaymentResponse::fromEntity)
             .toList();
+    }
+
+    private void publishInvoicePaid(Invoice invoice) {
+        eventPublisher.publishEvent(new InvoicePaidEvent(
+            invoice.getId(),
+            invoice.getBooking().getUser().getId()));
     }
 }

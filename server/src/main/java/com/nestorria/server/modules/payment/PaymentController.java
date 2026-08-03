@@ -1,5 +1,6 @@
 package com.nestorria.server.modules.payment;
 
+import java.io.IOException;
 import java.util.List;
 
 import org.springframework.http.ResponseEntity;
@@ -31,18 +32,26 @@ public class PaymentController {
         this.paymentService = paymentService;
     }
 
+    private static final int MAX_WEBHOOK_PAYLOAD_BYTES = 256 * 1024;
+
     @Operation(summary = "Webhook de Stripe para confirmación de pagos (público)")
     @PostMapping("/stripe/webhook")
     public ResponseEntity<Void> handleStripeWebhook(HttpServletRequest request) {
-        String payload;
-        String sigHeader;
-        try {
-            payload = new String(request.getInputStream().readAllBytes(), java.nio.charset.StandardCharsets.UTF_8);
-            sigHeader = request.getHeader("Stripe-Signature");
-        } catch (Exception e) {
+        String sigHeader = request.getHeader("Stripe-Signature");
+        if (sigHeader == null || sigHeader.isBlank()) {
             return ResponseEntity.badRequest().build();
         }
-
+        if (request.getContentLengthLong() > MAX_WEBHOOK_PAYLOAD_BYTES) {
+            return ResponseEntity.badRequest().build();
+        }
+        String payload;
+        try {
+            payload = new String(
+                request.getInputStream().readNBytes(MAX_WEBHOOK_PAYLOAD_BYTES),
+                java.nio.charset.StandardCharsets.UTF_8);
+        } catch (IOException e) {
+            return ResponseEntity.badRequest().build();
+        }
         paymentService.handleStripeWebhook(payload, sigHeader);
         return ResponseEntity.ok().build();
     }

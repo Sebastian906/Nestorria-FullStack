@@ -45,7 +45,7 @@ public class PaymentTransaction extends Auditable {
     @Column(name = "payment_method", nullable = false)
     private PaymentMethod paymentMethod;
 
-    @Column(name = "gateway_reference")
+    @Column(name = "gateway_reference", unique = true)
     private String gatewayReference;
 
     @Enumerated(EnumType.STRING)

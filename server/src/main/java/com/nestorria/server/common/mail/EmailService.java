@@ -121,6 +121,12 @@ public class EmailService {
     private static final DateTimeFormatter DATE_FORMATTER =
         DateTimeFormatter.ofLocalizedDate(FormatStyle.MEDIUM).withLocale(new Locale("es", "ES"));
 
+    private String formatAmount(long cents, String currency) {
+        boolean negative = cents < 0;
+        long abs = Math.abs(cents);
+        return "%s%s%d.%02d".formatted(currency, negative ? " -" : " ", abs / 100, abs % 100);
+    }
+
     private String buildBookingHtml(BookingEmailData data) {
         return """
             <h2>Detalles de tu reserva</h2>
@@ -131,7 +137,7 @@ public class EmailService {
                 <li><strong>Ubicación:</strong> %s</li>
                 <li><strong>Check-in:</strong> %s</li>
                 <li><strong>Check-out:</strong> %s</li>
-                <li><strong>Total:</strong> %s%s (%d noches)</li>
+                <li><strong>Total:</strong> %s (%d noches)</li>
                 <li><strong>Huéspedes:</strong> %d</li>
             </ul>
             <p>Estamos emocionados de recibirte pronto.</p>
@@ -142,8 +148,7 @@ public class EmailService {
             data.propertyAddress(),
             data.checkInDate().format(DATE_FORMATTER),
             data.checkOutDate().format(DATE_FORMATTER),
-            appProperties.currency(),
-            data.totalPrice(),
+            formatAmount(data.totalPrice(), appProperties.currency()),
             data.nights(),
             data.guests()
         );
@@ -156,9 +161,9 @@ public class EmailService {
             <ul>
                 <li><strong>Número de factura:</strong> %s</li>
                 <li><strong>Propiedad:</strong> %s</li>
-                <li><strong>Subtotal:</strong> %s%s</li>
-                <li><strong>Impuestos:</strong> %s%s</li>
-                <li><strong>Total:</strong> %s%s</li>
+                <li><strong>Subtotal:</strong> %s</li>
+                <li><strong>Impuestos:</strong> %s</li>
+                <li><strong>Total:</strong> %s</li>
                 <li><strong>Fecha de emisión:</strong> %s</li>
                 <li><strong>Fecha de vencimiento:</strong> %s</li>
             </ul>
@@ -166,9 +171,9 @@ public class EmailService {
         """.formatted(
             data.invoiceNumber(),
             data.propertyAddress(),
-            appProperties.currency(), data.total(),
-            appProperties.currency(), data.tax(),
-            appProperties.currency(), data.total(),
+            formatAmount(data.subtotal(), data.currency()),
+            formatAmount(data.tax(), data.currency()),
+            formatAmount(data.total(), data.currency()),
             data.issueDate().format(DATE_FORMATTER),
             data.dueDate().format(DATE_FORMATTER)
         );
@@ -181,7 +186,7 @@ public class EmailService {
             <ul>
                 <li><strong>Número de factura:</strong> %s</li>
                 <li><strong>Propiedad:</strong> %s</li>
-                <li><strong>Total a pagar:</strong> %s%s</li>
+                <li><strong>Total a pagar:</strong> %s</li>
                 <li><strong>Fecha de vencimiento:</strong> %s</li>
             </ul>
             <p>Realiza tu pago antes de la fecha de vencimiento para evitar cargos adicionales por mora.</p>
@@ -189,7 +194,7 @@ public class EmailService {
         """.formatted(
             data.invoiceNumber(),
             data.propertyAddress(),
-            appProperties.currency(), data.total(),
+            formatAmount(data.total(), data.currency()),
             data.dueDate().format(DATE_FORMATTER)
         );
     }
@@ -201,20 +206,20 @@ public class EmailService {
             <ul>
                 <li><strong>Número de factura:</strong> %s</li>
                 <li><strong>Propiedad:</strong> %s</li>
-                <li><strong>Subtotal:</strong> %s%s</li>
-                <li><strong>Impuestos:</strong> %s%s</li>
-                <li><strong>Cargo por mora:</strong> %s%s</li>
-                <li><strong>Total a pagar:</strong> %s%s</li>
+                <li><strong>Subtotal:</strong> %s</li>
+                <li><strong>Impuestos:</strong> %s</li>
+                <li><strong>Cargo por mora:</strong> %s</li>
+                <li><strong>Total a pagar:</strong> %s</li>
             </ul>
             <p>Realiza tu pago lo antes posible para evitar cargos adicionales.</p>
             <p>Ingresa a tu panel de facturas en la plataforma para pagar.</p>
         """.formatted(
             data.invoiceNumber(),
             data.propertyAddress(),
-            appProperties.currency(), data.total(),
-            appProperties.currency(), 0L,
-            appProperties.currency(), data.lateFee(),
-            appProperties.currency(), data.amountDue()
+            formatAmount(data.subtotal(), data.currency()),
+            formatAmount(data.tax(), data.currency()),
+            formatAmount(data.lateFee(), data.currency()),
+            formatAmount(data.amountDue(), data.currency())
         );
     }
 
@@ -225,14 +230,14 @@ public class EmailService {
             <ul>
                 <li><strong>Número de factura:</strong> %s</li>
                 <li><strong>Propiedad:</strong> %s</li>
-                <li><strong>Monto pagado:</strong> %s%s</li>
+                <li><strong>Monto pagado:</strong> %s</li>
                 <li><strong>Estado:</strong> Pagada</li>
             </ul>
             <p>Gracias por tu pago. Si tienes alguna pregunta, contáctanos.</p>
         """.formatted(
             data.invoiceNumber(),
             data.propertyAddress(),
-            appProperties.currency(), data.amountDue()
+            formatAmount(data.amountDue(), data.currency())
         );
     }
 }

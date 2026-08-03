@@ -77,6 +77,9 @@ public class Invoice extends Auditable {
     @Column(name = "late_fee", nullable = false)
     private long lateFee = 0;
 
+    @Column(name = "stripe_session_id")
+    private String stripeSessionId;
+
     @OneToMany(mappedBy = "invoice", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<PaymentTransaction> paymentTransactions = new ArrayList<>();
 

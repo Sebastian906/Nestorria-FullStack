@@ -28,7 +28,10 @@ public class StripeClient {
             .putAllMetadata(metadata)
             .build();
 
-        String idempotencyKey = UUID.randomUUID().toString();
+        String invoiceId = metadata.get("invoiceId");
+        String idempotencyKey = invoiceId != null
+            ? "pi_invoice_" + invoiceId
+            : UUID.randomUUID().toString();
         RequestOptions options = RequestOptions.builder()
             .setIdempotencyKey(idempotencyKey)
             .build();
@@ -68,7 +71,11 @@ public class StripeClient {
         try {
             return Webhook.constructEvent(payload, sigHeader, webhookSecret);
         } catch (com.stripe.exception.SignatureVerificationException e) {
-            throw new RuntimeException("Firma de webhook inválida", e);
+            throw new com.nestorria.server.common.exception.BadRequestException(
+                "Firma de webhook inválida", e);
+        } catch (Exception e) {
+            throw new com.nestorria.server.common.exception.BadRequestException(
+                "Payload de webhook malformado", e);
         }
     }
 
@@ -93,12 +100,25 @@ public class StripeClient {
             .build();
 
         try {
-            Session session = Session.create(params);
+            String invoiceId = metadata.get("invoiceId");
+            RequestOptions options = RequestOptions.builder()
+                .setIdempotencyKey("cs_invoice_" + invoiceId)
+                .build();
+            Session session = Session.create(params, options);
             log.info("Checkout Session creada: id={}, url={}", session.getId(), session.getUrl());
             return session;
         } catch (StripeException e) {
             log.error("Error al crear Checkout Session: {}", e.getMessage());
             throw new RuntimeException("Error al comunicarse con Stripe: " + e.getMessage(), e);
+        }
+    }
+
+    public Session retrieveCheckoutSession(String sessionId) {
+        try {
+            return Session.retrieve(sessionId);
+        } catch (StripeException e) {
+            log.warn("No se pudo recuperar Checkout Session {}: {}", sessionId, e.getMessage());
+            return null;
         }
     }
 }

@@ -2,7 +2,9 @@ package com.nestorria.server.modules.user;
 
 public enum UserRole {
     USER("user"),
-    AGENCY_OWNER("agency_owner");
+    AGENCY_OWNER("agency_owner"),
+    MANAGER("manager"),
+    ADMINISTRATOR("administrator");
 
     private final String value;
 

@@ -1,5 +1,6 @@
 package com.nestorria.server.modules.booking;
 
+import java.net.URI;
 import java.util.List;
 import java.util.Map;
 
@@ -12,6 +13,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.nestorria.server.common.config.AppProperties;
 import com.nestorria.server.modules.booking.dto.AgencyDashboardResponse;
 import com.nestorria.server.modules.booking.dto.BookingResponse;
 import com.nestorria.server.modules.booking.dto.CheckAvailabilityRequest;
@@ -29,9 +31,11 @@ import jakarta.validation.Valid;
 public class BookingController {
 
     private final BookingService bookingService;
+    private final AppProperties appProperties;
 
-    public BookingController(BookingService bookingService) {
+    public BookingController(BookingService bookingService, AppProperties appProperties) {
         this.bookingService = bookingService;
+        this.appProperties = appProperties;
     }
 
     @Operation(summary = "Verificar disponibilidad de una propiedad")
@@ -68,16 +72,7 @@ public class BookingController {
             @AuthenticationPrincipal Jwt jwt,
             @RequestBody Map<String, String> request,
             HttpServletRequest httpRequest) {
-        String origin = httpRequest.getHeader("Origin");
-        if (origin == null || origin.isEmpty()) {
-            origin = httpRequest.getHeader("Referer");
-            if (origin != null && origin.endsWith("/")) {
-                origin = origin.substring(0, origin.length() - 1);
-            }
-        }
-        if (origin == null || origin.isEmpty()) {
-            origin = "http://localhost:5173";
-        }
+        String origin = resolveStripeOrigin(httpRequest);
 
         Map<String, String> result = bookingService.createStripeCheckoutSession(
             request.get("bookingId"), jwt.getSubject(), origin);
@@ -86,5 +81,29 @@ public class BookingController {
             "success", true,
             "url", result.get("url")
         ));
+    }
+
+    private String resolveStripeOrigin(HttpServletRequest request) {
+        List<String> allowedOrigins = appProperties.stripe().originsAsList();
+
+        String origin = request.getHeader("Origin");
+        if (origin != null && allowedOrigins.contains(origin)) {
+            return origin;
+        }
+
+        String referer = request.getHeader("Referer");
+        if (referer != null) {
+            try {
+                URI uri = URI.create(referer);
+                String refererOrigin = uri.getScheme() + "://" + uri.getAuthority();
+                if (allowedOrigins.contains(refererOrigin)) {
+                    return refererOrigin;
+                }
+            } catch (IllegalArgumentException e) {
+                // Invalid Referer URI — ignore
+            }
+        }
+
+        return allowedOrigins.get(0);
     }
 }
