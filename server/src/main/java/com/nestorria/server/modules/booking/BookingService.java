@@ -3,6 +3,8 @@ package com.nestorria.server.modules.booking;
 import java.time.LocalDate;
 import java.time.temporal.ChronoUnit;
 import java.util.List;
+import java.util.HashMap;
+import java.util.Map;
 
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
@@ -21,6 +23,10 @@ import com.nestorria.server.modules.booking.dto.BookingResponse;
 import com.nestorria.server.modules.booking.dto.CheckAvailabilityRequest;
 import com.nestorria.server.modules.booking.dto.CreateBookingRequest;
 import com.nestorria.server.modules.notification.NotificationType;
+import com.nestorria.server.modules.payment.InvoiceService;
+import com.nestorria.server.modules.payment.Invoice;
+import com.nestorria.server.modules.payment.InvoiceService;
+import com.nestorria.server.modules.payment.StripeClient;
 import com.nestorria.server.modules.properties.Property;
 import com.nestorria.server.modules.properties.PropertyRepository;
 import com.nestorria.server.modules.user.User;
@@ -35,6 +41,8 @@ public class BookingService {
     private final UserRepository userRepository;
     private final EmailService emailService;
     private final ApplicationEventPublisher eventPublisher;
+    private final InvoiceService invoiceService;
+    private final StripeClient stripeClient;
 
     public BookingService(
             BookingRepository bookingRepository,
@@ -42,13 +50,17 @@ public class BookingService {
             AgencyRepository agencyRepository,
             UserRepository userRepository,
             EmailService emailService,
-            ApplicationEventPublisher eventPublisher) {
+            ApplicationEventPublisher eventPublisher,
+            InvoiceService invoiceService,
+            StripeClient stripeClient) {
         this.bookingRepository = bookingRepository;
         this.propertyRepository = propertyRepository;
         this.agencyRepository = agencyRepository;
         this.userRepository = userRepository;
         this.emailService = emailService;
         this.eventPublisher = eventPublisher;
+        this.invoiceService = invoiceService;
+        this.stripeClient = stripeClient;
     }
 
     @Transactional(readOnly = true)
@@ -97,6 +109,8 @@ public class BookingService {
 
         Booking savedBooking = bookingRepository.save(booking);
 
+        invoiceService.createBookingInvoice(savedBooking);
+
         emailService.sendBookingConfirmation(new BookingEmailData(
             savedBooking.getId(),
             user.getEmail(),
@@ -116,6 +130,15 @@ public class BookingService {
             NotificationType.BOOKING_CONFIRMED.defaultTitle(),
             "Tu reserva en %s ha sido confirmada.".formatted(property.getAddress()),
             "booking",
+            savedBooking.getId()
+        ));
+
+        eventPublisher.publishEvent(new NotificationEvent(
+            userId,
+            NotificationType.INVOICE_ISSUED,
+            NotificationType.INVOICE_ISSUED.defaultTitle(),
+            "Se ha emitido una factura para tu reserva en %s.".formatted(property.getAddress()),
+            "invoice",
             savedBooking.getId()
         ));
 
@@ -159,5 +182,40 @@ public class BookingService {
         if (!checkOutDate.isAfter(checkInDate)) {
             throw new BadRequestException("La fecha de salida debe ser posterior a la fecha de entrada");
         }
+    }
+
+    public Map<String, String> createStripeCheckoutSession(String bookingId, String userId, String origin) {
+        Booking booking = bookingRepository.findById(bookingId)
+            .orElseThrow(() -> new ResourceNotFoundException("Reserva no encontrada: " + bookingId));
+
+        String tenantId = booking.getUser().getId();
+        String agencyOwnerId = booking.getAgency().getOwner().getId();
+        if (!userId.equals(tenantId) && !userId.equals(agencyOwnerId)) {
+            throw new org.springframework.security.access.AccessDeniedException(
+                "No eres parte de esta reserva");
+        }
+
+        Invoice invoice = invoiceService.findByBookingId(bookingId);
+
+        String propertyAddress = booking.getProperty().getAddress();
+        String successUrl = origin + "/processing/my-bookings";
+        String cancelUrl = origin + "/my-bookings";
+
+        Map<String, String> metadata = new HashMap<>();
+        metadata.put("bookingId", bookingId);
+        metadata.put("invoiceId", invoice.getId());
+        metadata.put("propertyName", propertyAddress);
+
+        long amountInCents = invoice.getTotal() * 100;
+
+        var session = stripeClient.createCheckoutSession(
+            amountInCents,
+            invoice.getCurrency(),
+            metadata,
+            successUrl,
+            cancelUrl
+        );
+
+        return Map.of("url", session.getUrl());
     }
 }

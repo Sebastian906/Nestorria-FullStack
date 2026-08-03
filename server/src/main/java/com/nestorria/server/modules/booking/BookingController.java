@@ -1,8 +1,8 @@
 package com.nestorria.server.modules.booking;
 
 import java.util.List;
+import java.util.Map;
 
-import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.oauth2.jwt.Jwt;
@@ -18,7 +18,9 @@ import com.nestorria.server.modules.booking.dto.CheckAvailabilityRequest;
 import com.nestorria.server.modules.booking.dto.CheckAvailabilityResponse;
 import com.nestorria.server.modules.booking.dto.CreateBookingRequest;
 
+import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 
 @RestController
@@ -32,26 +34,57 @@ public class BookingController {
         this.bookingService = bookingService;
     }
 
+    @Operation(summary = "Verificar disponibilidad de una propiedad")
     @PostMapping("/check-availability")
-    public CheckAvailabilityResponse checkAvailability(@Valid @RequestBody CheckAvailabilityRequest request) {
-        return new CheckAvailabilityResponse(bookingService.checkAvailability(request));
+    public CheckAvailabilityResponse checkAvailability(
+            @Valid @RequestBody CheckAvailabilityRequest request) {
+        boolean isAvailable = bookingService.checkAvailability(request);
+        return new CheckAvailabilityResponse(isAvailable);
     }
 
+    @Operation(summary = "Crear una nueva reserva")
     @PostMapping
-    public ResponseEntity<BookingResponse> create(
+    public BookingResponse createBooking(
             @AuthenticationPrincipal Jwt jwt,
             @Valid @RequestBody CreateBookingRequest request) {
-        BookingResponse response = bookingService.createBooking(jwt.getSubject(), request);
-        return ResponseEntity.status(HttpStatus.CREATED).body(response);
+        return bookingService.createBooking(jwt.getSubject(), request);
     }
 
+    @Operation(summary = "Obtener las reservas del usuario")
     @GetMapping("/me")
     public List<BookingResponse> getMyBookings(@AuthenticationPrincipal Jwt jwt) {
         return bookingService.getUserBookings(jwt.getSubject());
     }
 
+    @Operation(summary = "Obtener el dashboard de la agencia")
     @GetMapping("/agency")
     public AgencyDashboardResponse getAgencyDashboard(@AuthenticationPrincipal Jwt jwt) {
         return bookingService.getAgencyDashboard(jwt.getSubject());
+    }
+
+    @Operation(summary = "Crear sesión de pago Stripe para una reserva")
+    @PostMapping("/stripe")
+    public ResponseEntity<Map<String, Object>> createStripePayment(
+            @AuthenticationPrincipal Jwt jwt,
+            @RequestBody Map<String, String> request,
+            HttpServletRequest httpRequest) {
+        String origin = httpRequest.getHeader("Origin");
+        if (origin == null || origin.isEmpty()) {
+            origin = httpRequest.getHeader("Referer");
+            if (origin != null && origin.endsWith("/")) {
+                origin = origin.substring(0, origin.length() - 1);
+            }
+        }
+        if (origin == null || origin.isEmpty()) {
+            origin = "http://localhost:5173";
+        }
+
+        Map<String, String> result = bookingService.createStripeCheckoutSession(
+            request.get("bookingId"), jwt.getSubject(), origin);
+
+        return ResponseEntity.ok(Map.of(
+            "success", true,
+            "url", result.get("url")
+        ));
     }
 }

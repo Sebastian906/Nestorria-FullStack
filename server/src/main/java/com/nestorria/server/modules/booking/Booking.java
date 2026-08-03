@@ -4,6 +4,7 @@ import java.time.LocalDate;
 
 import com.nestorria.server.common.persistence.Auditable;
 import com.nestorria.server.modules.agency.Agency;
+import com.nestorria.server.modules.payment.Invoice;
 import com.nestorria.server.modules.properties.Property;
 import com.nestorria.server.modules.user.User;
 
@@ -17,6 +18,7 @@ import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
+import jakarta.persistence.OneToOne;
 import jakarta.persistence.Table;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotNull;
@@ -74,6 +76,10 @@ public class Booking extends Auditable {
 
     @Column(name = "is_paid", nullable = false)
     private boolean isPaid = false;
+
+    @OneToOne(fetch = FetchType.LAZY, mappedBy = "booking")
+    @Setter(AccessLevel.NONE)
+    private Invoice invoice;
 
     public Booking(User user, Property property, Agency agency, LocalDate checkInDate,
                     LocalDate checkOutDate, long totalPrice, int guests) {
