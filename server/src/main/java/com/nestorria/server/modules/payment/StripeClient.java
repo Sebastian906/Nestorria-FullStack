@@ -101,8 +101,11 @@ public class StripeClient {
 
         try {
             String invoiceId = metadata.get("invoiceId");
+            String idempotencyKey = invoiceId != null
+                ? "cs_invoice_" + invoiceId + "_" + UUID.randomUUID()
+                : UUID.randomUUID().toString();
             RequestOptions options = RequestOptions.builder()
-                .setIdempotencyKey("cs_invoice_" + invoiceId)
+                .setIdempotencyKey(idempotencyKey)
                 .build();
             Session session = Session.create(params, options);
             log.info("Checkout Session creada: id={}, url={}", session.getId(), session.getUrl());

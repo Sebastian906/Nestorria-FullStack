@@ -196,8 +196,16 @@ public class InvoiceService {
     private String generateInvoiceNumber() {
         int year = Year.now().getValue();
 
-        InvoiceSequence sequence = invoiceSequenceRepository.findByYearForUpdate(year)
-            .orElseGet(() -> invoiceSequenceRepository.save(new InvoiceSequence(year)));
+        InvoiceSequence sequence;
+        try {
+            sequence = invoiceSequenceRepository.findByYearForUpdate(year)
+                .orElseGet(() -> invoiceSequenceRepository.save(new InvoiceSequence(year)));
+        } catch (org.springframework.dao.DataIntegrityViolationException e) {
+            // Race condition: otro request creó la secuencia primero → recargar con lock
+            sequence = invoiceSequenceRepository.findByYearForUpdate(year)
+                .orElseThrow(() -> new IllegalStateException(
+                    "No se pudo crear ni cargar la secuencia de facturas para el año " + year));
+        }
 
         long assigned = sequence.getNextValue();
         sequence.setNextValue(assigned + 1);

@@ -8,12 +8,12 @@ const Processing = () => {
     const { nextUrl } = useParams()
 
     useEffect(() => {
-        if(nextUrl) {
-            setTimeout(() => {
-                navigate(`/${nextUrl}`)
-            }, 8000);
-        }
-    }, [nextUrl])
+        if (!nextUrl) return
+        const timerId = setTimeout(() => {
+            navigate(`/${nextUrl}`)
+        }, 8000)
+        return () => clearTimeout(timerId)
+    }, [nextUrl, navigate])
 
     return (
         <div className='flexCenter h-screen'>

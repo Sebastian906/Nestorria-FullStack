@@ -33,8 +33,5 @@ public interface InvoiceRepository extends JpaRepository<Invoice, String> {
     List<Invoice> findInvoicesDueOnDateWithBooking(
         @Param("status") InvoiceStatus status, @Param("date") LocalDate date);
 
-    @Query("SELECT COUNT(i) FROM Invoice i WHERE FUNCTION('YEAR', i.createdAt) = :year")
-    long countByYear(@Param("year") int year);
-
     long countByStatus(InvoiceStatus status);
 }

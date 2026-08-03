@@ -23,5 +23,18 @@ public record AppProperties(
         public List<String> originsAsList() {
             return List.of(allowedOrigins.split(","));
         }
+
+        public void validate() {
+            if (allowedOrigins == null || allowedOrigins.isBlank()) {
+                throw new IllegalStateException(
+                    "app.stripe.allowed-origins no puede estar vacío. "
+                    + "Configura al menos un origen permitido (ej. http://localhost:5173)");
+            }
+            if (originsAsList().stream().anyMatch(String::isBlank)) {
+                throw new IllegalStateException(
+                    "app.stripe.allowed-origins contiene valores vacíos. "
+                    + "Revisa la configuración (valores separados por coma, sin espacios extra)");
+            }
+        }
     }
 }

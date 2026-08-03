@@ -36,6 +36,7 @@ public class BookingController {
     public BookingController(BookingService bookingService, AppProperties appProperties) {
         this.bookingService = bookingService;
         this.appProperties = appProperties;
+        appProperties.stripe().validate();
     }
 
     @Operation(summary = "Verificar disponibilidad de una propiedad")
@@ -104,6 +105,14 @@ public class BookingController {
             }
         }
 
-        return allowedOrigins.get(0);
+        return allowedOrigins.isEmpty()
+            ? throwNoOriginsConfigured()
+            : allowedOrigins.get(0);
+    }
+
+    private String throwNoOriginsConfigured() {
+        throw new IllegalStateException(
+            "app.stripe.allowed-origins está vacío. "
+            + "No se puede determinar la URL de redirección de Stripe.");
     }
 }
