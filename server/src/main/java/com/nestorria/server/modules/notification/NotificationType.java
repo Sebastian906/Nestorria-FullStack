@@ -2,13 +2,16 @@ package com.nestorria.server.modules.notification;
 
 public enum NotificationType {
 
-    BOOKING_CONFIRMED("Reserva confirmada"),
-    BOOKING_CANCELLED("Reserva cancelada"),
-    PAYMENT_RECEIVED("Pago recibido"),
-    CONTRACT_SIGNED("Contrato firmado"),
-    CONTRACT_EXPIRED("Contrato vencido"),
-    REVIEW_RECEIVED("Reseña recibida"),
-    PROPERTY_INQUIRY("Consulta sobre propiedad");
+    BOOKING_CONFIRMED("Booking confirmed"),
+    BOOKING_CANCELLED("Booking cancelled"),
+    PAYMENT_RECEIVED("Payment received"),
+    CONTRACT_SIGNED("Contract signed"),
+    CONTRACT_EXPIRED("Contract expired"),
+    REVIEW_RECEIVED("Review received"),
+    PROPERTY_INQUIRY("Property inquiry"),
+    INVOICE_ISSUED("Invoice issued"),
+    INVOICE_OVERDUE("Invoice overdue"),
+    INVOICE_PAID("Invoice paid");
 
     private final String defaultTitle;
 

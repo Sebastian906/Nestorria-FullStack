@@ -120,6 +120,24 @@ const MyBookings = () => {
         }
     }
 
+    // Stripe payment
+    const handlePayment = async (bookingId: string) => {
+        try {
+            const token = await getToken()
+            const { data } = await axios.post("/api/bookings/stripe", { bookingId }, {
+                headers: { Authorization: `Bearer ${token}` },
+            });
+
+            if (data.success) {
+                window.location.href = data.url
+            } else {
+                toast.error(data.message || "Error al procesar el pago")
+            }
+        } catch (error: any) {
+            toast.error(error.response?.data?.message || error.message || "Error al procesar el pago")
+        }
+    }
+
     useEffect(() => {
         if (user) {
             getUserBookings()
@@ -206,7 +224,10 @@ const MyBookings = () => {
                                         </div>
                                     </div>
                                     {!booking.isPaid && (
-                                        <button className='btn-secondary py-1! text-xs! rounded-sm'>
+                                        <button
+                                            onClick={() => handlePayment(booking.id)}
+                                            className='btn-secondary py-1! text-xs! rounded-sm'
+                                        >
                                             Pay Now
                                         </button>
                                     )}
