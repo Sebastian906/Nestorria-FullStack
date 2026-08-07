@@ -57,7 +57,7 @@ public class InvoiceIssuedEventListener {
                 NotificationType.INVOICE_ISSUED,
                 NotificationType.INVOICE_ISSUED.defaultTitle(),
                 "Se ha emitido la factura %s por un monto de %s.".formatted(
-                    invoice.getInvoiceNumber(), EmailService.formatAmount(invoice.getTotal(), appProperties.currency())),
+                    invoice.getInvoiceNumber(), EmailService.formatAmount(invoice.getTotal(), invoice.getCurrency())),
                 "invoice",
                 invoice.getId()));
 

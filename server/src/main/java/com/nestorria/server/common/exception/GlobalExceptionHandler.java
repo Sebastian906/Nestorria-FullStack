@@ -28,9 +28,17 @@ public class GlobalExceptionHandler {
         Map<String, String> fieldErrors = ex.getBindingResult().getFieldErrors().stream()
                 .collect(Collectors.toMap(
                         err -> err.getField(),
-                        err -> err.getDefaultMessage(),
+                        err -> err.getDefaultMessage() != null ? err.getDefaultMessage() : "inválido",
                         (a, b) -> a + "; " + b,
                         LinkedHashMap::new));
+
+        String globalMessage = ex.getBindingResult().getGlobalErrors().stream()
+                .map(err -> err.getDefaultMessage() != null ? err.getDefaultMessage() : "error de validación")
+                .collect(Collectors.joining("; "));
+
+        if (!globalMessage.isEmpty()) {
+            fieldErrors.put("_global", globalMessage);
+        }
 
         String combinedMessage = fieldErrors.entrySet().stream()
                 .map(e -> e.getKey() + ": " + e.getValue())

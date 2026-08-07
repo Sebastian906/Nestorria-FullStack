@@ -150,7 +150,7 @@ public class InvoiceService {
                 NotificationType.INVOICE_OVERDUE,
                 NotificationType.INVOICE_OVERDUE.defaultTitle(),
                 "La factura %s ha vencido. Se ha aplicado un cargo por mora de %s.".formatted(
-                    invoice.getInvoiceNumber(), EmailService.formatAmount(lateFee, appProperties.currency())),
+                    invoice.getInvoiceNumber(), EmailService.formatAmount(lateFee, invoice.getCurrency())),
                 "invoice",
                 invoice.getId()
             ));
@@ -179,7 +179,7 @@ public class InvoiceService {
                 NotificationType.INVOICE_ISSUED,
                 "Recordatorio de factura",
                 "La factura %s vence mañana. Total a pagar: %s.".formatted(
-                    invoice.getInvoiceNumber(), EmailService.formatAmount(invoice.getTotal(), appProperties.currency())),
+                    invoice.getInvoiceNumber(), EmailService.formatAmount(invoice.getTotal(), invoice.getCurrency())),
                 "invoice",
                 invoice.getId()
             ));

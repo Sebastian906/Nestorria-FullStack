@@ -88,6 +88,8 @@ public class EmailService {
     public static String formatAmount(long cents, String currency) {
         boolean negative = cents < 0;
         long abs = Math.abs(cents);
+        // Math.abs(Long.MIN_VALUE) overflows to Long.MIN_VALUE (negative)
+        if (abs < 0) abs = Long.MAX_VALUE;
         return "%s%s%d.%02d".formatted(currency, negative ? " -" : " ", abs / 100, abs % 100);
     }
 
