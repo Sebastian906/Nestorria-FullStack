@@ -26,104 +26,70 @@ public class EmailService {
         this.appProperties = appProperties;
     }
 
-    @Async
-    public void sendBookingConfirmation(BookingEmailData data) {
+    private void sendEmail(String to, String subject, String html) {
         try {
             MimeMessage message = mailSender.createMimeMessage();
             MimeMessageHelper helper = new MimeMessageHelper(message, "utf-8");
-
             helper.setFrom(appProperties.mail().sender());
-            helper.setTo(data.userEmail());
-            helper.setSubject("Confirmación de reserva - Nestorria");
-            helper.setText(buildBookingHtml(data), true);
-
+            helper.setTo(to);
+            helper.setSubject(subject);
+            helper.setText(html, true);
             mailSender.send(message);
-            log.info("Correo de confirmación enviado (bookingId={})", data.bookingId());
+            log.info("Correo enviado a {} con asunto '{}'", to, subject);
         } catch (Exception e) {
-            // El correo falla silenciosamente: la reserva ya fue guardada
-            log.error("Error al enviar correo de confirmación (bookingId={}): {}", data.bookingId(), e.getMessage());
+            log.error("Error al enviar correo a {}: {}", to, e.getMessage());
         }
+    }
+
+    @Async
+    public void sendBookingConfirmation(BookingEmailData data) {
+        sendEmail(
+            data.userEmail(),
+            "Confirmación de reserva - Nestorria",
+            buildBookingHtml(data));
     }
 
     @Async
     public void sendInvoiceIssuedEmail(InvoiceEmailData data) {
-        try {
-            MimeMessage message = mailSender.createMimeMessage();
-            MimeMessageHelper helper = new MimeMessageHelper(message, "utf-8");
-
-            helper.setFrom(appProperties.mail().sender());
-            helper.setTo(data.userEmail());
-            helper.setSubject("Factura emitida - %s - Nestorria".formatted(data.invoiceNumber()));
-            helper.setText(buildInvoiceIssuedHtml(data), true);
-
-            mailSender.send(message);
-            log.info("Correo de factura emitida enviado (invoiceId={})", data.invoiceId());
-        } catch (Exception e) {
-            log.error("Error al enviar correo de factura emitida (invoiceId={}): {}", data.invoiceId(), e.getMessage());
-        }
+        sendEmail(
+            data.userEmail(),
+            "Factura emitida - %s - Nestorria".formatted(data.invoiceNumber()),
+            buildInvoiceIssuedHtml(data));
     }
 
     @Async
     public void sendInvoiceReminderEmail(InvoiceEmailData data) {
-        try {
-            MimeMessage message = mailSender.createMimeMessage();
-            MimeMessageHelper helper = new MimeMessageHelper(message, "utf-8");
-
-            helper.setFrom(appProperties.mail().sender());
-            helper.setTo(data.userEmail());
-            helper.setSubject("Recordatorio: factura vence mañana - %s - Nestorria".formatted(data.invoiceNumber()));
-            helper.setText(buildInvoiceReminderHtml(data), true);
-
-            mailSender.send(message);
-            log.info("Correo de recordatorio de factura enviado (invoiceId={})", data.invoiceId());
-        } catch (Exception e) {
-            log.error("Error al enviar correo de recordatorio (invoiceId={}): {}", data.invoiceId(), e.getMessage());
-        }
+        sendEmail(
+            data.userEmail(),
+            "Recordatorio: factura vence mañana - %s - Nestorria".formatted(data.invoiceNumber()),
+            buildInvoiceReminderHtml(data));
     }
 
     @Async
     public void sendInvoiceOverdueEmail(InvoiceEmailData data) {
-        try {
-            MimeMessage message = mailSender.createMimeMessage();
-            MimeMessageHelper helper = new MimeMessageHelper(message, "utf-8");
-
-            helper.setFrom(appProperties.mail().sender());
-            helper.setTo(data.userEmail());
-            helper.setSubject("Factura vencida - %s - Nestorria".formatted(data.invoiceNumber()));
-            helper.setText(buildInvoiceOverdueHtml(data), true);
-
-            mailSender.send(message);
-            log.info("Correo de factura vencida enviado (invoiceId={})", data.invoiceId());
-        } catch (Exception e) {
-            log.error("Error al enviar correo de factura vencida (invoiceId={}): {}", data.invoiceId(), e.getMessage());
-        }
+        sendEmail(
+            data.userEmail(),
+            "Factura vencida - %s - Nestorria".formatted(data.invoiceNumber()),
+            buildInvoiceOverdueHtml(data));
     }
 
     @Async
     public void sendInvoicePaidEmail(InvoiceEmailData data) {
-        try {
-            MimeMessage message = mailSender.createMimeMessage();
-            MimeMessageHelper helper = new MimeMessageHelper(message, "utf-8");
-
-            helper.setFrom(appProperties.mail().sender());
-            helper.setTo(data.userEmail());
-            helper.setSubject("Pago confirmado - %s - Nestorria".formatted(data.invoiceNumber()));
-            helper.setText(buildInvoicePaidHtml(data), true);
-
-            mailSender.send(message);
-            log.info("Correo de pago confirmado enviado (invoiceId={})", data.invoiceId());
-        } catch (Exception e) {
-            log.error("Error al enviar correo de pago confirmado (invoiceId={}): {}", data.invoiceId(), e.getMessage());
-        }
+        sendEmail(
+            data.userEmail(),
+            "Pago confirmado - %s - Nestorria".formatted(data.invoiceNumber()),
+            buildInvoicePaidHtml(data));
     }
 
     @SuppressWarnings("deprecation")
     private static final DateTimeFormatter DATE_FORMATTER =
         DateTimeFormatter.ofLocalizedDate(FormatStyle.MEDIUM).withLocale(new Locale("es", "ES"));
 
-    private String formatAmount(long cents, String currency) {
+    public static String formatAmount(long cents, String currency) {
         boolean negative = cents < 0;
         long abs = Math.abs(cents);
+        // Math.abs(Long.MIN_VALUE) overflows to Long.MIN_VALUE (negative)
+        if (abs < 0) abs = Long.MAX_VALUE;
         return "%s%s%d.%02d".formatted(currency, negative ? " -" : " ", abs / 100, abs % 100);
     }
 
