@@ -1,21 +1,24 @@
 package com.nestorria.server.modules.notification;
 
-import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.*;
-
-import java.time.Instant;
+import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import org.mockito.Captor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.context.ApplicationEventPublisher;
 
@@ -28,13 +31,14 @@ import com.nestorria.server.modules.booking.BookingRepository;
 import com.nestorria.server.modules.booking.BookingService;
 import com.nestorria.server.modules.booking.dto.BookingResponse;
 import com.nestorria.server.modules.booking.dto.CreateBookingRequest;
+import com.nestorria.server.modules.payment.InvoiceRepository;
+import com.nestorria.server.modules.payment.InvoiceService;
+import com.nestorria.server.modules.payment.StripeClient;
 import com.nestorria.server.modules.properties.Property;
 import com.nestorria.server.modules.properties.PropertyRepository;
 import com.nestorria.server.modules.properties.embeddable.PriceDetails;
 import com.nestorria.server.modules.user.User;
 import com.nestorria.server.modules.user.UserRepository;
-
-import java.time.LocalDate;
 
 @ExtendWith(MockitoExtension.class)
 class BookingServiceNotificationTest {
@@ -56,6 +60,15 @@ class BookingServiceNotificationTest {
 
     @Mock
     private ApplicationEventPublisher eventPublisher;
+
+    @Mock
+    private InvoiceService invoiceService;
+
+    @Mock
+    private InvoiceRepository invoiceRepository;
+
+    @Mock
+    private StripeClient stripeClient;
 
     @InjectMocks
     private BookingService bookingService;
