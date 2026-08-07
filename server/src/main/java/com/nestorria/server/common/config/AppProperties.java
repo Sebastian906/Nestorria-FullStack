@@ -9,7 +9,8 @@ public record AppProperties(
         MailProperties mail,
         String currency,
         InvoiceProperties invoice,
-        StripeProperties stripe) {
+        StripeProperties stripe,
+        RateLimitProperties rateLimit) {
     public record MailProperties(String sender) {
     }
 
@@ -27,14 +28,24 @@ public record AppProperties(
         public void validate() {
             if (allowedOrigins == null || allowedOrigins.isBlank()) {
                 throw new IllegalStateException(
-                    "app.stripe.allowed-origins no puede estar vacío. "
-                    + "Configura al menos un origen permitido (ej. http://localhost:5173)");
+                        "app.stripe.allowed-origins no puede estar vacío. "
+                                + "Configura al menos un origen permitido (ej. http://localhost:5173)");
             }
             if (originsAsList().stream().anyMatch(String::isBlank)) {
                 throw new IllegalStateException(
-                    "app.stripe.allowed-origins contiene valores vacíos. "
-                    + "Revisa la configuración (valores separados por coma, sin espacios extra)");
+                        "app.stripe.allowed-origins contiene valores vacíos. "
+                                + "Revisa la configuración (valores separados por coma, sin espacios extra)");
             }
         }
+    }
+
+    public record RateLimitProperties(
+            boolean enabled,
+            int readPerMinute,
+            int writePerMinute,
+            int reviewPerMinute,
+            int stripePerMinute,
+            int publicReadPerMinute,
+            int searchPerMinute) {
     }
 }
