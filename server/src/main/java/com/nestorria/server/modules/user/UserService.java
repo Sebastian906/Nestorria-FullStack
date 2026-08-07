@@ -32,10 +32,16 @@ public class UserService {
 
         List<String> cities = new ArrayList<>(user.getRecentSearchedCities());
 
-        if (cities.size() >= MAX_RECENT_CITIES) {
-            cities.remove(0);
+        // Deduplicar: remover si ya existe para moverla al frente
+        cities.remove(request.city());
+
+        // Agregar al frente (posición 0 = más reciente)
+        cities.addFirst(request.city());
+
+        // Recortar si excede el máximo
+        if (cities.size() > MAX_RECENT_CITIES) {
+            cities = new ArrayList<>(cities.subList(0, MAX_RECENT_CITIES));
         }
-        cities.add(request.city());
 
         user.setRecentSearchedCities(cities);
         userRepository.save(user);
