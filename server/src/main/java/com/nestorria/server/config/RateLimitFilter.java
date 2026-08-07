@@ -2,8 +2,9 @@ package com.nestorria.server.config;
 
 import java.io.IOException;
 import java.time.Duration;
-import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+
+import org.springframework.scheduling.annotation.Scheduled;
 
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -25,10 +26,24 @@ import jakarta.servlet.http.HttpServletResponse;
 public class RateLimitFilter extends OncePerRequestFilter {
 
     private final AppProperties.RateLimitProperties rateLimitProps;
-    private final Map<String, Bucket> buckets = new ConcurrentHashMap<>();
+    private final ConcurrentHashMap<String, TimedBucket> buckets = new ConcurrentHashMap<>();
+
+    // Evict buckets inactive for 2x the refill interval (1 min refill → 2 min expiry)
+    private static final long EXPIRY_NANOS = Duration.ofMinutes(2).toNanos();
+    private static final int MAX_BUCKETS = 10_000;
 
     public RateLimitFilter(AppProperties appProperties) {
         this.rateLimitProps = appProperties.rateLimit();
+    }
+
+    private static final class TimedBucket {
+        final Bucket bucket;
+        volatile long lastAccessNanos;
+
+        TimedBucket(Bucket bucket) {
+            this.bucket = bucket;
+            this.lastAccessNanos = System.nanoTime();
+        }
     }
 
     @Override
@@ -52,7 +67,10 @@ public class RateLimitFilter extends OncePerRequestFilter {
 
         String key = resolveKey(request);
         int limit = resolveLimit(uri);
-        Bucket bucket = buckets.computeIfAbsent(key, k -> createBucket(limit));
+        String bucketKey = key + ":" + limit;
+        TimedBucket tb = buckets.computeIfAbsent(bucketKey, k -> new TimedBucket(createBucket(limit)));
+        tb.lastAccessNanos = System.nanoTime();
+        Bucket bucket = tb.bucket;
 
         ConsumptionProbe probe = bucket.tryConsumeAndReturnRemaining(1);
 
@@ -61,9 +79,11 @@ public class RateLimitFilter extends OncePerRequestFilter {
                 String.valueOf(probe.getRemainingTokens()));
             filterChain.doFilter(request, response);
         } else {
-            long retryAfterSeconds = probe.getNanosToWaitForRefill() / 1_000_000_000;
+            long retryAfterSeconds =
+                (probe.getNanosToWaitForRefill() + 999_999_999L) / 1_000_000_000;
             response.setStatus(429);
             response.setContentType("application/json");
+            response.setHeader("X-Rate-Limit-Remaining", "0");
             response.setHeader("Retry-After", String.valueOf(retryAfterSeconds));
             response.getWriter().write(
                 "{\"timestamp\":\"" + java.time.Instant.now()
@@ -91,16 +111,19 @@ public class RateLimitFilter extends OncePerRequestFilter {
     }
 
     /**
-     * Resolve client IP. If behind a reverse proxy in the future,
-     * add server.forward-headers-strategy=native to application.properties.
+     * Resolve client IP. Returns getRemoteAddr() by default.
+     * Parses X-Forwarded-For only when the immediate peer is a configured
+     * trusted proxy — prevents clients from spoofing their IP.
      */
     private String resolveClientIp(HttpServletRequest request) {
-        String xff = request.getHeader("X-Forwarded-For");
-        if (xff != null && !xff.isBlank()) {
-            // First IP in the chain is the original client
-            return xff.split(",")[0].trim();
+        String remoteAddr = request.getRemoteAddr();
+        if (rateLimitProps.trustedProxiesAsList().contains(remoteAddr)) {
+            String xff = request.getHeader("X-Forwarded-For");
+            if (xff != null && !xff.isBlank()) {
+                return xff.split(",")[0].trim();
+            }
         }
-        return request.getRemoteAddr();
+        return remoteAddr;
     }
 
     private int resolveLimit(String uri) {
@@ -129,5 +152,15 @@ public class RateLimitFilter extends OncePerRequestFilter {
                 .capacity(requestsPerMinute)
                 .refillGreedy(requestsPerMinute, Duration.ofMinutes(1)))
             .build();
+    }
+
+    @Scheduled(fixedRate = 60_000)
+    void evictExpiredBuckets() {
+        long now = System.nanoTime();
+        buckets.entrySet().removeIf(e -> now - e.getValue().lastAccessNanos > EXPIRY_NANOS);
+        // Soft cap: if still oversized after normal eviction, force-compact
+        if (buckets.size() > MAX_BUCKETS) {
+            buckets.entrySet().removeIf(e -> now - e.getValue().lastAccessNanos > EXPIRY_NANOS / 2);
+        }
     }
 }

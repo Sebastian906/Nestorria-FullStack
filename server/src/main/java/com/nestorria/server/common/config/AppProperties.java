@@ -46,6 +46,13 @@ public record AppProperties(
             int reviewPerMinute,
             int stripePerMinute,
             int publicReadPerMinute,
-            int searchPerMinute) {
+            int searchPerMinute,
+            String trustedProxies) {
+        public java.util.List<String> trustedProxiesAsList() {
+            if (trustedProxies == null || trustedProxies.isBlank()) {
+                return java.util.List.of();
+            }
+            return java.util.List.of(trustedProxies.split(","));
+        }
     }
 }

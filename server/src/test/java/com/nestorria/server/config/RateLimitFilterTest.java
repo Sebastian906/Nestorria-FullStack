@@ -46,7 +46,7 @@ class RateLimitFilterTest {
     @BeforeEach
     void setUp() {
         RateLimitProperties props = new RateLimitProperties(
-            true, 100, 10, 5, 10, 60, 30
+            true, 100, 10, 5, 10, 60, 30, ""
         );
         AppProperties appProps = new AppProperties(
             null, "$", null, null, props
@@ -76,7 +76,7 @@ class RateLimitFilterTest {
 
     @Test
     void healthEndpoint_IsExcluded() throws ServletException, IOException {
-        authenticateAnon();
+        // No auth needed — excluded before SecurityContext access
         MockHttpServletRequest request = new MockHttpServletRequest("GET", "/api/health/");
         MockHttpServletResponse response = new MockHttpServletResponse();
 
@@ -88,7 +88,7 @@ class RateLimitFilterTest {
 
     @Test
     void stripeWebhook_IsExcluded() throws ServletException, IOException {
-        authenticateAnon();
+        // No auth needed — excluded before SecurityContext access
         MockHttpServletRequest request = new MockHttpServletRequest("POST", "/api/payments/stripe/webhook");
         MockHttpServletResponse response = new MockHttpServletResponse();
 
@@ -132,7 +132,8 @@ class RateLimitFilterTest {
         filter.doFilterInternal(request, response2, filterChain);
 
         assertEquals(429, response2.getStatus());
-        assertTrue(response2.containsHeader("Retry-After"));
+        assertEquals("0", response2.getHeader("X-Rate-Limit-Remaining"));
+        assertTrue(Long.parseLong(response2.getHeader("Retry-After")) >= 1);
     }
 
     @Test
@@ -153,6 +154,32 @@ class RateLimitFilterTest {
         filter.doFilterInternal(request, response2, filterChain);
 
         assertEquals(429, response2.getStatus());
+    }
+
+    // === Category isolation ===
+
+    @Test
+    void readAndWriteCategories_HaveIndependentBuckets() throws ServletException, IOException {
+        authenticateAsUser(TEST_USER_ID);
+
+        // Exhaust the read bucket (limit 100) via GET /api/users/me
+        MockHttpServletRequest readRequest = new MockHttpServletRequest("GET", "/api/users/me");
+        for (int i = 0; i < 100; i++) {
+            MockHttpServletResponse res = new MockHttpServletResponse();
+            filter.doFilterInternal(readRequest, res, filterChain);
+        }
+
+        // Read bucket is now empty
+        MockHttpServletResponse blockedRead = new MockHttpServletResponse();
+        filter.doFilterInternal(readRequest, blockedRead, filterChain);
+        assertEquals(429, blockedRead.getStatus());
+
+        // Write bucket (limit 10) is still full — independent category
+        MockHttpServletRequest writeRequest = new MockHttpServletRequest("POST", "/api/bookings");
+        MockHttpServletResponse allowedWrite = new MockHttpServletResponse();
+        filter.doFilterInternal(writeRequest, allowedWrite, filterChain);
+        assertEquals(200, allowedWrite.getStatus());
+        assertTrue(Long.parseLong(allowedWrite.getHeader("X-Rate-Limit-Remaining")) >= 9);
     }
 
     // === Per-user isolation ===
@@ -191,19 +218,58 @@ class RateLimitFilterTest {
         assertTrue(response.containsHeader("X-Rate-Limit-Remaining"));
     }
 
+    // === Trusted proxy ===
+
+    @Test
+    void untrustedProxy_IgnoresXForwardedFor() throws ServletException, IOException {
+        // Default filter has empty trustedProxies — X-Forwarded-For must be ignored
+        authenticateAnon();
+        MockHttpServletRequest request = new MockHttpServletRequest("GET", "/api/properties/me");
+        request.setRemoteAddr("192.168.1.100");
+        request.addHeader("X-Forwarded-For", "10.0.0.1");
+
+        MockHttpServletResponse response = new MockHttpServletResponse();
+        filter.doFilterInternal(request, response, filterChain);
+
+        // Remaining tokens match the IP bucket for 192.168.1.100, not 10.0.0.1
+        assertTrue(response.containsHeader("X-Rate-Limit-Remaining"));
+    }
+
+    @Test
+    void trustedProxy_ParsesXForwardedFor() throws ServletException, IOException {
+        RateLimitProperties props = new RateLimitProperties(
+            true, 100, 10, 5, 10, 60, 30, "192.168.1.100"
+        );
+        AppProperties appProps = new AppProperties(
+            null, "$", null, null, props
+        );
+        RateLimitFilter proxyFilter = new RateLimitFilter(appProps);
+
+        authenticateAnon();
+        MockHttpServletRequest request = new MockHttpServletRequest("GET", "/api/properties/me");
+        request.setRemoteAddr("192.168.1.100");
+        request.addHeader("X-Forwarded-For", "10.0.0.1, 172.16.0.1");
+
+        MockHttpServletResponse response = new MockHttpServletResponse();
+        proxyFilter.doFilterInternal(request, response, filterChain);
+
+        assertTrue(response.containsHeader("X-Rate-Limit-Remaining"));
+        // Bucket is keyed by 10.0.0.1 (first XFF entry), not 192.168.1.100
+    }
+
     // === Disabled rate limiting ===
 
     @Test
     void whenDisabled_AllRequestsAllowed() throws ServletException, IOException {
         RateLimitProperties props = new RateLimitProperties(
-            false, 100, 10, 5, 10, 60, 30
+            false, 100, 10, 5, 10, 60, 30, ""
         );
         AppProperties appProps = new AppProperties(
             null, "$", null, null, props
         );
         RateLimitFilter disabledFilter = new RateLimitFilter(appProps);
 
-        authenticateAsUser(TEST_USER_ID);
+        // No auth needed — disabled flag short-circuits before SecurityContext
         MockHttpServletRequest request = new MockHttpServletRequest("POST", "/api/bookings");
         MockHttpServletResponse response = new MockHttpServletResponse();
 
