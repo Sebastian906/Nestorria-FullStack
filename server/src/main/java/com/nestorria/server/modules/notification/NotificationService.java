@@ -1,5 +1,7 @@
 package com.nestorria.server.modules.notification;
 
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
@@ -30,11 +32,13 @@ public class NotificationService {
             .map(NotificationResponse::fromEntity);
     }
 
+    @Cacheable(cacheNames = "unreadCount", key = "#userId")
     @Transactional(readOnly = true)
     public long getUnreadCount(String userId) {
         return notificationRepository.countByUserIdAndIsReadFalse(userId);
     }
 
+    @CacheEvict(cacheNames = "unreadCount", key = "#userId")
     @Transactional
     public void markAsRead(String notificationId, String userId) {
         Notification notification = notificationRepository.findById(notificationId)
@@ -52,11 +56,13 @@ public class NotificationService {
         }
     }
 
+    @CacheEvict(cacheNames = "unreadCount", key = "#userId")
     @Transactional
     public void markAllAsRead(String userId) {
         notificationRepository.markAllAsRead(userId);
     }
 
+    @CacheEvict(cacheNames = "unreadCount", key = "#event.userId")
     @Transactional
     public void createNotification(NotificationEvent event) {
         User user = userRepository.findById(event.userId())
