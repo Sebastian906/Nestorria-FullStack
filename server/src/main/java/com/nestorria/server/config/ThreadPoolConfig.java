@@ -46,4 +46,24 @@ public class ThreadPoolConfig {
         executor.initialize();
         return executor;
     }
+
+    /**
+     * Pool para subidas de imágenes a Cloudinary: I/O-bound, HTTP calls.
+     * AbortPolicy: si la cola se llena, lanza excepción — el caller (HTTP thread)
+     * puede manejar el error y notificar al usuario. CallerRunsPolicy bloquearía
+     * el HTTP thread, que es exactamente lo que queremos evitar.
+     */
+    @Bean("imageUploadTaskExecutor")
+    public Executor imageUploadTaskExecutor() {
+        ThreadPoolTaskExecutor executor = new ThreadPoolTaskExecutor();
+        executor.setCorePoolSize(1);
+        executor.setMaxPoolSize(3);
+        executor.setQueueCapacity(50);
+        executor.setThreadNamePrefix("img-");
+        executor.setRejectedExecutionHandler(new ThreadPoolExecutor.AbortPolicy());
+        executor.setWaitForTasksToCompleteOnShutdown(true);
+        executor.setAwaitTerminationSeconds(60);
+        executor.initialize();
+        return executor;
+    }
 }

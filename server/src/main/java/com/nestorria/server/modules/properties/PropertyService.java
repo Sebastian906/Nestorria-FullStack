@@ -37,7 +37,7 @@ public class PropertyService {
     private final Cloudinary cloudinary;
     private final PropertyPersistenceService persistenceService;
     private final ReviewService reviewService;
-    private final Executor emailTaskExecutor;
+    private final Executor imageUploadTaskExecutor;
 
     public PropertyService(
             PropertyRepository propertyRepository,
@@ -45,13 +45,13 @@ public class PropertyService {
             Cloudinary cloudinary,
             PropertyPersistenceService persistenceService,
             ReviewService reviewService,
-            @Qualifier("emailTaskExecutor") Executor emailTaskExecutor) {
+            @Qualifier("imageUploadTaskExecutor") Executor imageUploadTaskExecutor) {
         this.propertyRepository = propertyRepository;
         this.agencyRepository = agencyRepository;
         this.cloudinary = cloudinary;
         this.persistenceService = persistenceService;
         this.reviewService = reviewService;
-        this.emailTaskExecutor = emailTaskExecutor;
+        this.imageUploadTaskExecutor = imageUploadTaskExecutor;
     }
 
     @CacheEvict(cacheNames = {"propertyListings", "ownerProperties"}, allEntries = true)
@@ -128,12 +128,8 @@ public class PropertyService {
     /**
      * Sube imágenes a Cloudinary en paralelo usando CompletableFuture.
      * Mantiene el contrato de API: la respuesta incluye las URLs.
-     * La diferencia con el enfoque secuencial es que las 4 imágenes
-     * se suben concurrentemente, reduciendo la latencia total.
-     *
-     * NOTA: Esto NO usa @Async porque las URLs son necesarias antes
-     * de persistir la propiedad. Usa el emailTaskExecutor como pool
-     * de threads para las subidas — es un pool I/O-bound que ya existe.
+     * Usa imageUploadTaskExecutor (pool dedicado I/O-bound) para no competir
+     * con emails (SMTP) en el mismo pool.
      */
     private List<String> uploadImagesParallel(List<MultipartFile> files) {
         if (files == null || files.isEmpty()) {
@@ -144,14 +140,12 @@ public class PropertyService {
             ? files.subList(0, MAX_IMAGES)
             : files;
 
-        // Crear un CompletableFuture por cada imagen
         List<CompletableFuture<String>> futures = limited.stream()
             .map(file -> CompletableFuture.supplyAsync(
-                () -> uploadSingle(file), emailTaskExecutor))
+                () -> uploadSingle(file), imageUploadTaskExecutor))
             .toList();
 
-        // Esperar a que todas completen y recoger resultados
-        // Si alguna falla, CompletableFuture.join() lanza CompletionException
+        // Esperar a que todas completen. Si alguna falla, join() lanza CompletionException
         List<String> urls = new ArrayList<>(futures.size());
         for (CompletableFuture<String> future : futures) {
             urls.add(future.join());
@@ -160,7 +154,6 @@ public class PropertyService {
         return urls;
     }
 
-    // Upload secuencial (método original, mantenido como fallback).
     @SuppressWarnings("unchecked")
     private String uploadSingle(MultipartFile file) {
         if (file == null || file.isEmpty()) {

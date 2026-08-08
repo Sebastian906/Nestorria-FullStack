@@ -32,7 +32,7 @@ class EmailServicePoolTest {
 
     @Test
     void emailExecutor_QueueCapacityIs100() {
-        assertThat(emailExecutor.getThreadPoolExecutor().getQueue().remainingCapacity())
-            .isGreaterThan(0);
+        var queue = emailExecutor.getThreadPoolExecutor().getQueue();
+        assertThat(queue.size() + queue.remainingCapacity()).isEqualTo(100);
     }
 }
