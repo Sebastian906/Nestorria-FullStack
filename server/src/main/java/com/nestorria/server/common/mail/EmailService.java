@@ -41,7 +41,7 @@ public class EmailService {
         }
     }
 
-    @Async
+    @Async("emailTaskExecutor")
     public void sendBookingConfirmation(BookingEmailData data) {
         sendEmail(
             data.userEmail(),
@@ -49,7 +49,7 @@ public class EmailService {
             buildBookingHtml(data));
     }
 
-    @Async
+    @Async("emailTaskExecutor")
     public void sendInvoiceIssuedEmail(InvoiceEmailData data) {
         sendEmail(
             data.userEmail(),
@@ -57,7 +57,7 @@ public class EmailService {
             buildInvoiceIssuedHtml(data));
     }
 
-    @Async
+    @Async("emailTaskExecutor")
     public void sendInvoiceReminderEmail(InvoiceEmailData data) {
         sendEmail(
             data.userEmail(),
@@ -65,7 +65,7 @@ public class EmailService {
             buildInvoiceReminderHtml(data));
     }
 
-    @Async
+    @Async("emailTaskExecutor")
     public void sendInvoiceOverdueEmail(InvoiceEmailData data) {
         sendEmail(
             data.userEmail(),
@@ -73,7 +73,7 @@ public class EmailService {
             buildInvoiceOverdueHtml(data));
     }
 
-    @Async
+    @Async("emailTaskExecutor")
     public void sendInvoicePaidEmail(InvoiceEmailData data) {
         sendEmail(
             data.userEmail(),

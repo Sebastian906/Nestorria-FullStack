@@ -41,7 +41,7 @@ public class InvoiceIssuedEventListener {
         this.appProperties = appProperties;
     }
 
-    @Async("taskExecutor")
+    @Async("emailTaskExecutor")
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
     public void handleInvoiceIssued(InvoiceIssuedEvent event) {
