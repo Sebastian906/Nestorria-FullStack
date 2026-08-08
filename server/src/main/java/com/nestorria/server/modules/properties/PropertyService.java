@@ -47,7 +47,7 @@ public class PropertyService {
         this.reviewService = reviewService;
     }
 
-    @CacheEvict(cacheNames = "propertyListings", allEntries = true)
+    @CacheEvict(cacheNames = {"propertyListings", "ownerProperties"}, allEntries = true)
     public PropertyResponse create(String userId, CreatePropertyRequest request, List<MultipartFile> files) {
         Agency agency = agencyRepository.findByOwnerId(userId)
                 .orElseThrow(() -> new ResourceNotFoundException("No se encontró una agencia para este usuario"));

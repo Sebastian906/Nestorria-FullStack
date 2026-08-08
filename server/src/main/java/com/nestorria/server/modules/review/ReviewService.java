@@ -35,7 +35,7 @@ public class ReviewService {
         this.propertyRepository = propertyRepository;
     }
 
-    @CacheEvict(cacheNames = {"ratingAggregates", "propertyListings"}, allEntries = true)
+    @CacheEvict(cacheNames = {"ratingAggregates", "propertyListings", "ownerProperties"}, allEntries = true)
     @Transactional
     public ReviewResponse createReview(String userId, String propertyId, CreateReviewRequest request) {
         if (reviewRepository.existsByUserIdAndPropertyId(userId, propertyId)) {
@@ -60,7 +60,7 @@ public class ReviewService {
             .toList();
     }
 
-    @CacheEvict(cacheNames = {"ratingAggregates", "propertyListings"}, allEntries = true)
+    @CacheEvict(cacheNames = {"ratingAggregates", "propertyListings", "ownerProperties"}, allEntries = true)
     @Transactional
     public ReviewResponse updateReview(String reviewId, String userId, UpdateReviewRequest request) {
         Review review = reviewRepository.findById(reviewId)
@@ -82,7 +82,7 @@ public class ReviewService {
         return ReviewResponse.fromEntity(reviewRepository.save(review));
     }
 
-    @CacheEvict(cacheNames = {"ratingAggregates", "propertyListings"}, allEntries = true)
+    @CacheEvict(cacheNames = {"ratingAggregates", "propertyListings", "ownerProperties"}, allEntries = true)
     @Transactional
     public void deleteReview(String reviewId, String userId) {
         Review review = reviewRepository.findById(reviewId)
