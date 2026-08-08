@@ -19,7 +19,7 @@ public class NotificationEventListener {
         this.notificationService = notificationService;
     }
 
-    @Async("taskExecutor")
+    @Async("notificationTaskExecutor")
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
     public void handleNotificationEvent(NotificationEvent event) {
         try {

@@ -49,6 +49,8 @@ public class SecurityConfig {
                 .requestMatchers(HttpMethod.GET, "/api/properties/nearby").permitAll()
                 .requestMatchers(HttpMethod.GET, "/api/properties/*/reviews").permitAll()
                 .requestMatchers(HttpMethod.POST, "/api/payments/stripe/webhook").permitAll()
+                // Actuator: health público para load balancers, el resto autenticado
+                .requestMatchers("/actuator/health").permitAll()
                 .anyRequest().authenticated()
             )
             .oauth2ResourceServer(oauth2 -> oauth2.jwt(Customizer.withDefaults()))
