@@ -4,6 +4,8 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -33,6 +35,7 @@ public class ReviewService {
         this.propertyRepository = propertyRepository;
     }
 
+    @CacheEvict(cacheNames = {"ratingAggregates", "propertyListings", "ownerProperties"}, allEntries = true)
     @Transactional
     public ReviewResponse createReview(String userId, String propertyId, CreateReviewRequest request) {
         if (reviewRepository.existsByUserIdAndPropertyId(userId, propertyId)) {
@@ -57,6 +60,7 @@ public class ReviewService {
             .toList();
     }
 
+    @CacheEvict(cacheNames = {"ratingAggregates", "propertyListings", "ownerProperties"}, allEntries = true)
     @Transactional
     public ReviewResponse updateReview(String reviewId, String userId, UpdateReviewRequest request) {
         Review review = reviewRepository.findById(reviewId)
@@ -78,6 +82,7 @@ public class ReviewService {
         return ReviewResponse.fromEntity(reviewRepository.save(review));
     }
 
+    @CacheEvict(cacheNames = {"ratingAggregates", "propertyListings", "ownerProperties"}, allEntries = true)
     @Transactional
     public void deleteReview(String reviewId, String userId) {
         Review review = reviewRepository.findById(reviewId)
@@ -92,6 +97,7 @@ public class ReviewService {
         reviewRepository.delete(review);
     }
 
+    @Cacheable(cacheNames = "ratingAggregates")
     @Transactional(readOnly = true)
     public Map<String, RatingAggregate> getAverageRatings(List<String> propertyIds) {
         if (propertyIds == null || propertyIds.isEmpty()) {

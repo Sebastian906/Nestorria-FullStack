@@ -4,6 +4,8 @@ import java.io.IOException;
 import java.util.List;
 import java.util.Map;
 
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
@@ -45,6 +47,7 @@ public class PropertyService {
         this.reviewService = reviewService;
     }
 
+    @CacheEvict(cacheNames = {"propertyListings", "ownerProperties"}, allEntries = true)
     public PropertyResponse create(String userId, CreatePropertyRequest request, List<MultipartFile> files) {
         Agency agency = agencyRepository.findByOwnerId(userId)
                 .orElseThrow(() -> new ResourceNotFoundException("No se encontró una agencia para este usuario"));
@@ -52,6 +55,7 @@ public class PropertyService {
         return persistenceService.persistProperty(agency, request, imageUrls);
     }
 
+    @Cacheable(cacheNames = "propertyListings", key = "'all-available'")
     @Transactional(readOnly = true)
     public List<PropertySummaryResponse> getAllAvailable() {
         List<Property> properties = propertyRepository.findByIsAvailableTrue();
@@ -72,6 +76,7 @@ public class PropertyService {
             .toList();
     }
 
+    @Cacheable(cacheNames = "ownerProperties", key = "#userId")
     @Transactional(readOnly = true)
     public List<PropertyResponse> getOwnerProperties(String userId) {
         Agency agency = agencyRepository.findByOwnerId(userId)
@@ -95,6 +100,7 @@ public class PropertyService {
             .toList();
     }
 
+    @CacheEvict(cacheNames = {"propertyListings", "ownerProperties"}, allEntries = true)
     @Transactional
     public void toggleAvailability(String userId, ToggleAvailabilityRequest request) {
         Agency agency = agencyRepository.findByOwnerId(userId)
