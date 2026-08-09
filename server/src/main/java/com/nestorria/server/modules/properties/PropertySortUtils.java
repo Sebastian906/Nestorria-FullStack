@@ -7,7 +7,7 @@ import com.nestorria.server.modules.properties.dto.PropertySummaryResponse;
 
 public final class PropertySortUtils {
 
-    public enum SortField { PRICE, DATE, AREA }
+    public enum SortField { PRICE, DATE, AREA, RATING }
     public enum SortDirection { ASC, DESC }
 
     private PropertySortUtils() {}
@@ -20,11 +20,16 @@ public final class PropertySortUtils {
                 return Integer.compare(va, vb);
             };
             case DATE -> (a, b) -> {
-                Instant da = a.createdAt() != null ? a.createdAt() : Instant.MIN;
-                Instant db = b.createdAt() != null ? b.createdAt() : Instant.MIN;
+                Instant da = a.createdAt() != null ? a.createdAt() : Instant.MAX;
+                Instant db = b.createdAt() != null ? b.createdAt() : Instant.MAX;
                 return da.compareTo(db);
             };
             case AREA -> Comparator.comparingInt(PropertySummaryResponse::area);
+            case RATING -> (a, b) -> {
+                Double ra = a.averageRating() != null ? a.averageRating() : Double.NEGATIVE_INFINITY;
+                Double rb = b.averageRating() != null ? b.averageRating() : Double.NEGATIVE_INFINITY;
+                return Double.compare(ra, rb);
+            };
         };
         return direction == SortDirection.DESC ? base.reversed() : base;
     }

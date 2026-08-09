@@ -27,6 +27,18 @@ class PropertySortUtilsTest {
         );
     }
 
+    private PropertySummaryResponse propWithRating(String id, Double rating) {
+        return new PropertySummaryResponse(
+            id, "Title", "Desc", "City", "Country", "Addr", 50,
+            PropertyType.HOUSE,
+            new PriceDetails(null, 100),
+            null, List.of(), List.of(),
+            true, null, null,
+            rating, 0,
+            Instant.now()
+        );
+    }
+
     @Test
     void priceAsc() {
         var list = new ArrayList<>(List.of(
@@ -118,6 +130,37 @@ class PropertySortUtilsTest {
             prop("b", 100, 50, Instant.now())
         ));
         list.sort(PropertySortUtils.getComparator(SortField.DATE, SortDirection.ASC));
+        assertEquals("b", list.get(0).id());
+        assertEquals("a", list.get(1).id());
+    }
+
+    @Test
+    void ratingAsc() {
+        var list = new ArrayList<>(List.of(
+            propWithRating("a", 4.5),
+            propWithRating("b", 3.0)
+        ));
+        list.sort(PropertySortUtils.getComparator(SortField.RATING, SortDirection.ASC));
+        assertEquals("b", list.get(0).id());
+    }
+
+    @Test
+    void ratingDesc() {
+        var list = new ArrayList<>(List.of(
+            propWithRating("a", 4.5),
+            propWithRating("b", 3.0)
+        ));
+        list.sort(PropertySortUtils.getComparator(SortField.RATING, SortDirection.DESC));
+        assertEquals("a", list.get(0).id());
+    }
+
+    @Test
+    void ratingNullSortedLastAsc() {
+        var list = new ArrayList<>(List.of(
+            propWithRating("a", null),
+            propWithRating("b", 4.0)
+        ));
+        list.sort(PropertySortUtils.getComparator(SortField.RATING, SortDirection.ASC));
         assertEquals("b", list.get(0).id());
         assertEquals("a", list.get(1).id());
     }

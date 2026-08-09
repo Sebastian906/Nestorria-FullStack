@@ -27,6 +27,18 @@ class BookingSortUtilsTest {
         );
     }
 
+    private BookingResponse bkWithStatus(String id, BookingStatus status) {
+        return new BookingResponse(
+            id, null, null,
+            LocalDate.now(), LocalDate.now().plusDays(1),
+            500, 2,
+            status,
+            "Pay at Check-in",
+            false,
+            Instant.now()
+        );
+    }
+
     @Test
     void checkInAsc() {
         var list = new ArrayList<>(List.of(
@@ -87,6 +99,33 @@ class BookingSortUtilsTest {
         ));
         list.sort(BookingSortUtils.getComparator(SortField.CREATED_AT, SortDirection.ASC));
         assertEquals("b", list.get(0).id());
+    }
+
+    @Test
+    void statusAsc() {
+        // PENDING(0) < CONFIRMED(1) < CANCELLED(2)
+        var list = new ArrayList<>(List.of(
+            bkWithStatus("a", BookingStatus.CANCELLED),
+            bkWithStatus("b", BookingStatus.PENDING),
+            bkWithStatus("c", BookingStatus.CONFIRMED)
+        ));
+        list.sort(BookingSortUtils.getComparator(SortField.STATUS, SortDirection.ASC));
+        assertEquals("b", list.get(0).id());
+        assertEquals("c", list.get(1).id());
+        assertEquals("a", list.get(2).id());
+    }
+
+    @Test
+    void statusDesc() {
+        var list = new ArrayList<>(List.of(
+            bkWithStatus("a", BookingStatus.CANCELLED),
+            bkWithStatus("b", BookingStatus.PENDING),
+            bkWithStatus("c", BookingStatus.CONFIRMED)
+        ));
+        list.sort(BookingSortUtils.getComparator(SortField.STATUS, SortDirection.DESC));
+        assertEquals("a", list.get(0).id());
+        assertEquals("c", list.get(1).id());
+        assertEquals("b", list.get(2).id());
     }
 
     @Test
