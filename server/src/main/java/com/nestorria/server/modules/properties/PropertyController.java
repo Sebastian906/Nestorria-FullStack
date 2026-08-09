@@ -22,6 +22,7 @@ import com.nestorria.server.modules.favorite.FavoriteService;
 import com.nestorria.server.modules.properties.dto.CreatePropertyRequest;
 import com.nestorria.server.modules.properties.dto.NearbySearchRequest;
 import com.nestorria.server.modules.properties.dto.PropertyResponse;
+import com.nestorria.server.modules.properties.dto.PropertyStatsResponse;
 import com.nestorria.server.modules.properties.dto.PropertySummaryResponse;
 import com.nestorria.server.modules.properties.dto.ToggleAvailabilityRequest;
 
@@ -63,6 +64,12 @@ public class PropertyController {
     @GetMapping("/me")
     public List<PropertySummaryResponse> getAllAvailable() {
         return propertyService.getAllAvailable();
+    }
+
+    // GET /api/properties/stats — Estadísticas de propiedades (usa SearchUtils sobre datos cacheados)
+    @GetMapping("/stats")
+    public PropertyStatsResponse getStats(@AuthenticationPrincipal Jwt jwt) {
+        return propertyService.getPropertyStats();
     }
 
     // GET /api/properties/owner — solo el dueño de una agencia
