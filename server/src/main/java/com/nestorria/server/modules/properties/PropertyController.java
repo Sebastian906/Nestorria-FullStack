@@ -13,12 +13,15 @@ import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RequestPart;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 
 import com.nestorria.server.common.exception.BadRequestException;
 import com.nestorria.server.modules.favorite.FavoriteService;
+import com.nestorria.server.modules.properties.PropertySortUtils.SortDirection;
+import com.nestorria.server.modules.properties.PropertySortUtils.SortField;
 import com.nestorria.server.modules.properties.dto.CreatePropertyRequest;
 import com.nestorria.server.modules.properties.dto.NearbySearchRequest;
 import com.nestorria.server.modules.properties.dto.PropertyResponse;
@@ -27,6 +30,7 @@ import com.nestorria.server.modules.properties.dto.PropertySummaryResponse;
 import com.nestorria.server.modules.properties.dto.ToggleAvailabilityRequest;
 
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
@@ -61,9 +65,24 @@ public class PropertyController {
     }
 
     // GET /api/properties/me — público
+    @Operation(summary = "Obtener todas las propiedades disponibles")
     @GetMapping("/me")
-    public List<PropertySummaryResponse> getAllAvailable() {
-        return propertyService.getAllAvailable();
+    public List<PropertySummaryResponse> getAllAvailable(
+            @Parameter(description = "Campo de ordenamiento: PRICE, DATE, AREA")
+            @RequestParam(required = false) SortField sortBy,
+            @Parameter(description = "Dirección del ordenamiento: ASC o DESC")
+            @RequestParam(required = false) SortDirection direction
+    ) {
+        List<PropertySummaryResponse> properties = propertyService.getAllAvailable();
+
+        if (sortBy != null) {
+            SortDirection dir = direction != null ? direction : SortDirection.ASC;
+            properties = properties.stream()
+                .sorted(PropertySortUtils.getComparator(sortBy, dir))
+                .toList();
+        }
+
+        return properties;
     }
 
     // GET /api/properties/stats — Estadísticas de propiedades (usa SearchUtils sobre datos cacheados)

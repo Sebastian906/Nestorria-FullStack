@@ -1,5 +1,6 @@
 package com.nestorria.server.modules.properties.dto;
 
+import java.time.Instant;
 import java.util.List;
 
 import com.nestorria.server.modules.agency.dto.AgencyResponse;
@@ -26,7 +27,8 @@ public record PropertySummaryResponse(
     PropertyLocation location,
     AgencyResponse agency,
     Double averageRating,
-    int reviewCount
+    int reviewCount,
+    Instant createdAt
 ) {
     public static PropertySummaryResponse fromEntity(Property p) {
         return fromEntity(p, null, 0);
@@ -50,7 +52,8 @@ public record PropertySummaryResponse(
             p.getLocation(),
             AgencyResponse.fromEntity(p.getAgency()),
             averageRating,
-            reviewCount
+            reviewCount,
+            p.getCreatedAt()
         );
     }
 }

@@ -1,5 +1,6 @@
 package com.nestorria.server.modules.booking.dto;
 
+import java.time.Instant;
 import java.time.LocalDate;
 
 import com.nestorria.server.modules.agency.dto.AgencyResponse;
@@ -17,7 +18,8 @@ public record BookingResponse(
     int guests,
     BookingStatus status,
     String paymentMethod,
-    boolean isPaid
+    boolean isPaid,
+    Instant createdAt
 ) {
     public static BookingResponse fromEntity(Booking b) {
         return new BookingResponse(
@@ -30,7 +32,8 @@ public record BookingResponse(
             b.getGuests(),
             b.getStatus(),
             b.getPaymentMethod(),
-            b.isPaid()
+            b.isPaid(),
+            b.getCreatedAt()
         );
     }
 }
