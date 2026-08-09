@@ -38,6 +38,7 @@ public class PropertyService {
     private final AgencyRepository agencyRepository;
     private final Cloudinary cloudinary;
     private final PropertyPersistenceService persistenceService;
+    private final PropertyListingService listingService;
     private final ReviewService reviewService;
     private final Executor imageUploadTaskExecutor;
 
@@ -46,12 +47,14 @@ public class PropertyService {
             AgencyRepository agencyRepository,
             Cloudinary cloudinary,
             PropertyPersistenceService persistenceService,
+            PropertyListingService listingService,
             ReviewService reviewService,
             @Qualifier("imageUploadTaskExecutor") Executor imageUploadTaskExecutor) {
         this.propertyRepository = propertyRepository;
         this.agencyRepository = agencyRepository;
         this.cloudinary = cloudinary;
         this.persistenceService = persistenceService;
+        this.listingService = listingService;
         this.reviewService = reviewService;
         this.imageUploadTaskExecutor = imageUploadTaskExecutor;
     }
@@ -64,25 +67,12 @@ public class PropertyService {
         return persistenceService.persistProperty(agency, request, imageUrls);
     }
 
-    @Cacheable(cacheNames = "propertyListings", key = "'all-available'")
-    @Transactional(readOnly = true)
+    /**
+     * Delega a PropertyListingService para que el proxy de Spring intercepte
+     * la llamada y el @Cacheable funcione correctamente.
+     */
     public List<PropertySummaryResponse> getAllAvailable() {
-        List<Property> properties = propertyRepository.findByIsAvailableTrue();
-
-        List<String> propertyIds = properties.stream()
-            .map(Property::getId)
-            .toList();
-
-        Map<String, RatingAggregate> ratings = reviewService.getAverageRatings(propertyIds);
-
-        return properties.stream()
-            .map(p -> {
-                RatingAggregate agg = ratings.get(p.getId());
-                Double avgRating = agg != null ? agg.averageRating() : null;
-                int reviewCount = agg != null ? agg.reviewCount() : 0;
-                return PropertySummaryResponse.fromEntity(p, avgRating, reviewCount);
-            })
-            .toList();
+        return listingService.getAllAvailable();
     }
 
     @Cacheable(cacheNames = "ownerProperties", key = "#userId")
@@ -134,7 +124,7 @@ public class PropertyService {
     @Cacheable(cacheNames = "propertyStats", key = "'global'")
     @Transactional(readOnly = true)
     public PropertyStatsResponse getPropertyStats() {
-        List<PropertySummaryResponse> properties = getAllAvailable();
+        List<PropertySummaryResponse> properties = listingService.getAllAvailable();
 
         Map<String, Long> byType = SearchUtils.countBy(
             properties,

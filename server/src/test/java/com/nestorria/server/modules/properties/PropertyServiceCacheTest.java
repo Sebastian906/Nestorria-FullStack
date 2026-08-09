@@ -60,6 +60,7 @@ class PropertyServiceCacheTest {
         // Clear all caches between tests to prevent cross-test contamination
         clearCache("propertyListings");
         clearCache("ownerProperties");
+        clearCache("propertyStats");
 
         User mockOwner = mock(User.class);
         when(mockOwner.getId()).thenReturn("owner-1");

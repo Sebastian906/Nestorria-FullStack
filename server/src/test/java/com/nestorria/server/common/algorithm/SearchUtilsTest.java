@@ -42,7 +42,7 @@ class SearchUtilsTest {
         List<String> words = List.of("apple", "banana", "avocado", "blueberry", "cherry");
         Map<String, List<String>> result = SearchUtils.groupBy(words, w -> w.substring(0, 1));
 
-        assertEquals(2, result.size());
+        assertEquals(3, result.size());
         assertEquals(List.of("apple", "avocado"), result.get("a"));
         assertEquals(List.of("banana", "blueberry"), result.get("b"));
         assertEquals(List.of("cherry"), result.get("c"));
@@ -66,7 +66,7 @@ class SearchUtilsTest {
         List<String> words = List.of("apple", "banana", "avocado", "blueberry", "cherry");
         Map<String, Long> result = SearchUtils.countBy(words, w -> w.substring(0, 1));
 
-        assertEquals(3L, result.get("a"));
+        assertEquals(2L, result.get("a"));
         assertEquals(2L, result.get("b"));
         assertEquals(1L, result.get("c"));
     }
@@ -152,26 +152,26 @@ class SearchUtilsTest {
     @Test
     void filterByRange_returnsElementsInRange() {
         List<Integer> numbers = List.of(10, 20, 30, 40, 50);
-        List<Integer> result = SearchUtils.filterByRange(numbers, 20, 40, n -> n);
+        List<Integer> result = SearchUtils.<Integer, Integer>filterByRange(numbers, 20, 40, n -> n);
         assertEquals(List.of(20, 30, 40), result);
     }
 
     @Test
     void filterByRange_returnsEmptyWhenLowGreaterThanHigh() {
         List<Integer> numbers = List.of(10, 20, 30);
-        List<Integer> result = SearchUtils.filterByRange(numbers, 40, 20, n -> n);
+        List<Integer> result = SearchUtils.<Integer, Integer>filterByRange(numbers, 40, 20, n -> n);
         assertTrue(result.isEmpty());
     }
 
     @Test
     void filterByRange_returnsEmptyOnEmptyList() {
-        List<Integer> result = SearchUtils.filterByRange(List.of(), 1, 10, n -> n);
+        List<Integer> result = SearchUtils.<Integer, Integer>filterByRange(List.of(), 1, 10, n -> n);
         assertTrue(result.isEmpty());
     }
 
     @Test
     void filterByRange_returnsEmptyOnNull() {
-        List<Integer> result = SearchUtils.filterByRange(null, 1, 10, n -> n);
+        List<Integer> result = SearchUtils.<Integer, Integer>filterByRange(null, 1, 10, n -> n);
         assertTrue(result.isEmpty());
     }
 
@@ -188,5 +188,75 @@ class SearchUtilsTest {
         List<Item> result = SearchUtils.filterByRange(items, 50, 200, Item::price);
         assertEquals(1, result.size());
         assertEquals("A", result.getFirst().name());
+    }
+
+    // binarySearch
+    @Test
+    void binarySearch_findsCorrectIndex() {
+        List<Integer> sorted = List.of(10, 20, 30, 40, 50);
+        assertEquals(2, SearchUtils.<Integer, Integer>binarySearch(sorted, 30, n -> n));
+    }
+
+    @Test
+    void binarySearch_returnsInsertionPoint() {
+        List<Integer> sorted = List.of(10, 20, 40, 50);
+        assertEquals(2, SearchUtils.<Integer, Integer>binarySearch(sorted, 30, n -> n));
+    }
+
+    @Test
+    void binarySearch_returnsZeroOnEmptyList() {
+        assertEquals(0, SearchUtils.<Integer, Integer>binarySearch(List.of(), 10, n -> n));
+    }
+
+    @Test
+    void binarySearch_returnsZeroOnNull() {
+        assertEquals(0, SearchUtils.<Integer, Integer>binarySearch(null, 10, n -> n));
+    }
+
+    @Test
+    void binarySearch_returnsZeroOnNullTarget() {
+        List<Integer> sorted = List.of(10, 20);
+        assertEquals(0, SearchUtils.<Integer, Integer>binarySearch(sorted, null, n -> n));
+    }
+
+    // rangeSearch
+    @Test
+    void rangeSearch_returnsElementsInRange() {
+        List<Integer> sorted = List.of(10, 20, 30, 40, 50);
+        List<Integer> result = SearchUtils.<Integer, Integer>rangeSearch(sorted, 20, 40, n -> n);
+        assertEquals(List.of(20, 30, 40), result);
+    }
+
+    @Test
+    void rangeSearch_returnsEmptyWhenLowGreaterThanHigh() {
+        List<Integer> sorted = List.of(10, 20, 30);
+        List<Integer> result = SearchUtils.<Integer, Integer>rangeSearch(sorted, 40, 20, n -> n);
+        assertTrue(result.isEmpty());
+    }
+
+    @Test
+    void rangeSearch_returnsEmptyOnEmptyList() {
+        List<Integer> result = SearchUtils.<Integer, Integer>rangeSearch(List.of(), 1, 10, n -> n);
+        assertTrue(result.isEmpty());
+    }
+
+    @Test
+    void rangeSearch_returnsEmptyOnNull() {
+        List<Integer> result = SearchUtils.<Integer, Integer>rangeSearch(null, 1, 10, n -> n);
+        assertTrue(result.isEmpty());
+    }
+
+    @Test
+    void rangeSearch_returnsEmptyOnNullBounds() {
+        List<Integer> sorted = List.of(10, 20);
+        assertTrue(SearchUtils.<Integer, Integer>rangeSearch(sorted, null, 10, n -> n).isEmpty());
+        assertTrue(SearchUtils.<Integer, Integer>rangeSearch(sorted, 10, null, n -> n).isEmpty());
+    }
+
+    @Test
+    void rangeSearch_noMatchOutsideRange() {
+        List<Integer> sorted = List.of(10, 20, 30);
+        List<Integer> result = SearchUtils.<Integer, Integer>rangeSearch(sorted, 100, 200, n -> n);
+        assertTrue(result.isEmpty());
     }
 }
