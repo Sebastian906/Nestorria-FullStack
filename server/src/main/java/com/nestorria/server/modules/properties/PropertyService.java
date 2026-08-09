@@ -15,6 +15,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
 import com.cloudinary.Cloudinary;
+import com.nestorria.server.common.algorithm.SearchUtils;
 import com.nestorria.server.common.exception.BadRequestException;
 import com.nestorria.server.common.exception.ConflictException;
 import com.nestorria.server.common.exception.ResourceNotFoundException;
@@ -22,6 +23,7 @@ import com.nestorria.server.modules.agency.Agency;
 import com.nestorria.server.modules.agency.AgencyRepository;
 import com.nestorria.server.modules.properties.dto.CreatePropertyRequest;
 import com.nestorria.server.modules.properties.dto.PropertyResponse;
+import com.nestorria.server.modules.properties.dto.PropertyStatsResponse;
 import com.nestorria.server.modules.properties.dto.PropertySummaryResponse;
 import com.nestorria.server.modules.properties.dto.ToggleAvailabilityRequest;
 import com.nestorria.server.modules.review.ReviewService;
@@ -54,7 +56,7 @@ public class PropertyService {
         this.imageUploadTaskExecutor = imageUploadTaskExecutor;
     }
 
-    @CacheEvict(cacheNames = {"propertyListings", "ownerProperties"}, allEntries = true)
+    @CacheEvict(cacheNames = {"propertyListings", "ownerProperties", "propertyStats"}, allEntries = true)
     public PropertyResponse create(String userId, CreatePropertyRequest request, List<MultipartFile> files) {
         Agency agency = agencyRepository.findByOwnerId(userId)
                 .orElseThrow(() -> new ResourceNotFoundException("No se encontró una agencia para este usuario"));
@@ -107,22 +109,48 @@ public class PropertyService {
             .toList();
     }
 
-    @CacheEvict(cacheNames = {"propertyListings", "ownerProperties"}, allEntries = true)
+    @CacheEvict(cacheNames = {"propertyListings", "ownerProperties", "propertyStats"}, allEntries = true)
     @Transactional
     public void toggleAvailability(String userId, ToggleAvailabilityRequest request) {
         Agency agency = agencyRepository.findByOwnerId(userId)
-            .orElseThrow(() -> new ResourceNotFoundException("No se encontró una agencia para este usuario"));
+                .orElseThrow(() -> new ResourceNotFoundException("No se encontró una agencia para este usuario"));
 
         Property property = propertyRepository.findById(request.propertyId())
-            .orElseThrow(() -> new ResourceNotFoundException("Propiedad no encontrada: " + request.propertyId()));
+                .orElseThrow(() -> new ResourceNotFoundException("Propiedad no encontrada: " + request.propertyId()));
 
         if (!property.getAgency().getId().equals(agency.getId())) {
             throw new org.springframework.security.access.AccessDeniedException(
-                "No tienes permiso para modificar esta propiedad"
-            );
+                    "No tienes permiso para modificar esta propiedad");
         }
 
         property.toggleAvailability();
+    }
+
+    /**
+     * Estadísticas de propiedades usando SearchUtils sobre datos cacheados.
+     * Reutiliza getAllAvailable() que ya tiene @Cacheable.
+     * Complejidad: O(n) sobre la lista cacheada, sin queries adicionales a DB.
+     */
+    @Cacheable(cacheNames = "propertyStats", key = "'global'")
+    @Transactional(readOnly = true)
+    public PropertyStatsResponse getPropertyStats() {
+        List<PropertySummaryResponse> properties = getAllAvailable();
+
+        Map<String, Long> byType = SearchUtils.countBy(
+            properties,
+            p -> p.propertyType().getDisplayName()
+        );
+
+        Map<String, Long> byCity = SearchUtils.countBy(
+            properties,
+            PropertySummaryResponse::city
+        );
+
+        return new PropertyStatsResponse(
+            properties.size(),
+            byType,
+            byCity
+        );
     }
 
     /**
