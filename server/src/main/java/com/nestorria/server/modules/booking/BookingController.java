@@ -11,9 +11,12 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.nestorria.server.common.config.AppProperties;
+import com.nestorria.server.modules.booking.BookingSortUtils.SortDirection;
+import com.nestorria.server.modules.booking.BookingSortUtils.SortField;
 import com.nestorria.server.modules.booking.dto.AgencyDashboardResponse;
 import com.nestorria.server.modules.booking.dto.BookingResponse;
 import com.nestorria.server.modules.booking.dto.CheckAvailabilityRequest;
@@ -21,6 +24,7 @@ import com.nestorria.server.modules.booking.dto.CheckAvailabilityResponse;
 import com.nestorria.server.modules.booking.dto.CreateBookingRequest;
 
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
@@ -57,8 +61,23 @@ public class BookingController {
 
     @Operation(summary = "Obtener las reservas del usuario")
     @GetMapping("/me")
-    public List<BookingResponse> getMyBookings(@AuthenticationPrincipal Jwt jwt) {
-        return bookingService.getUserBookings(jwt.getSubject());
+    public List<BookingResponse> getMyBookings(
+            @AuthenticationPrincipal Jwt jwt,
+            @Parameter(description = "Campo de ordenamiento: CHECK_IN, CHECK_OUT, TOTAL_PRICE, STATUS, CREATED_AT")
+            @RequestParam(required = false) SortField sortBy,
+            @Parameter(description = "Dirección del ordenamiento: ASC o DESC")
+            @RequestParam(required = false) SortDirection direction
+    ) {
+        List<BookingResponse> bookings = bookingService.getUserBookings(jwt.getSubject());
+
+        if (sortBy != null) {
+            SortDirection dir = direction != null ? direction : SortDirection.ASC;
+            bookings = bookings.stream()
+                .sorted(BookingSortUtils.getComparator(sortBy, dir))
+                .toList();
+        }
+
+        return bookings;
     }
 
     @Operation(summary = "Obtener el dashboard de la agencia")
