@@ -71,14 +71,14 @@ class PropertySortUtilsTest {
     }
 
     @Test
-    void priceNullSortedFirstDesc() {
+    void priceNullSortedLastDesc() {
         var list = new ArrayList<>(List.of(
             prop("a", null, 50, Instant.now()),
             prop("b", 50, 50, Instant.now())
         ));
         list.sort(PropertySortUtils.getComparator(SortField.PRICE, SortDirection.DESC));
-        assertEquals("a", list.get(0).id());
-        assertEquals("b", list.get(1).id());
+        assertEquals("b", list.get(0).id());
+        assertEquals("a", list.get(1).id());
     }
 
     @Test
@@ -135,6 +135,17 @@ class PropertySortUtilsTest {
     }
 
     @Test
+    void dateNullSortedLastDesc() {
+        var list = new ArrayList<>(List.of(
+            prop("a", 100, 50, null),
+            prop("b", 100, 50, Instant.now())
+        ));
+        list.sort(PropertySortUtils.getComparator(SortField.DATE, SortDirection.DESC));
+        assertEquals("b", list.get(0).id());
+        assertEquals("a", list.get(1).id());
+    }
+
+    @Test
     void ratingAsc() {
         var list = new ArrayList<>(List.of(
             propWithRating("a", 4.5),
@@ -161,6 +172,17 @@ class PropertySortUtilsTest {
             propWithRating("b", 4.0)
         ));
         list.sort(PropertySortUtils.getComparator(SortField.RATING, SortDirection.ASC));
+        assertEquals("b", list.get(0).id());
+        assertEquals("a", list.get(1).id());
+    }
+
+    @Test
+    void ratingNullSortedLastDesc() {
+        var list = new ArrayList<>(List.of(
+            propWithRating("a", null),
+            propWithRating("b", 4.0)
+        ));
+        list.sort(PropertySortUtils.getComparator(SortField.RATING, SortDirection.DESC));
         assertEquals("b", list.get(0).id());
         assertEquals("a", list.get(1).id());
     }

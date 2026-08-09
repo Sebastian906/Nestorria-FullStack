@@ -68,7 +68,7 @@ public class PropertyController {
     @Operation(summary = "Obtener todas las propiedades disponibles")
     @GetMapping("/me")
     public List<PropertySummaryResponse> getAllAvailable(
-            @Parameter(description = "Campo de ordenamiento: PRICE, DATE, AREA")
+            @Parameter(description = "Campo de ordenamiento: PRICE, DATE, AREA, RATING")
             @RequestParam(required = false) SortField sortBy,
             @Parameter(description = "Dirección del ordenamiento: ASC o DESC")
             @RequestParam(required = false) SortDirection direction

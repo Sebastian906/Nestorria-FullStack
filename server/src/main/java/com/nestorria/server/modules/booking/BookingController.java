@@ -63,7 +63,7 @@ public class BookingController {
     @GetMapping("/me")
     public List<BookingResponse> getMyBookings(
             @AuthenticationPrincipal Jwt jwt,
-            @Parameter(description = "Campo de ordenamiento: CHECK_IN, CHECK_OUT, TOTAL_PRICE, CREATED_AT")
+            @Parameter(description = "Campo de ordenamiento: CHECK_IN, CHECK_OUT, TOTAL_PRICE, STATUS, CREATED_AT")
             @RequestParam(required = false) SortField sortBy,
             @Parameter(description = "Dirección del ordenamiento: ASC o DESC")
             @RequestParam(required = false) SortDirection direction

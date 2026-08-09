@@ -102,6 +102,40 @@ class BookingSortUtilsTest {
     }
 
     @Test
+    void createdAtEqualTimestamps() {
+        Instant now = Instant.now();
+        var list = new ArrayList<>(List.of(
+            bk("a", LocalDate.now(), 500, now),
+            bk("b", LocalDate.now(), 600, now)
+        ));
+        list.sort(BookingSortUtils.getComparator(SortField.CREATED_AT, SortDirection.ASC));
+        // Equal timestamps → both remain, order between them is undefined but both present
+        assertEquals(2, list.size());
+    }
+
+    @Test
+    void createdAtNullSortedLastAsc() {
+        var list = new ArrayList<>(List.of(
+            bk("a", LocalDate.now(), 500, null),
+            bk("b", LocalDate.now(), 500, Instant.now())
+        ));
+        list.sort(BookingSortUtils.getComparator(SortField.CREATED_AT, SortDirection.ASC));
+        assertEquals("b", list.get(0).id());
+        assertEquals("a", list.get(1).id());
+    }
+
+    @Test
+    void createdAtNullSortedLastDesc() {
+        var list = new ArrayList<>(List.of(
+            bk("a", LocalDate.now(), 500, null),
+            bk("b", LocalDate.now(), 500, Instant.now())
+        ));
+        list.sort(BookingSortUtils.getComparator(SortField.CREATED_AT, SortDirection.DESC));
+        assertEquals("b", list.get(0).id());
+        assertEquals("a", list.get(1).id());
+    }
+
+    @Test
     void statusAsc() {
         // PENDING(0) < CONFIRMED(1) < CANCELLED(2)
         var list = new ArrayList<>(List.of(

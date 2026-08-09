@@ -15,20 +15,29 @@ public final class PropertySortUtils {
     public static Comparator<PropertySummaryResponse> getComparator(SortField field, SortDirection direction) {
         Comparator<PropertySummaryResponse> base = switch (field) {
             case PRICE -> (a, b) -> {
-                int va = a.price().getSale() != null ? a.price().getSale() : Integer.MAX_VALUE;
-                int vb = b.price().getSale() != null ? b.price().getSale() : Integer.MAX_VALUE;
-                return Integer.compare(va, vb);
+                boolean an = a.price().getSale() == null;
+                boolean bn = b.price().getSale() == null;
+                if (an && bn) return 0;
+                if (an) return 1;
+                if (bn) return -1;
+                return Integer.compare(a.price().getSale(), b.price().getSale());
             };
             case DATE -> (a, b) -> {
-                Instant da = a.createdAt() != null ? a.createdAt() : Instant.MAX;
-                Instant db = b.createdAt() != null ? b.createdAt() : Instant.MAX;
-                return da.compareTo(db);
+                boolean an = a.createdAt() == null;
+                boolean bn = b.createdAt() == null;
+                if (an && bn) return 0;
+                if (an) return 1;
+                if (bn) return -1;
+                return a.createdAt().compareTo(b.createdAt());
             };
             case AREA -> Comparator.comparingInt(PropertySummaryResponse::area);
             case RATING -> (a, b) -> {
-                Double ra = a.averageRating() != null ? a.averageRating() : Double.NEGATIVE_INFINITY;
-                Double rb = b.averageRating() != null ? b.averageRating() : Double.NEGATIVE_INFINITY;
-                return Double.compare(ra, rb);
+                boolean an = a.averageRating() == null;
+                boolean bn = b.averageRating() == null;
+                if (an && bn) return 0;
+                if (an) return 1;
+                if (bn) return -1;
+                return Double.compare(a.averageRating(), b.averageRating());
             };
         };
         return direction == SortDirection.DESC ? base.reversed() : base;

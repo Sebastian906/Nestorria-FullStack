@@ -19,9 +19,12 @@ public final class BookingSortUtils {
             case TOTAL_PRICE -> Comparator.comparingLong(BookingResponse::totalPrice);
             case STATUS -> Comparator.comparing(BookingResponse::status);
             case CREATED_AT -> (a, b) -> {
-                Instant da = a.createdAt() != null ? a.createdAt() : Instant.MIN;
-                Instant db = b.createdAt() != null ? b.createdAt() : Instant.MIN;
-                return da.compareTo(db);
+                boolean an = a.createdAt() == null;
+                boolean bn = b.createdAt() == null;
+                if (an && bn) return 0;
+                if (an) return 1;
+                if (bn) return -1;
+                return a.createdAt().compareTo(b.createdAt());
             };
         };
         return direction == SortDirection.DESC ? base.reversed() : base;
