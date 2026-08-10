@@ -198,8 +198,7 @@ public class BookingService {
             .orElseThrow(() -> new ResourceNotFoundException(
                 "Factura no encontrada: " + invoiceLookup.getId()));
 
-        if (invoice.getStatus() != InvoiceStatus.PENDING
-                && invoice.getStatus() != InvoiceStatus.OVERDUE) {
+        if (!InvoiceStatus.PAYABLE.contains(invoice.getStatus())) {
             throw new BadRequestException(
                 "La factura no se puede pagar. Estado actual: " + invoice.getStatus());
         }
