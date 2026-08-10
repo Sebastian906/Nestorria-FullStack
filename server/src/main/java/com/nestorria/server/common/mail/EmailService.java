@@ -41,6 +41,9 @@ public class EmailService {
                 mailSender.send(message);
                 log.info("Correo enviado a {} con asunto '{}' (intento {})", to, subject, attempt);
                 return;
+            } catch (jakarta.mail.MessagingException e) {
+                log.error("Error de construcción de mensaje (to={}): {}", to, e.getMessage());
+                return;
             } catch (Exception e) {
                 log.warn("Intento {}/{} fallido al enviar correo a {}: {}",
                     attempt, MAX_RETRIES, to, e.getMessage());

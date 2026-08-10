@@ -5,6 +5,7 @@ import org.springframework.stereotype.Component;
 import org.springframework.transaction.event.TransactionPhase;
 import org.springframework.transaction.event.TransactionalEventListener;
 
+import com.nestorria.server.common.exception.ResourceNotFoundException;
 import com.nestorria.server.modules.notification.NotificationService;
 
 import lombok.extern.slf4j.Slf4j;
@@ -30,6 +31,10 @@ public class NotificationEventListener {
                 notificationService.createNotification(event);
                 log.info("Notificación persistida: type={}, userId={} (intento {})",
                     event.type(), event.userId(), attempt);
+                return;
+            } catch (ResourceNotFoundException e) {
+                log.error("Error permanente al persistir notificación (userId={}, type={}): {}",
+                    event.userId(), event.type(), e.getMessage());
                 return;
             } catch (Exception e) {
                 log.warn("Intento {}/{} fallido al persistir notificación (userId={}, type={}): {}",
