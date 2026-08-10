@@ -1,6 +1,8 @@
 package com.nestorria.server.modules.booking;
 
 import java.net.URI;
+import java.util.Collections;
+import java.util.LinkedHashSet;
 import java.util.Set;
 import java.util.List;
 import java.util.Map;
@@ -43,7 +45,8 @@ public class BookingController {
         this.bookingService = bookingService;
         this.appProperties = appProperties;
         appProperties.stripe().validate();
-        this.allowedOrigins = Set.copyOf(appProperties.stripe().originsAsList());
+        this.allowedOrigins = Collections.unmodifiableSet(
+            new LinkedHashSet<>(appProperties.stripe().originsAsList()));
     }
 
     @Operation(summary = "Verificar disponibilidad de una propiedad")

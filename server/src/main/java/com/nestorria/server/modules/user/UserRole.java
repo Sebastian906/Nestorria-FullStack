@@ -32,6 +32,9 @@ public enum UserRole {
     );
 
     public static UserRole fromValue(String value) {
+        if (value == null) {
+            throw new IllegalArgumentException("El valor del rol no puede ser null");
+        }
         UserRole role = BY_VALUE.get(value);
         if (role == null) {
             throw new IllegalArgumentException("Rol desconocido: " + value);
