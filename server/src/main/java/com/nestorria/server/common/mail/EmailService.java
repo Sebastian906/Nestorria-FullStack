@@ -18,6 +18,9 @@ import lombok.extern.slf4j.Slf4j;
 @Slf4j
 public class EmailService {
 
+    private static final int MAX_RETRIES = 3;
+    private static final long RETRY_DELAY_MS = 1000;
+
     private final JavaMailSender mailSender;
     private final AppProperties appProperties;
 
@@ -27,18 +30,33 @@ public class EmailService {
     }
 
     private void sendEmail(String to, String subject, String html) {
-        try {
-            MimeMessage message = mailSender.createMimeMessage();
-            MimeMessageHelper helper = new MimeMessageHelper(message, "utf-8");
-            helper.setFrom(appProperties.mail().sender());
-            helper.setTo(to);
-            helper.setSubject(subject);
-            helper.setText(html, true);
-            mailSender.send(message);
-            log.info("Correo enviado a {} con asunto '{}'", to, subject);
-        } catch (Exception e) {
-            log.error("Error al enviar correo a {}: {}", to, e.getMessage());
+        for (int attempt = 1; attempt <= MAX_RETRIES; attempt++) {
+            try {
+                MimeMessage message = mailSender.createMimeMessage();
+                MimeMessageHelper helper = new MimeMessageHelper(message, "utf-8");
+                helper.setFrom(appProperties.mail().sender());
+                helper.setTo(to);
+                helper.setSubject(subject);
+                helper.setText(html, true);
+                mailSender.send(message);
+                log.info("Correo enviado a {} con asunto '{}' (intento {})", to, subject, attempt);
+                return;
+            } catch (Exception e) {
+                log.warn("Intento {}/{} fallido al enviar correo a {}: {}",
+                    attempt, MAX_RETRIES, to, e.getMessage());
+                if (attempt < MAX_RETRIES) {
+                    try {
+                        Thread.sleep(RETRY_DELAY_MS * attempt);
+                    } catch (InterruptedException ie) {
+                        Thread.currentThread().interrupt();
+                        log.error("Interrumpido durante retry a {}: {}", to, ie.getMessage());
+                        return;
+                    }
+                }
+            }
         }
+        log.error("Fallo definitivo al enviar correo a {} con asunto '{}' después de {} intentos",
+            to, subject, MAX_RETRIES);
     }
 
     @Async("emailTaskExecutor")
@@ -88,7 +106,6 @@ public class EmailService {
     public static String formatAmount(long cents, String currency) {
         boolean negative = cents < 0;
         long abs = Math.abs(cents);
-        // Math.abs(Long.MIN_VALUE) overflows to Long.MIN_VALUE (negative)
         if (abs < 0) abs = Long.MAX_VALUE;
         return "%s%s%d.%02d".formatted(currency, negative ? " -" : " ", abs / 100, abs % 100);
     }
