@@ -4,6 +4,8 @@ import java.time.Instant;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
+import java.util.function.Consumer;
 
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.ApplicationEventPublisher;
@@ -15,18 +17,22 @@ import com.nestorria.server.common.exception.BadRequestException;
 import com.nestorria.server.common.exception.ResourceNotFoundException;
 import com.nestorria.server.common.mail.EmailService;
 import com.nestorria.server.modules.booking.Booking;
-import com.nestorria.server.modules.user.User;
-import com.nestorria.server.modules.user.UserRepository;
-import com.nestorria.server.modules.user.UserRole;
 import com.nestorria.server.modules.payment.dto.PaymentIntentResponse;
 import com.nestorria.server.modules.payment.dto.PaymentResponse;
 import com.nestorria.server.modules.payment.dto.ProcessManualPaymentRequest;
+import com.nestorria.server.modules.user.User;
+import com.nestorria.server.modules.user.UserRepository;
+import com.nestorria.server.modules.user.UserRole;
 
 import lombok.extern.slf4j.Slf4j;
 
 @Service
 @Slf4j
 public class PaymentService {
+
+    private static final Set<UserRole> MANUAL_PAYMENT_ROLES = Set.of(
+        UserRole.AGENCY_OWNER, UserRole.MANAGER, UserRole.ADMINISTRATOR
+    );
 
     private final InvoiceRepository invoiceRepository;
     private final PaymentTransactionRepository paymentTransactionRepository;
@@ -66,8 +72,7 @@ public class PaymentService {
                 "No tienes acceso a esta factura");
         }
 
-        if (invoice.getStatus() != InvoiceStatus.PENDING
-                && invoice.getStatus() != InvoiceStatus.OVERDUE) {
+        if (!InvoiceStatus.PAYABLE.contains(invoice.getStatus())) {
             throw new BadRequestException(
                 "La factura no se puede pagar. Estado actual: " + invoice.getStatus());
         }
@@ -109,19 +114,21 @@ public class PaymentService {
         );
     }
 
+    private final Map<String, Consumer<com.stripe.model.Event>> webhookHandlers = Map.of(
+        "checkout.session.completed", this::handleCheckoutSessionCompleted,
+        "payment_intent.succeeded",   this::handlePaymentIntentSucceeded
+    );
+
     @Transactional
     public void handleStripeWebhook(String payload, String sigHeader) {
         com.stripe.model.Event event = stripeClient.constructWebhookEvent(
             payload, sigHeader, webhookSecret);
 
-        String eventType = event.getType();
-
-        if ("checkout.session.completed".equals(eventType)) {
-            handleCheckoutSessionCompleted(event);
-        } else if ("payment_intent.succeeded".equals(eventType)) {
-            handlePaymentIntentSucceeded(event);
+        Consumer<com.stripe.model.Event> handler = webhookHandlers.get(event.getType());
+        if (handler != null) {
+            handler.accept(event);
         } else {
-            log.info("Evento de webhook ignorado: {}", eventType);
+            log.info("Evento de webhook ignorado: {}", event.getType());
         }
     }
 
@@ -244,17 +251,14 @@ public class PaymentService {
                 "Usuario no encontrado: " + userId));
 
         boolean isAgencyOwner = invoice.getBooking().getAgency().getOwner().getId().equals(userId);
-        boolean hasPrivilege = user.getRole() == UserRole.AGENCY_OWNER
-            || user.getRole() == UserRole.MANAGER
-            || user.getRole() == UserRole.ADMINISTRATOR;
+        boolean hasPrivilege = MANUAL_PAYMENT_ROLES.contains(user.getRole());
 
         if (!isAgencyOwner && !hasPrivilege) {
             throw new org.springframework.security.access.AccessDeniedException(
                 "Solo la agencia o un administrador pueden registrar pagos manuales");
         }
 
-        if (invoice.getStatus() != InvoiceStatus.PENDING
-                && invoice.getStatus() != InvoiceStatus.OVERDUE) {
+        if (!InvoiceStatus.PAYABLE.contains(invoice.getStatus())) {
             throw new BadRequestException(
                 "La factura no se puede pagar. Estado actual: " + invoice.getStatus());
         }

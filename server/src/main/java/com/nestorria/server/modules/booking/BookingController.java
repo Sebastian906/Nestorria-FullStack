@@ -1,6 +1,7 @@
 package com.nestorria.server.modules.booking;
 
 import java.net.URI;
+import java.util.Set;
 import java.util.List;
 import java.util.Map;
 
@@ -36,11 +37,13 @@ public class BookingController {
 
     private final BookingService bookingService;
     private final AppProperties appProperties;
+    private final Set<String> allowedOrigins;
 
     public BookingController(BookingService bookingService, AppProperties appProperties) {
         this.bookingService = bookingService;
         this.appProperties = appProperties;
         appProperties.stripe().validate();
+        this.allowedOrigins = Set.copyOf(appProperties.stripe().originsAsList());
     }
 
     @Operation(summary = "Verificar disponibilidad de una propiedad")
@@ -104,8 +107,6 @@ public class BookingController {
     }
 
     private String resolveStripeOrigin(HttpServletRequest request) {
-        List<String> allowedOrigins = appProperties.stripe().originsAsList();
-
         String origin = request.getHeader("Origin");
         if (origin != null && allowedOrigins.contains(origin)) {
             return origin;
@@ -126,7 +127,7 @@ public class BookingController {
 
         return allowedOrigins.isEmpty()
             ? throwNoOriginsConfigured()
-            : allowedOrigins.get(0);
+            : allowedOrigins.iterator().next();
     }
 
     private String throwNoOriginsConfigured() {
