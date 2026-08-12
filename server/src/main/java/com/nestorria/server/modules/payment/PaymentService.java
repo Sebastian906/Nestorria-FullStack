@@ -16,6 +16,7 @@ import com.nestorria.server.common.event.InvoicePaidEvent;
 import com.nestorria.server.common.exception.BadRequestException;
 import com.nestorria.server.common.exception.ResourceNotFoundException;
 import com.nestorria.server.common.mail.EmailService;
+import com.nestorria.server.common.outbox.OutboxEventService;
 import com.nestorria.server.modules.booking.Booking;
 import com.nestorria.server.modules.payment.dto.PaymentIntentResponse;
 import com.nestorria.server.modules.payment.dto.PaymentResponse;
@@ -39,7 +40,7 @@ public class PaymentService {
     private final StripeClient stripeClient;
     private final InvoiceService invoiceService;
     private final EmailService emailService;
-    private final ApplicationEventPublisher eventPublisher;
+    private final OutboxEventService outboxEventService;
     private final UserRepository userRepository;
 
     @Value("${stripe.webhook-secret}")
@@ -50,14 +51,14 @@ public class PaymentService {
                           StripeClient stripeClient,
                           InvoiceService invoiceService,
                           EmailService emailService,
-                          ApplicationEventPublisher eventPublisher,
+                          OutboxEventService outboxEventService,
                           UserRepository userRepository) {
         this.invoiceRepository = invoiceRepository;
         this.paymentTransactionRepository = paymentTransactionRepository;
         this.stripeClient = stripeClient;
         this.invoiceService = invoiceService;
         this.emailService = emailService;
-        this.eventPublisher = eventPublisher;
+        this.outboxEventService = outboxEventService;
         this.userRepository = userRepository;
     }
 
@@ -314,8 +315,11 @@ public class PaymentService {
     }
 
     private void publishInvoicePaid(Invoice invoice) {
-        eventPublisher.publishEvent(new InvoicePaidEvent(
-            invoice.getId(),
-            invoice.getBooking().getUser().getId()));
+        outboxEventService.publish(
+            new InvoicePaidEvent(
+                invoice.getId(),
+                invoice.getBooking().getUser().getId()),
+            "Invoice",
+            invoice.getId());
     }
 }

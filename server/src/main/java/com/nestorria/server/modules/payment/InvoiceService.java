@@ -16,6 +16,7 @@ import com.nestorria.server.common.exception.BadRequestException;
 import com.nestorria.server.common.exception.ResourceNotFoundException;
 import com.nestorria.server.common.mail.EmailService;
 import com.nestorria.server.common.mail.InvoiceEmailData;
+import com.nestorria.server.common.outbox.OutboxEventService;
 import com.nestorria.server.modules.booking.Booking;
 import com.nestorria.server.modules.notification.NotificationType;
 import com.nestorria.server.modules.payment.dto.InvoiceResponse;
@@ -30,18 +31,18 @@ public class InvoiceService {
     private final InvoiceSequenceRepository invoiceSequenceRepository;
     private final AppProperties appProperties;
     private final EmailService emailService;
-    private final ApplicationEventPublisher eventPublisher;
+    private final OutboxEventService outboxEventService;
 
     public InvoiceService(InvoiceRepository invoiceRepository,
                           InvoiceSequenceRepository invoiceSequenceRepository,
                           AppProperties appProperties,
                           EmailService emailService,
-                          ApplicationEventPublisher eventPublisher) {
+                          OutboxEventService outboxEventService) {
         this.invoiceRepository = invoiceRepository;
         this.invoiceSequenceRepository = invoiceSequenceRepository;
         this.appProperties = appProperties;
         this.emailService = emailService;
-        this.eventPublisher = eventPublisher;
+        this.outboxEventService = outboxEventService;
     }
 
     @Transactional
@@ -60,10 +61,13 @@ public class InvoiceService {
 
         Invoice savedInvoice = invoiceRepository.save(invoice);
 
-        // Evento de dominio: side effects se ejecutan AFTER_COMMIT
-        eventPublisher.publishEvent(new InvoiceIssuedEvent(
-                savedInvoice.getId(),
-                booking.getUser().getId()));
+        // Evento de dominio via outbox: se persiste en la misma transacción
+        outboxEventService.publish(
+                new InvoiceIssuedEvent(
+                    savedInvoice.getId(),
+                    booking.getUser().getId()),
+                "Invoice",
+                savedInvoice.getId());
 
         log.info("Factura creada para reserva {}: {} (total: {} cents)",
                 booking.getId(), invoiceNumber, total);
@@ -145,7 +149,8 @@ public class InvoiceService {
 
             emailService.sendInvoiceOverdueEmail(buildInvoiceEmailData(invoice));
 
-            eventPublisher.publishEvent(new NotificationEvent(
+            outboxEventService.publish(
+            new NotificationEvent(
                 invoice.getBooking().getUser().getId(),
                 NotificationType.INVOICE_OVERDUE,
                 NotificationType.INVOICE_OVERDUE.defaultTitle(),
@@ -153,7 +158,9 @@ public class InvoiceService {
                     invoice.getInvoiceNumber(), EmailService.formatAmount(lateFee, invoice.getCurrency())),
                 "invoice",
                 invoice.getId()
-            ));
+            ),
+            "Invoice",
+            invoice.getId());
 
             log.info("Factura marcada como vencida: {} (lateFee: {} cents)",
                 invoice.getInvoiceNumber(), lateFee);
@@ -174,7 +181,8 @@ public class InvoiceService {
         for (Invoice invoice : invoicesDueTomorrow) {
             emailService.sendInvoiceReminderEmail(buildInvoiceEmailData(invoice));
 
-            eventPublisher.publishEvent(new NotificationEvent(
+            outboxEventService.publish(
+            new NotificationEvent(
                 invoice.getBooking().getUser().getId(),
                 NotificationType.INVOICE_ISSUED,
                 "Recordatorio de factura",
@@ -182,7 +190,9 @@ public class InvoiceService {
                     invoice.getInvoiceNumber(), EmailService.formatAmount(invoice.getTotal(), invoice.getCurrency())),
                 "invoice",
                 invoice.getId()
-            ));
+            ),
+            "Invoice",
+            invoice.getId());
 
             log.info("Recordatorio enviado para factura: {}", invoice.getInvoiceNumber());
         }

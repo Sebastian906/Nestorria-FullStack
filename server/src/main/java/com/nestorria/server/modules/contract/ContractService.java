@@ -10,6 +10,7 @@ import com.nestorria.server.common.event.NotificationEvent;
 import com.nestorria.server.common.exception.BadRequestException;
 import com.nestorria.server.common.exception.ConflictException;
 import com.nestorria.server.common.exception.ResourceNotFoundException;
+import com.nestorria.server.common.outbox.OutboxEventService;
 import com.nestorria.server.modules.booking.Booking;
 import com.nestorria.server.modules.booking.BookingRepository;
 import com.nestorria.server.modules.booking.BookingStatus;
@@ -29,7 +30,7 @@ public class ContractService {
     private final DigitalSignatureRepository digitalSignatureRepository;
     private final BookingRepository bookingRepository;
     private final UserRepository userRepository;
-    private final ApplicationEventPublisher eventPublisher;
+    private final OutboxEventService outboxEventService;
 
     public ContractService(
             ContractRepository contractRepository,
@@ -37,13 +38,13 @@ public class ContractService {
             DigitalSignatureRepository digitalSignatureRepository,
             BookingRepository bookingRepository,
             UserRepository userRepository,
-            ApplicationEventPublisher eventPublisher) {
+            OutboxEventService outboxEventService) {
         this.contractRepository = contractRepository;
         this.contractClauseRepository = contractClauseRepository;
         this.digitalSignatureRepository = digitalSignatureRepository;
         this.bookingRepository = bookingRepository;
         this.userRepository = userRepository;
-        this.eventPublisher = eventPublisher;
+        this.outboxEventService = outboxEventService;
     }
 
     @Transactional
@@ -202,14 +203,17 @@ public class ContractService {
     }
 
     private void notifyContractSigned(String recipientId, String message, String contractId) {
-        eventPublisher.publishEvent(new NotificationEvent(
-            recipientId,
-            NotificationType.CONTRACT_SIGNED,
-            NotificationType.CONTRACT_SIGNED.defaultTitle(),
-            message,
-            "contract",
-            contractId
-        ));
+        outboxEventService.publish(
+            new NotificationEvent(
+                recipientId,
+                NotificationType.CONTRACT_SIGNED,
+                NotificationType.CONTRACT_SIGNED.defaultTitle(),
+                message,
+                "contract",
+                contractId
+            ),
+            "Contract",
+            contractId);
     }
 
     private List<ContractClause> generateDefaultClauses(Contract contract, ContractType type) {

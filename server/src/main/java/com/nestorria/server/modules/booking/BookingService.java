@@ -2,8 +2,8 @@ package com.nestorria.server.modules.booking;
 
 import java.time.LocalDate;
 import java.time.temporal.ChronoUnit;
-import java.util.List;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 import org.springframework.context.ApplicationEventPublisher;
@@ -16,6 +16,7 @@ import com.nestorria.server.common.exception.ConflictException;
 import com.nestorria.server.common.exception.ResourceNotFoundException;
 import com.nestorria.server.common.mail.BookingEmailData;
 import com.nestorria.server.common.mail.EmailService;
+import com.nestorria.server.common.outbox.OutboxEventService;
 import com.nestorria.server.modules.agency.Agency;
 import com.nestorria.server.modules.agency.AgencyRepository;
 import com.nestorria.server.modules.booking.dto.AgencyDashboardResponse;
@@ -23,9 +24,9 @@ import com.nestorria.server.modules.booking.dto.BookingResponse;
 import com.nestorria.server.modules.booking.dto.CheckAvailabilityRequest;
 import com.nestorria.server.modules.booking.dto.CreateBookingRequest;
 import com.nestorria.server.modules.notification.NotificationType;
-import com.nestorria.server.modules.payment.InvoiceService;
 import com.nestorria.server.modules.payment.Invoice;
 import com.nestorria.server.modules.payment.InvoiceRepository;
+import com.nestorria.server.modules.payment.InvoiceService;
 import com.nestorria.server.modules.payment.InvoiceStatus;
 import com.nestorria.server.modules.payment.StripeClient;
 import com.nestorria.server.modules.properties.Property;
@@ -42,6 +43,7 @@ public class BookingService {
     private final UserRepository userRepository;
     private final EmailService emailService;
     private final ApplicationEventPublisher eventPublisher;
+    private final OutboxEventService outboxEventService;
     private final InvoiceService invoiceService;
     private final InvoiceRepository invoiceRepository;
     private final StripeClient stripeClient;
@@ -50,6 +52,7 @@ public class BookingService {
             BookingRepository bookingRepository,
             PropertyRepository propertyRepository,
             AgencyRepository agencyRepository,
+            OutboxEventService outboxEventService,
             UserRepository userRepository,
             EmailService emailService,
             ApplicationEventPublisher eventPublisher,
@@ -62,6 +65,7 @@ public class BookingService {
         this.userRepository = userRepository;
         this.emailService = emailService;
         this.eventPublisher = eventPublisher;
+        this.outboxEventService = outboxEventService;
         this.invoiceService = invoiceService;
         this.invoiceRepository = invoiceRepository;
         this.stripeClient = stripeClient;
@@ -127,15 +131,19 @@ public class BookingService {
             request.guests()
         ));
 
-        // Publicar evento de notificación (fire-and-forget)
-        eventPublisher.publishEvent(new NotificationEvent(
-            userId,
-            NotificationType.BOOKING_CONFIRMED,
-            NotificationType.BOOKING_CONFIRMED.defaultTitle(),
-            "Tu reserva en %s ha sido confirmada.".formatted(property.getAddress()),
-            "booking",
+        // Publicar evento de notificación via outbox (persist + retry)
+        outboxEventService.publish(
+            new NotificationEvent(
+                userId,
+                NotificationType.BOOKING_CONFIRMED,
+                NotificationType.BOOKING_CONFIRMED.defaultTitle(),
+                "Tu reserva en %s ha sido confirmada.".formatted(property.getAddress()),
+                "booking",
+                savedBooking.getId()
+            ),
+            "Booking",
             savedBooking.getId()
-        ));
+        );
 
         return BookingResponse.fromEntity(savedBooking);
     }
