@@ -11,17 +11,21 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 
+import com.nestorria.server.common.outbox.handler.NotificationEventHandler;
+import com.nestorria.server.common.outbox.handler.InvoiceIssuedEventHandler;
+import com.nestorria.server.common.outbox.handler.InvoicePaidEventHandler;
+
 @SpringBootTest
 class EventListenerPoolTest {
 
     @Autowired
-    private NotificationEventListener notificationListener;
+    private NotificationEventHandler notificationHandler;
 
     @Autowired
-    private InvoiceIssuedEventListener invoiceIssuedListener;
+    private InvoiceIssuedEventHandler invoiceIssuedHandler;
 
     @Autowired
-    private InvoicePaidEventListener invoicePaidListener;
+    private InvoicePaidEventHandler invoicePaidHandler;
 
     @Autowired
     @Qualifier("emailTaskExecutor")
@@ -32,18 +36,18 @@ class EventListenerPoolTest {
     private ThreadPoolTaskExecutor notificationExecutor;
 
     @Test
-    void notificationListener_Exists() {
-        assertThat(notificationListener).isNotNull();
+    void notificationHandler_Exists() {
+        assertThat(notificationHandler).isNotNull();
     }
 
     @Test
-    void invoiceIssuedListener_Exists() {
-        assertThat(invoiceIssuedListener).isNotNull();
+    void invoiceIssuedHandler_Exists() {
+        assertThat(invoiceIssuedHandler).isNotNull();
     }
 
     @Test
-    void invoicePaidListener_Exists() {
-        assertThat(invoicePaidListener).isNotNull();
+    void invoicePaidHandler_Exists() {
+        assertThat(invoicePaidHandler).isNotNull();
     }
 
     @Test
@@ -62,8 +66,8 @@ class EventListenerPoolTest {
     }
 
     @Test
-    void notificationListener_UsesNotificationTaskExecutor() throws Exception {
-        Method method = NotificationEventListener.class.getMethod(
+    void notificationHandler_UsesNotificationTaskExecutor() throws Exception {
+        Method method = NotificationEventHandler.class.getMethod(
             "handleNotificationEvent", NotificationEvent.class);
         Async async = method.getAnnotation(Async.class);
         assertThat(async).isNotNull();
@@ -71,8 +75,8 @@ class EventListenerPoolTest {
     }
 
     @Test
-    void invoiceIssuedListener_UsesEmailTaskExecutor() throws Exception {
-        Method method = InvoiceIssuedEventListener.class.getMethod(
+    void invoiceIssuedHandler_UsesEmailTaskExecutor() throws Exception {
+        Method method = InvoiceIssuedEventHandler.class.getMethod(
             "handleInvoiceIssued", InvoiceIssuedEvent.class);
         Async async = method.getAnnotation(Async.class);
         assertThat(async).isNotNull();
@@ -80,8 +84,8 @@ class EventListenerPoolTest {
     }
 
     @Test
-    void invoicePaidListener_UsesEmailTaskExecutor() throws Exception {
-        Method method = InvoicePaidEventListener.class.getMethod(
+    void invoicePaidHandler_UsesEmailTaskExecutor() throws Exception {
+        Method method = InvoicePaidEventHandler.class.getMethod(
             "handleInvoicePaid", InvoicePaidEvent.class);
         Async async = method.getAnnotation(Async.class);
         assertThat(async).isNotNull();
