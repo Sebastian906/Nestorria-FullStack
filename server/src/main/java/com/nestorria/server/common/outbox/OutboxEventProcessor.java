@@ -3,6 +3,7 @@ package com.nestorria.server.common.outbox;
 import java.time.Instant;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.stream.Collectors;
 
@@ -10,8 +11,9 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
-import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionTemplate;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 import jakarta.annotation.PostConstruct;
@@ -30,6 +32,7 @@ public class OutboxEventProcessor {
     private final DeadLetterEventRepository deadLetterRepository;
     private final List<EventHandler<?>> handlers;
     private final ObjectMapper objectMapper;
+    private final TransactionTemplate transactionTemplate;
 
     private Map<String, EventHandler<?>> handlerMap;
 
@@ -53,7 +56,6 @@ public class OutboxEventProcessor {
     }
 
     @Scheduled(fixedDelayString = "${app.outbox.poll-interval:1000}")
-    @Transactional
     public void processPendingEvents() {
         List<OutboxEvent> pendingEvents = outboxRepository.findProcessableEvents(
             OutboxEventStatus.PENDING,
@@ -68,37 +70,59 @@ public class OutboxEventProcessor {
         log.debug("Procesando {} eventos pendientes", pendingEvents.size());
 
         for (OutboxEvent event : pendingEvents) {
-            processEvent(event);
+            try {
+                transactionTemplate.executeWithoutResult(status -> processEvent(event));
+            } catch (RuntimeException e) {
+                persistFailureState(event.getId(), e);
+            }
         }
     }
 
-    @SuppressWarnings("unchecked")
     private void processEvent(OutboxEvent event) {
         event.setStatus(OutboxEventStatus.PROCESSING);
         outboxRepository.save(event);
 
-        try {
-            EventHandler handler = handlerMap.get(event.getEventType());
-            if (handler == null) {
-                throw new IllegalArgumentException(
-                    "No hay handler registrado para el tipo de evento: " + event.getEventType());
-            }
-
-            Object payload = objectMapper.readValue(
-                event.getPayload(), handler.getPayloadClass());
-            handler.handle(payload);
-
-            event.setStatus(OutboxEventStatus.COMPLETED);
-            event.setProcessedAt(Instant.now());
-            outboxRepository.save(event);
-
-            log.info("Evento procesado exitosamente: id={}, type={}, aggregate={}/{}",
-                event.getId(), event.getEventType(),
-                event.getAggregateType(), event.getAggregateId());
-
-        } catch (Exception e) {
-            handleFailure(event, e);
+        EventHandler<?> handler = handlerMap.get(event.getEventType());
+        if (handler == null) {
+            throw new IllegalArgumentException(
+                "No hay handler registrado para el tipo de evento: " + event.getEventType());
         }
+
+        Object payload;
+        try {
+            payload = objectMapper.readValue(event.getPayload(), handler.getPayloadClass());
+        } catch (JsonProcessingException e) {
+            throw new IllegalStateException(
+                "Error deserializando payload para eventType=" + event.getEventType(), e);
+        }
+        handleTypedEvent(handler, payload);
+
+        event.setStatus(OutboxEventStatus.COMPLETED);
+        event.setProcessedAt(Instant.now());
+        outboxRepository.save(event);
+
+        log.info("Evento procesado exitosamente: id={}, type={}, aggregate={}/{}",
+            event.getId(), event.getEventType(),
+            event.getAggregateType(), event.getAggregateId());
+    }
+
+    private void persistFailureState(UUID eventId, Exception cause) {
+        try {
+            transactionTemplate.executeWithoutResult(status -> {
+                OutboxEvent event = outboxRepository.findById(eventId)
+                    .orElseThrow(() -> new IllegalStateException(
+                        "Evento outbox no encontrado al persistir fallo: " + eventId));
+                handleFailure(event, cause);
+            });
+        } catch (RuntimeException persistenceError) {
+            log.error("No se pudo persistir estado de fallo del evento outbox: id={}, cause={}",
+                eventId, deriveErrorDescription(persistenceError), persistenceError);
+        }
+    }
+
+    @SuppressWarnings("unchecked")
+    private void handleTypedEvent(EventHandler<?> handler, Object payload) {
+        ((EventHandler<Object>) handler).handle(payload);
     }
 
     private void handleFailure(OutboxEvent event, Exception e) {

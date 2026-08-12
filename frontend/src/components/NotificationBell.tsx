@@ -40,6 +40,10 @@ const NotificationBell = () => {
     const [page, setPage] = useState(0)
     const [hasMore, setHasMore] = useState(true)
     const dropdownRef = useRef<HTMLDivElement>(null)
+    const hasLoggedNetworkIssueRef = useRef(false)
+
+    const isNetworkError = (error: unknown) =>
+        axios.isAxiosError(error) && error.code === 'ERR_NETWORK'
 
     const fetchUnreadCount = useCallback(async () => {
         try {
@@ -50,7 +54,15 @@ const NotificationBell = () => {
                 headers: { Authorization: `Bearer ${token}` }
             })
             setUnreadCount(data.count)
+            hasLoggedNetworkIssueRef.current = false
         } catch (error) {
+            if (isNetworkError(error)) {
+                if (!hasLoggedNetworkIssueRef.current) {
+                    hasLoggedNetworkIssueRef.current = true
+                    console.warn("Backend not reachable for unread-count endpoint")
+                }
+                return
+            }
             console.error("Error fetching unread count", error)
         }
     }, [getToken])
@@ -78,6 +90,9 @@ const NotificationBell = () => {
             }
             setHasMore(pageNum < data.totalPages - 1)
         } catch (error) {
+            if (isNetworkError(error)) {
+                return
+            }
             console.error("Error fetching notifications", error)
             toast.error("Error fetching notifications")
         } finally {
@@ -99,6 +114,9 @@ const NotificationBell = () => {
             )
             setUnreadCount(prev => Math.max(0, prev - 1))
         } catch (error) {
+            if (isNetworkError(error)) {
+                return
+            }
             console.error("Error marking as read", error)
             toast.error("Error at marking as read")
         }
@@ -117,6 +135,9 @@ const NotificationBell = () => {
             setUnreadCount(0)
             toast.success("All notifications marked as read")
         } catch (error) {
+            if (isNetworkError(error)) {
+                return
+            }
             toast.error("Error at marking notifications as read")
         }
     }
@@ -136,22 +157,6 @@ const NotificationBell = () => {
         }
         setIsOpen(!isOpen)
     }
-
-    useEffect(() => {
-        fetchUnreadCount()
-        const interval = setInterval(fetchUnreadCount, 30000)
-        return () => clearInterval(interval)
-    }, [fetchUnreadCount])
-
-    useEffect(() => {
-        const handleClickOutside = (event: MouseEvent) => {
-            if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
-                setIsOpen(false)
-            }
-        }
-        document.addEventListener("mousedown", handleClickOutside)
-        return () => document.removeEventListener("mousedown", handleClickOutside)
-    }, [])
 
     const getNotificationIcon = (type: NotificationType) => {
         switch (type) {
@@ -188,6 +193,22 @@ const NotificationBell = () => {
         if (diffDays < 7) return `${diffDays}d ago`
         return date.toLocaleDateString(undefined, { day: "numeric", month: "short" })
     }
+
+    useEffect(() => {
+        fetchUnreadCount()
+        const interval = setInterval(fetchUnreadCount, 30000)
+        return () => clearInterval(interval)
+    }, [fetchUnreadCount])
+
+    useEffect(() => {
+        const handleClickOutside = (event: MouseEvent) => {
+            if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+                setIsOpen(false)
+            }
+        }
+        document.addEventListener("mousedown", handleClickOutside)
+        return () => document.removeEventListener("mousedown", handleClickOutside)
+    }, [])
 
     return (
         <div className="relative" ref={dropdownRef}>
