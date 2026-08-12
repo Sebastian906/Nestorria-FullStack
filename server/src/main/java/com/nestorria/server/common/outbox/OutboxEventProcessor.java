@@ -3,6 +3,7 @@ package com.nestorria.server.common.outbox;
 import java.time.Instant;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ThreadLocalRandom;
 import java.util.stream.Collectors;
 
 import org.springframework.beans.factory.annotation.Value;
@@ -22,12 +23,15 @@ import lombok.extern.slf4j.Slf4j;
 @RequiredArgsConstructor
 public class OutboxEventProcessor {
 
+    private static final long MAX_BACKOFF_MS = 60_000; // 60 seconds
+    private static final int MAX_ERROR_LENGTH = 500;
+
     private final OutboxEventRepository outboxRepository;
     private final DeadLetterEventRepository deadLetterRepository;
-    private final List<EventHandler> handlers;
+    private final List<EventHandler<?>> handlers;
     private final ObjectMapper objectMapper;
 
-    private Map<String, EventHandler> handlerMap;
+    private Map<String, EventHandler<?>> handlerMap;
 
     @Value("${app.outbox.batch-size:100}")
     private int batchSize;
@@ -35,7 +39,15 @@ public class OutboxEventProcessor {
     @PostConstruct
     public void init() {
         handlerMap = handlers.stream()
-            .collect(Collectors.toMap(EventHandler::getEventType, h -> h));
+            .collect(Collectors.toMap(
+                EventHandler::getEventType,
+                h -> h,
+                (a, b) -> {
+                    throw new IllegalStateException(
+                        "Handlers duplicados para el tipo de evento: " + a.getEventType()
+                        + " → " + a.getClass().getSimpleName()
+                        + " vs " + b.getClass().getSimpleName());
+                }));
         log.info("Outbox processor initialized con {} handlers: {}",
             handlers.size(), handlerMap.keySet());
     }
@@ -60,8 +72,8 @@ public class OutboxEventProcessor {
         }
     }
 
+    @SuppressWarnings("unchecked")
     private void processEvent(OutboxEvent event) {
-        // Marcar como PROCESSING
         event.setStatus(OutboxEventStatus.PROCESSING);
         outboxRepository.save(event);
 
@@ -76,7 +88,6 @@ public class OutboxEventProcessor {
                 event.getPayload(), handler.getPayloadClass());
             handler.handle(payload);
 
-            // Marcar como COMPLETED
             event.setStatus(OutboxEventStatus.COMPLETED);
             event.setProcessedAt(Instant.now());
             outboxRepository.save(event);
@@ -91,18 +102,17 @@ public class OutboxEventProcessor {
     }
 
     private void handleFailure(OutboxEvent event, Exception e) {
+        String errorDescription = deriveErrorDescription(e);
         event.setRetryCount(event.getRetryCount() + 1);
-        event.setErrorMessage(e.getMessage());
+        event.setErrorMessage(errorDescription);
 
         if (event.getRetryCount() >= event.getMaxRetries()) {
-            // Agotados los reintentos → mover a DLQ
             event.setStatus(OutboxEventStatus.FAILED);
-            moveToDeadLetter(event, e);
+            moveToDeadLetter(event, errorDescription);
             log.error("Evento movido a DLQ: id={}, type={}, attempts={}, error={}",
                 event.getId(), event.getEventType(),
-                event.getRetryCount(), e.getMessage());
+                event.getRetryCount(), errorDescription);
         } else {
-            // Reprogramar con backoff exponencial
             event.setStatus(OutboxEventStatus.PENDING);
             event.setNextRetryAt(calculateNextRetry(event.getRetryCount()));
             log.warn("Reprogramando evento: id={}, type={}, attempt={}, nextRetry={}",
@@ -113,20 +123,33 @@ public class OutboxEventProcessor {
         outboxRepository.save(event);
     }
 
-    /**
-     * Backoff exponencial: 1s, 2s, 4s, 8s, 16s
-     */
-    private Instant calculateNextRetry(int retryCount) {
-        long delayMs = (long) Math.pow(2, retryCount) * 1000;
-        return Instant.now().plusMillis(delayMs);
+    private String deriveErrorDescription(Exception e) {
+        String raw = e.getMessage();
+        if (raw == null) {
+            raw = e.getClass().getSimpleName();
+        }
+        if (raw.length() > MAX_ERROR_LENGTH) {
+            raw = raw.substring(0, MAX_ERROR_LENGTH) + "...";
+        }
+        return raw;
     }
 
-    private void moveToDeadLetter(OutboxEvent event, Exception e) {
+    /**
+     * Backoff exponencial con jitter y tope: 1-2s, 2-4s, 4-8s, ... hasta 60s máximo.
+     */
+    private Instant calculateNextRetry(int retryCount) {
+        long baseMs = (long) Math.pow(2, retryCount) * 1000;
+        long capped = Math.min(baseMs, MAX_BACKOFF_MS);
+        long jitter = ThreadLocalRandom.current().nextLong(0, capped / 2 + 1);
+        return Instant.now().plusMillis(capped + jitter);
+    }
+
+    private void moveToDeadLetter(OutboxEvent event, String errorDescription) {
         DeadLetterEvent deadLetter = DeadLetterEvent.builder()
             .originalEventId(event.getId())
             .eventType(event.getEventType())
             .payload(event.getPayload())
-            .errorMessage(e.getMessage())
+            .errorMessage(errorDescription)
             .correlationId(event.getCorrelationId())
             .failedAt(Instant.now())
             .build();

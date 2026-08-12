@@ -1,6 +1,10 @@
 package com.nestorria.server.common.outbox;
 
 import static org.assertj.core.api.Assertions.assertThat;
+
+import java.util.UUID;
+
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -22,30 +26,36 @@ class OutboxEventProcessorTest {
     private OutboxEventRepository outboxRepository;
 
     @Autowired
+    private DeadLetterEventRepository deadLetterRepository;
+
+    @Autowired
     private OutboxEventService outboxEventService;
+
+    @AfterEach
+    void cleanup() {
+        deadLetterRepository.deleteAllInBatch();
+        outboxRepository.deleteAllInBatch();
+    }
 
     @Test
     void processPendingEvents_handlesEventSuccessfully() {
-        // Publicar evento
         outboxEventService.publish(
             new NotificationEvent("user-1", NotificationType.BOOKING_CONFIRMED,
                 "Test", "Test message", "booking", "b-1"),
             "Booking", "b-1");
 
-        // Verificar que está pendiente
-        assertThat(outboxRepository.countByStatus(OutboxEventStatus.PENDING)).isEqualTo(1);
+        OutboxEvent saved = outboxRepository.findAll().get(0);
+        assertThat(saved.getStatus()).isEqualTo(OutboxEventStatus.PENDING);
 
-        // Procesar
         processor.processPendingEvents();
 
-        // Verificar que se completó
-        assertThat(outboxRepository.countByStatus(OutboxEventStatus.PENDING)).isZero();
-        assertThat(outboxRepository.countByStatus(OutboxEventStatus.COMPLETED)).isEqualTo(1);
+        OutboxEvent after = outboxRepository.findById(saved.getId()).orElseThrow();
+        assertThat(after.getStatus()).isEqualTo(OutboxEventStatus.COMPLETED);
+        assertThat(after.getProcessedAt()).isNotNull();
     }
 
     @Test
     void processPendingEvents_movesFailedEventToDLQ_afterMaxRetries() {
-        // Crear evento con tipo inválido (no hay handler)
         OutboxEvent event = OutboxEvent.builder()
             .eventType("InvalidEventType")
             .payload("{}")
@@ -56,15 +66,34 @@ class OutboxEventProcessorTest {
             .retryCount(0)
             .build();
         outboxRepository.save(event);
+        UUID eventId = event.getId();
 
-        // Procesar 3 veces (cada intento incrementa retryCount)
-        processor.processPendingEvents(); // retryCount=1
-        processor.processPendingEvents(); // retryCount=2
-        processor.processPendingEvents(); // retryCount=3 → FAILED + DLQ
+        // Primer intento fallido → retryCount=1, nextRetryAt en el futuro
+        processor.processPendingEvents();
+        OutboxEvent after1 = outboxRepository.findById(eventId).orElseThrow();
+        assertThat(after1.getRetryCount()).isEqualTo(1);
+        assertThat(after1.getStatus()).isEqualTo(OutboxEventStatus.PENDING);
 
-        OutboxEvent failed = outboxRepository.findById(event.getId()).orElseThrow();
+        // Avanzar el reloj del evento para que sea procesable
+        after1.setNextRetryAt(null);
+        outboxRepository.save(after1);
+        processor.processPendingEvents();
+        OutboxEvent after2 = outboxRepository.findById(eventId).orElseThrow();
+        assertThat(after2.getRetryCount()).isEqualTo(2);
+
+        after2.setNextRetryAt(null);
+        outboxRepository.save(after2);
+        processor.processPendingEvents();
+
+        OutboxEvent failed = outboxRepository.findById(eventId).orElseThrow();
         assertThat(failed.getStatus()).isEqualTo(OutboxEventStatus.FAILED);
         assertThat(failed.getRetryCount()).isEqualTo(3);
+
+        DeadLetterEvent dlq = deadLetterRepository.findAll().stream()
+            .filter(d -> d.getOriginalEventId().equals(eventId))
+            .findFirst().orElseThrow();
+        assertThat(dlq.getEventType()).isEqualTo("InvalidEventType");
+        assertThat(dlq.getErrorMessage()).isNotBlank();
     }
 
     @Test
@@ -80,13 +109,31 @@ class OutboxEventProcessorTest {
             .build();
         outboxRepository.save(event);
 
-        // Primer intento fallido
         processor.processPendingEvents();
 
         OutboxEvent afterFirstFailure = outboxRepository.findById(event.getId()).orElseThrow();
         assertThat(afterFirstFailure.getStatus()).isEqualTo(OutboxEventStatus.PENDING);
         assertThat(afterFirstFailure.getRetryCount()).isEqualTo(1);
         assertThat(afterFirstFailure.getNextRetryAt()).isNotNull();
-        // Backoff: 2^1 * 1000ms = 2 segundos
+        assertThat(afterFirstFailure.getErrorMessage()).isNotBlank();
+    }
+
+    @Test
+    void processPendingEvents_errorDescription_neverNull() {
+        OutboxEvent event = OutboxEvent.builder()
+            .eventType("InvalidEventType")
+            .payload("{}")
+            .aggregateType("Test")
+            .aggregateId("test-3")
+            .status(OutboxEventStatus.PENDING)
+            .maxRetries(1)
+            .retryCount(0)
+            .build();
+        outboxRepository.save(event);
+
+        processor.processPendingEvents();
+
+        OutboxEvent after = outboxRepository.findById(event.getId()).orElseThrow();
+        assertThat(after.getErrorMessage()).isNotNull().isNotEmpty();
     }
 }

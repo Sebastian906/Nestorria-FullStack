@@ -5,6 +5,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import com.nestorria.server.common.event.InvoicePaidEvent;
 import com.nestorria.server.common.event.NotificationEvent;
+import com.nestorria.server.common.exception.ResourceNotFoundException;
 import com.nestorria.server.common.mail.EmailService;
 import com.nestorria.server.common.outbox.EventHandler;
 import com.nestorria.server.common.outbox.OutboxEventService;
@@ -40,7 +41,7 @@ public class InvoicePaidEventHandler implements EventHandler<InvoicePaidEvent> {
     @Transactional
     public void handle(InvoicePaidEvent event) {
         Invoice invoice = invoiceRepository.findById(event.invoiceId())
-            .orElseThrow(() -> new com.nestorria.server.common.exception.ResourceNotFoundException(
+            .orElseThrow(() -> new ResourceNotFoundException(
                 "Factura no encontrada: " + event.invoiceId()));
 
         // Enviar email de pago confirmado

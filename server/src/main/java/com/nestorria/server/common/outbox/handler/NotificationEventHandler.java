@@ -31,7 +31,7 @@ public class NotificationEventHandler implements EventHandler<NotificationEvent>
     @Transactional
     public void handle(NotificationEvent event) {
         notificationService.createNotification(event);
-        log.info("Notificación persistida: type={}, userId={}",
+        log.debug("Notificación persistida: type={}, userId={}",
             event.type(), event.userId());
     }
 }

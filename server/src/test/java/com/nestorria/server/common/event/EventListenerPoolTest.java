@@ -2,13 +2,10 @@ package com.nestorria.server.common.event;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import java.lang.reflect.Method;
-
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.scheduling.annotation.Async;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 
 import com.nestorria.server.common.outbox.handler.NotificationEventHandler;
@@ -63,32 +60,5 @@ class EventListenerPoolTest {
     @Test
     void notificationExecutor_PrefixIsNotif() {
         assertThat(notificationExecutor.getThreadNamePrefix()).isEqualTo("notif-");
-    }
-
-    @Test
-    void notificationHandler_UsesNotificationTaskExecutor() throws Exception {
-        Method method = NotificationEventHandler.class.getMethod(
-            "handleNotificationEvent", NotificationEvent.class);
-        Async async = method.getAnnotation(Async.class);
-        assertThat(async).isNotNull();
-        assertThat(async.value()).isEqualTo("notificationTaskExecutor");
-    }
-
-    @Test
-    void invoiceIssuedHandler_UsesEmailTaskExecutor() throws Exception {
-        Method method = InvoiceIssuedEventHandler.class.getMethod(
-            "handleInvoiceIssued", InvoiceIssuedEvent.class);
-        Async async = method.getAnnotation(Async.class);
-        assertThat(async).isNotNull();
-        assertThat(async.value()).isEqualTo("emailTaskExecutor");
-    }
-
-    @Test
-    void invoicePaidHandler_UsesEmailTaskExecutor() throws Exception {
-        Method method = InvoicePaidEventHandler.class.getMethod(
-            "handleInvoicePaid", InvoicePaidEvent.class);
-        Async async = method.getAnnotation(Async.class);
-        assertThat(async).isNotNull();
-        assertThat(async.value()).isEqualTo("emailTaskExecutor");
     }
 }
