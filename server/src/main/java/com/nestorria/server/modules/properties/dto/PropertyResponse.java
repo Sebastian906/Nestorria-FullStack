@@ -22,6 +22,7 @@ public record PropertyResponse(
     FacilityDetails facilities,
     List<String> amenities,
     List<String> images,
+    CategoryNode category,
     boolean isAvailable,
     PropertyLocation location,
     AgencyResponse agency,
@@ -33,6 +34,10 @@ public record PropertyResponse(
     }
 
     public static PropertyResponse fromEntity(Property p, Double averageRating, int reviewCount) {
+        CategoryNode categoryNode = p.getCategory() != null
+            ? CategoryNode.fromEntity(p.getCategory())
+            : null;
+
         return new PropertyResponse(
             p.getId(),
             p.getTitle(),
@@ -46,6 +51,7 @@ public record PropertyResponse(
             p.getFacilities(),
             p.getAmenities(),
             p.getImages(),
+            categoryNode,
             p.isAvailable(),
             p.getLocation(),
             AgencyResponse.fromEntity(p.getAgency()),

@@ -47,6 +47,11 @@ public class Property extends Auditable {
     @JoinColumn(name = "agency_id", nullable = false)
     private Agency agency;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "category_id")
+    private CategoryTree category;
+
+
     @NotBlank
     @Column(nullable = false)
     private String title;

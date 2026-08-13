@@ -1,6 +1,7 @@
 package com.nestorria.server.modules.properties;
 
 import java.util.List;
+import java.util.Set;
 
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
@@ -75,6 +76,7 @@ public interface PropertySearchRepository extends JpaRepository<Property, String
     @Query(value = """
         SELECT p.* FROM properties p
         WHERE p.is_available = true
+          AND (:categoryIds IS NULL OR p.category_id IN (:categoryIds))
           AND (:city IS NULL OR unaccent(LOWER(p.city)) LIKE '%' || unaccent(LOWER(:city)) || '%')
           AND (:propertyType IS NULL OR p.property_type = CAST(:propertyType AS text))
           AND (:minPrice IS NULL
@@ -88,5 +90,6 @@ public interface PropertySearchRepository extends JpaRepository<Property, String
             @Param("city") String city,
             @Param("propertyType") String propertyType,
             @Param("minPrice") Integer minPrice,
-            @Param("maxPrice") Integer maxPrice);
+            @Param("maxPrice") Integer maxPrice,
+            @Param("categoryIds") Set<Long> categoryIds);
 }

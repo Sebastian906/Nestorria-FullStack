@@ -10,7 +10,8 @@ public record NearbySearchRequest(
     String city,
     String propertyType,
     Integer minPrice,
-    Integer maxPrice
+    Integer maxPrice,
+    Long categoryId
 ) {
     public NearbySearchRequest {
         if (radiusKm == null || radiusKm <= 0) radiusKm = 10.0;
