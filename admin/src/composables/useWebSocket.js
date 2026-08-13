@@ -3,7 +3,7 @@ import { useAuth } from '@clerk/vue'
 import { Client } from '@stomp/stompjs'
 
 export function useWebSocket() {
-    const { getToken } = useAuth()
+    const { getToken, isOnline } = useAuth()
 
     const connected = ref(false)
     const notifications = ref([])
@@ -16,46 +16,48 @@ export function useWebSocket() {
         active = true
 
         const backendUrl = (import.meta.env.VITE_BACKEND_URL || 'http://127.0.0.1:4000').replace(/\/$/, '')
-        const wsUrl = backendUrl.replace(/^http/i, 'ws') + '/ws'
+        const wsBaseUrl = backendUrl.replace(/^http/i, 'ws') + '/ws'
 
         const connect = async () => {
             if (!active) return
 
-            const token = await getToken.value()
+            let token
+            try {
+                token = await getToken.value()
+            } catch (e) {
+                // ClerkOfflineError: user is offline or auth not available
+                if (!isOnline) {
+                    connected.value = false
+                } else {
+                    throw e
+                }
+                return
+            }
+
             if (!token || !active) {
                 connected.value = false
                 return
             }
 
+            // Send bearer token via HTTP handshake query parameter expected by
+            // WebSocketAuthInterceptor, instead of STOMP connectHeaders.
+            const wsUrl = `${wsBaseUrl}?token=${token}`
+
             client = new Client({
                 brokerURL: wsUrl,
                 reconnectDelay: 5000,
-                connectHeaders: { Authorization: `Bearer ${token}` },
+                // connectHeaders removed: token sent through HTTP handshake above
                 onConnect: () => {
                     if (!active) return
                     connected.value = true
-
-                    client.subscribe('/user/topic/notifications', (message) => {
-                        try {
-                            const notification = JSON.parse(message.body)
-                            notifications.value = [notification, ...notifications.value]
-                            unreadCount.value += 1
-                        } catch (e) {
-                            console.error('Error parsing WebSocket message', e)
-                        }
-                    })
-
-                    client.subscribe('/user/topic/notifications/unread-count', (message) => {
-                        try {
-                            const { count } = JSON.parse(message.body)
-                            unreadCount.value = count
-                        } catch (e) {
-                            console.error('Error parsing unread count', e)
-                        }
-                    })
                 },
                 onDisconnect: () => {
                     connected.value = false
+                    // Re-attempt connection with fresh token on reconnect
+                    // so that an expired token is refreshed automatically.
+                    if (active) {
+                        void connect()
+                    }
                 },
                 onStompError: (frame) => {
                     console.error('STOMP error:', frame.headers['message'], frame.body)

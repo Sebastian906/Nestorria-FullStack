@@ -34,7 +34,7 @@ interface NotificationResponse {
 
 const NotificationBell = () => {
     const { getToken } = useAuth()
-    const { connected, notifications: wsNotifications } = useWebSocket()
+    const { connected, notifications: wsNotifications, unreadCount: wsUnreadCount } = useWebSocket()
     const [notifications, setNotifications] = useState<Notification[]>([])
     const [unreadCount, setUnreadCount] = useState(0)
     const [isOpen, setIsOpen] = useState(false)
@@ -219,6 +219,15 @@ const NotificationBell = () => {
         return () => clearInterval(interval)
     }, [connected, fetchUnreadCount])
 
+    // Synchronization effect: use the hook's unreadCount value for the badge
+    // whenever the socket is connected. When disconnected, the first useEffect's
+    // polling (fetchUnreadCount) refreshes the count from the HTTP endpoint.
+    useEffect(() => {
+        if (connected && wsUnreadCount !== undefined) {
+            setUnreadCount(wsUnreadCount)
+        }
+    }, [connected, wsUnreadCount])
+
     useEffect(() => {
         // Real-time refresh from pushed notification events: prepend anything the
         // socket has newly delivered, deduplicating by id against both previously
@@ -233,10 +242,6 @@ const NotificationBell = () => {
         if (incoming.length === 0) return
 
         setNotifications(prev => [...incoming, ...prev])
-        // Each surfaced push is an unread notification (the server only pushes
-        // unread ones), so advance the badge immediately to stay in sync while
-        // the socket is connected and the HTTP interval is dormant.
-        setUnreadCount(c => c + incoming.length)
     }, [wsNotifications, notifications])
 
     useEffect(() => {

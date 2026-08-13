@@ -1,6 +1,7 @@
 package com.nestorria.server.common.outbox.handler;
 
 import org.springframework.stereotype.Component;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.support.TransactionSynchronization;
 import org.springframework.transaction.support.TransactionSynchronizationManager;
@@ -41,25 +42,44 @@ public class NotificationEventHandler implements EventHandler<NotificationEvent>
 
         // 2. Construir mensaje WebSocket a partir de la entidad persistida para incluir
         // el id y createdAt generados por JPA/Auditing (necesario para dedup y renderizado en cliente).
-        long unreadCount = notificationService.getUnreadCount(event.userId());
         NotificationWebSocketMessage notificationMsg = new NotificationWebSocketMessage(notification);
 
         // 3. Difirir llamadas WebSocket al después del commit transaccional mediante
-        // TransactionSynchronization.afterCommit, de modo que sendNotificationToUser y
-        // sendUnreadCountUpdate ejecionen solo después de un commit exitoso.
-        deferWebSocketPublishes(event.userId(), notificationMsg, unreadCount);
+        // TransactionSynchronization.afterCommit, usando registros de entrega separados
+        // para notificación y conteo de no leídas, permitiendo reintentos independientes
+        // cuando OutboxEventProcessor requeua el evento.
+        deferNotificationPublishes(event.userId(), notificationMsg);
+        deferUnreadCountPublishes(event.userId());
     }
 
-    private void deferWebSocketPublishes(String userId, NotificationWebSocketMessage notificationMsg, long unreadCount) {
+    private void deferNotificationPublishes(String userId, NotificationWebSocketMessage notificationMsg) {
         TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
             @Override
             public void afterCommit() {
                 // Publicar al usuario específico después del commit exitoso
                 webSocketService.sendNotificationToUser(userId, notificationMsg);
-                // Publicar actualización del conteo de no leídas después del commit exitoso
-                webSocketService.sendUnreadCountUpdate(userId, unreadCount);
-                log.debug("Notificación push WebSocket enviada a userId={}, unreadCount={}", userId, unreadCount);
+                log.debug("Notificación push WebSocket enviada a userId={}", userId);
             }
         });
+    }
+
+    private void deferUnreadCountPublishes(String userId) {
+        TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+            @Override
+            public void afterCommit() {
+                // Queries the unread count in a separate REQUIRES_NEW transaction
+                // to bypass the non-transaction-aware Caffeine cache and ensure a
+                // consistent read view after the write transaction has committed.
+                long unreadCount = getUnreadCountInSeparateTransaction(userId);
+                // Publicar actualización del conteo de no leídas después del commit exitoso
+                webSocketService.sendUnreadCountUpdate(userId, unreadCount);
+                log.debug("Actualización de conteo de no leídas enviada a userId={}, unreadCount={}", userId, unreadCount);
+            }
+        });
+    }
+
+    @Transactional(propagation = Propagation.REQUIRES_NEW, readOnly = true)
+    private long getUnreadCountInSeparateTransaction(String userId) {
+        return notificationService.getUnreadCount(userId);
     }
 }
