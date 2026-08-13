@@ -2,6 +2,7 @@ import { useState, useEffect, useRef, useCallback } from "react"
 import { useAuth } from "@clerk/react"
 import axios from "axios"
 import toast from "react-hot-toast"
+import { useWebSocket } from "../hooks/useWebSocket"
 
 export interface Notification {
     id: string
@@ -33,6 +34,7 @@ interface NotificationResponse {
 
 const NotificationBell = () => {
     const { getToken } = useAuth()
+    const { connected, notifications: wsNotifications, unreadCount: wsUnreadCount } = useWebSocket()
     const [notifications, setNotifications] = useState<Notification[]>([])
     const [unreadCount, setUnreadCount] = useState(0)
     const [isOpen, setIsOpen] = useState(false)
@@ -40,6 +42,11 @@ const NotificationBell = () => {
     const [page, setPage] = useState(0)
     const [hasMore, setHasMore] = useState(true)
     const dropdownRef = useRef<HTMLDivElement>(null)
+    const hasLoggedNetworkIssueRef = useRef(false)
+    const seenIdsRef = useRef(new Set<string>())
+
+    const isNetworkError = (error: unknown) =>
+        axios.isAxiosError(error) && error.code === 'ERR_NETWORK'
 
     const fetchUnreadCount = useCallback(async () => {
         try {
@@ -50,7 +57,15 @@ const NotificationBell = () => {
                 headers: { Authorization: `Bearer ${token}` }
             })
             setUnreadCount(data.count)
+            hasLoggedNetworkIssueRef.current = false
         } catch (error) {
+            if (isNetworkError(error)) {
+                if (!hasLoggedNetworkIssueRef.current) {
+                    hasLoggedNetworkIssueRef.current = true
+                    console.warn("Backend not reachable for unread-count endpoint")
+                }
+                return
+            }
             console.error("Error fetching unread count", error)
         }
     }, [getToken])
@@ -72,12 +87,18 @@ const NotificationBell = () => {
             if (requestId !== requestIdRef.current) return
 
             if (append) {
-                setNotifications(prev => [...prev, ...data.content])
+                setNotifications(prev => {
+                    const existingIds = new Set(prev.map(n => n.id))
+                    return [...prev, ...data.content.filter(n => !existingIds.has(n.id))]
+                })
             } else {
                 setNotifications(data.content)
             }
             setHasMore(pageNum < data.totalPages - 1)
         } catch (error) {
+            if (isNetworkError(error)) {
+                return
+            }
             console.error("Error fetching notifications", error)
             toast.error("Error fetching notifications")
         } finally {
@@ -99,6 +120,9 @@ const NotificationBell = () => {
             )
             setUnreadCount(prev => Math.max(0, prev - 1))
         } catch (error) {
+            if (isNetworkError(error)) {
+                return
+            }
             console.error("Error marking as read", error)
             toast.error("Error at marking as read")
         }
@@ -117,6 +141,9 @@ const NotificationBell = () => {
             setUnreadCount(0)
             toast.success("All notifications marked as read")
         } catch (error) {
+            if (isNetworkError(error)) {
+                return
+            }
             toast.error("Error at marking notifications as read")
         }
     }
@@ -136,22 +163,6 @@ const NotificationBell = () => {
         }
         setIsOpen(!isOpen)
     }
-
-    useEffect(() => {
-        fetchUnreadCount()
-        const interval = setInterval(fetchUnreadCount, 30000)
-        return () => clearInterval(interval)
-    }, [fetchUnreadCount])
-
-    useEffect(() => {
-        const handleClickOutside = (event: MouseEvent) => {
-            if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
-                setIsOpen(false)
-            }
-        }
-        document.addEventListener("mousedown", handleClickOutside)
-        return () => document.removeEventListener("mousedown", handleClickOutside)
-    }, [])
 
     const getNotificationIcon = (type: NotificationType) => {
         switch (type) {
@@ -188,6 +199,60 @@ const NotificationBell = () => {
         if (diffDays < 7) return `${diffDays}d ago`
         return date.toLocaleDateString(undefined, { day: "numeric", month: "short" })
     }
+
+    useEffect(() => {
+        // Seed the badge from the authoritative HTTP count.
+        // While the socket is connected, real-time refreshes arrive via pushed
+        // WebSocket events (see the effect below), so this 30-second HTTP interval
+        // stays dormant. When the socket is disconnected, polling refreshes the
+        // unread count every 30 seconds.
+        fetchUnreadCount()
+
+        if (connected) {
+            // Socket connected: WebSocket events handle real-time notification
+            // updates and unread count tracking. No HTTP polling needed.
+            return
+        }
+
+        // Socket disconnected (or not yet connected): fall back to polling.
+        const interval = setInterval(fetchUnreadCount, 30000)
+        return () => clearInterval(interval)
+    }, [connected, fetchUnreadCount])
+
+    // Synchronization effect: use the hook's unreadCount value for the badge
+    // whenever the socket is connected. When disconnected, the first useEffect's
+    // polling (fetchUnreadCount) refreshes the count from the HTTP endpoint.
+    useEffect(() => {
+        if (connected && wsUnreadCount !== undefined) {
+            setUnreadCount(wsUnreadCount)
+        }
+    }, [connected, wsUnreadCount])
+
+    useEffect(() => {
+        // Real-time refresh from pushed notification events: prepend anything the
+        // socket has newly delivered, deduplicating by id against both previously
+        // surfaced pushes and the notifications already loaded from the paged API.
+        const existingIds = new Set(notifications.map(n => n.id))
+        const incoming: Notification[] = []
+        for (const n of wsNotifications) {
+            if (!n?.id || seenIdsRef.current.has(n.id)) continue
+            seenIdsRef.current.add(n.id)
+            if (!existingIds.has(n.id)) incoming.push(n as Notification)
+        }
+        if (incoming.length === 0) return
+
+        setNotifications(prev => [...incoming, ...prev])
+    }, [wsNotifications, notifications])
+
+    useEffect(() => {
+        const handleClickOutside = (event: MouseEvent) => {
+            if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+                setIsOpen(false)
+            }
+        }
+        document.addEventListener("mousedown", handleClickOutside)
+        return () => document.removeEventListener("mousedown", handleClickOutside)
+    }, [])
 
     return (
         <div className="relative" ref={dropdownRef}>

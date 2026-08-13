@@ -64,7 +64,7 @@ public class NotificationService {
 
     @CacheEvict(cacheNames = "unreadCount", key = "#event.userId")
     @Transactional
-    public void createNotification(NotificationEvent event) {
+    public Notification createNotification(NotificationEvent event) {
         User user = userRepository.findById(event.userId())
             .orElseThrow(() -> new ResourceNotFoundException("Usuario no encontrado: " + event.userId()));
 
@@ -78,5 +78,6 @@ public class NotificationService {
         );
 
         notificationRepository.save(notification);
+        return notification;
     }
 }

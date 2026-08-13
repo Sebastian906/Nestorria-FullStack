@@ -5,7 +5,8 @@ import { useAuth, useUser } from "@clerk/react"
 import axios from "axios"
 import toast from "react-hot-toast"
 
-axios.defaults.baseURL = import.meta.env.VITE_BACKEND_URL
+const backendUrl = (import.meta.env.VITE_BACKEND_URL || 'http://127.0.0.1:4000').replace(/\/$/, '')
+axios.defaults.baseURL = backendUrl
 
 interface AppContextType {
     navigate: NavigateFunction;

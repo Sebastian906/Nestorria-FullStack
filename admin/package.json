@@ -10,6 +10,7 @@
   },
   "dependencies": {
     "@clerk/vue": "^2.3.3",
+    "@stomp/stompjs": "^7.3.0",
     "@tailwindcss/vite": "^4.3.0",
     "axios": "^1.18.0",
     "tailwindcss": "^4.3.0",
