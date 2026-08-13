@@ -18,6 +18,7 @@ public record CreatePropertyRequest(
     @NotBlank String address,
     @Min(1) int area,
     @NotNull PropertyType propertyType,
+    Long categoryId,
     @Min(0) Integer priceRent,
     @Min(0) Integer priceSale,
     @Min(0) int bedrooms,

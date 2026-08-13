@@ -135,6 +135,7 @@ public class PropertyController {
         return propertySearchService.findByFilters(
             request.city(), request.propertyType(),
             request.minPrice(), request.maxPrice(),
+            request.categoryId(),
             request.lat(), request.lng(), request.radiusKm()
         );
     }
