@@ -4,6 +4,7 @@ import java.time.Instant;
 
 import com.nestorria.server.modules.notification.Notification;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.Builder;
 import lombok.Data;
 
@@ -17,7 +18,9 @@ public class NotificationWebSocketMessage {
     private final String message;
     private final String referenceType;
     private final String referenceId;
+    @JsonProperty("isRead")
     private final boolean isRead;
+
     private final Instant createdAt;
 
     public NotificationWebSocketMessage(String id, String type, String title, String message,

@@ -1,7 +1,5 @@
 package com.nestorria.server.common.websocket;
 
-import java.net.URLDecoder;
-import java.nio.charset.StandardCharsets;
 import java.util.Map;
 
 import org.springframework.http.server.ServerHttpRequest;
@@ -26,8 +24,8 @@ public class WebSocketAuthInterceptor extends HttpSessionHandshakeInterceptor {
     @Override
     public boolean beforeHandshake(ServerHttpRequest request, ServerHttpResponse response,
                                    WebSocketHandler wsHandler, Map<String, Object> attributes) {
-        // Extract token from query parameter ( ?token= )
-        String token = extractTokenFromQuery(request);
+        // Extract JWT from Authorization header: Authorization: Bearer <token>
+        String token = extractTokenFromAuthorizationHeader(request);
         if (token == null) return false;
 
         try {
@@ -39,26 +37,13 @@ public class WebSocketAuthInterceptor extends HttpSessionHandshakeInterceptor {
         }
     }
 
-    private String extractTokenFromQuery(ServerHttpRequest request) {
-        // Get the original Servlet request to access query parameters
+    private String extractTokenFromAuthorizationHeader(ServerHttpRequest request) {
+        // Get the original Servlet request to access HTTP headers
         HttpServletRequest servletRequest = ((ServletServerHttpRequest) request).getServletRequest();
-        String queryString = servletRequest.getQueryString();
-        if (queryString == null || !queryString.contains("token=")) {
+        String authorization = servletRequest.getHeader("Authorization");
+        if (authorization == null || !authorization.startsWith("Bearer ")) {
             return null;
         }
-        // Parse token parameter: ?token=xxx&other=yyy
-        String[] params = queryString.split("&");
-        for (String param : params) {
-            if (param.startsWith("token=")) {
-                String tokenValue = param.substring("token=".length());
-                // Decode if URL-encoded
-                try {
-                    return URLDecoder.decode(tokenValue, StandardCharsets.UTF_8);
-                } catch (Exception e) {
-                    return tokenValue;
-                }
-            }
-        }
-        return null;
+        return authorization.substring("Bearer ".length()).trim();
     }
 }

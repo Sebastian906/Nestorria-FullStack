@@ -2,6 +2,7 @@ import { useState, useEffect, useRef, useCallback } from "react"
 import { useAuth } from "@clerk/react"
 import axios from "axios"
 import toast from "react-hot-toast"
+import { useWebSocket } from "../hooks/useWebSocket"
 
 export interface Notification {
     id: string
@@ -33,6 +34,7 @@ interface NotificationResponse {
 
 const NotificationBell = () => {
     const { getToken } = useAuth()
+    const { connected, notifications: wsNotifications } = useWebSocket()
     const [notifications, setNotifications] = useState<Notification[]>([])
     const [unreadCount, setUnreadCount] = useState(0)
     const [isOpen, setIsOpen] = useState(false)
@@ -41,6 +43,7 @@ const NotificationBell = () => {
     const [hasMore, setHasMore] = useState(true)
     const dropdownRef = useRef<HTMLDivElement>(null)
     const hasLoggedNetworkIssueRef = useRef(false)
+    const seenIdsRef = useRef(new Set<string>())
 
     const isNetworkError = (error: unknown) =>
         axios.isAxiosError(error) && error.code === 'ERR_NETWORK'
@@ -84,7 +87,10 @@ const NotificationBell = () => {
             if (requestId !== requestIdRef.current) return
 
             if (append) {
-                setNotifications(prev => [...prev, ...data.content])
+                setNotifications(prev => {
+                    const existingIds = new Set(prev.map(n => n.id))
+                    return [...prev, ...data.content.filter(n => !existingIds.has(n.id))]
+                })
             } else {
                 setNotifications(data.content)
             }
@@ -195,10 +201,43 @@ const NotificationBell = () => {
     }
 
     useEffect(() => {
+        // Seed the badge from the authoritative HTTP count.
+        // While the socket is connected, real-time refreshes arrive via pushed
+        // WebSocket events (see the effect below), so this 30-second HTTP interval
+        // stays dormant. When the socket is disconnected, polling refreshes the
+        // unread count every 30 seconds.
         fetchUnreadCount()
+
+        if (connected) {
+            // Socket connected: WebSocket events handle real-time notification
+            // updates and unread count tracking. No HTTP polling needed.
+            return
+        }
+
+        // Socket disconnected (or not yet connected): fall back to polling.
         const interval = setInterval(fetchUnreadCount, 30000)
         return () => clearInterval(interval)
-    }, [fetchUnreadCount])
+    }, [connected, fetchUnreadCount])
+
+    useEffect(() => {
+        // Real-time refresh from pushed notification events: prepend anything the
+        // socket has newly delivered, deduplicating by id against both previously
+        // surfaced pushes and the notifications already loaded from the paged API.
+        const existingIds = new Set(notifications.map(n => n.id))
+        const incoming: Notification[] = []
+        for (const n of wsNotifications) {
+            if (!n?.id || seenIdsRef.current.has(n.id)) continue
+            seenIdsRef.current.add(n.id)
+            if (!existingIds.has(n.id)) incoming.push(n as Notification)
+        }
+        if (incoming.length === 0) return
+
+        setNotifications(prev => [...incoming, ...prev])
+        // Each surfaced push is an unread notification (the server only pushes
+        // unread ones), so advance the badge immediately to stay in sync while
+        // the socket is connected and the HTTP interval is dormant.
+        setUnreadCount(c => c + incoming.length)
+    }, [wsNotifications, notifications])
 
     useEffect(() => {
         const handleClickOutside = (event: MouseEvent) => {

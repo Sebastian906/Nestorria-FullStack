@@ -2,6 +2,8 @@ package com.nestorria.server.common.outbox.handler;
 
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 import com.nestorria.server.common.event.NotificationEvent;
 import com.nestorria.server.common.outbox.EventHandler;
@@ -34,31 +36,30 @@ public class NotificationEventHandler implements EventHandler<NotificationEvent>
     @Transactional
     public void handle(NotificationEvent event) {
         // 1. Persistir notificación en base de datos (a través del servicio existente)
-        notificationService.createNotification(event);
+        var notification = notificationService.createNotification(event);
         log.debug("Notificación persistida: type={}, userId={}", event.type(), event.userId());
 
-        // 2. Publicar vía WebSocket DESPUÉS del commit transaccional
-        // Usamos los datos del evento directamente (evita query adicional a BD)
+        // 2. Construir mensaje WebSocket a partir de la entidad persistida para incluir
+        // el id y createdAt generados por JPA/Auditing (necesario para dedup y renderizado en cliente).
         long unreadCount = notificationService.getUnreadCount(event.userId());
-        
-        // Crear mensaje WebSocket usando builder pattern desde los datos del evento
-        NotificationWebSocketMessage notificationMsg = NotificationWebSocketMessage.builder()
-            .type(event.type().name())
-            .title(event.title())
-            .message(event.message())
-            .referenceType(event.referenceType())
-            .referenceId(event.referenceId())
-            .isRead(false)
-            .build();
-        
-        // Publicar al usuario específico (el userId del evento coincide con el principal
-        // setado por WebSocketAuthInterceptor en el handshake)
-        webSocketService.sendNotificationToUser(event.userId(), notificationMsg);
-        
-        // Publicar actualización del conteo de no leídas
-        webSocketService.sendUnreadCountUpdate(event.userId(), unreadCount);
-        
-        log.debug("Notificación push WebSocket enviada a userId={}, unreadCount={}", 
-            event.userId(), unreadCount);
+        NotificationWebSocketMessage notificationMsg = new NotificationWebSocketMessage(notification);
+
+        // 3. Difirir llamadas WebSocket al después del commit transaccional mediante
+        // TransactionSynchronization.afterCommit, de modo que sendNotificationToUser y
+        // sendUnreadCountUpdate ejecionen solo después de un commit exitoso.
+        deferWebSocketPublishes(event.userId(), notificationMsg, unreadCount);
+    }
+
+    private void deferWebSocketPublishes(String userId, NotificationWebSocketMessage notificationMsg, long unreadCount) {
+        TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+            @Override
+            public void afterCommit() {
+                // Publicar al usuario específico después del commit exitoso
+                webSocketService.sendNotificationToUser(userId, notificationMsg);
+                // Publicar actualización del conteo de no leídas después del commit exitoso
+                webSocketService.sendUnreadCountUpdate(userId, unreadCount);
+                log.debug("Notificación push WebSocket enviada a userId={}, unreadCount={}", userId, unreadCount);
+            }
+        });
     }
 }
