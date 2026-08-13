@@ -7,10 +7,12 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.BDDMockito.given;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
+import static org.mockito.Mockito.verify;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import com.nestorria.server.common.exception.ResourceNotFoundException;
@@ -131,6 +133,14 @@ class CategoryServiceTest {
 
         CategoryNode result = categoryService.createCategory(request);
 
+        ArgumentCaptor<CategoryTree> captor = ArgumentCaptor.forClass(CategoryTree.class);
+        verify(categoryRepository).save(captor.capture());
+        CategoryTree captured = captor.getValue();
+        assertThat(captured.getName()).isEqualTo("Residential");
+        assertThat(captured.getSlug()).isEqualTo("residential");
+        assertThat(captured.getParent()).isNull();
+        assertThat(captured.getLevel()).isZero();
+
         assertThat(result.name()).isEqualTo("Residential");
         assertThat(result.level()).isZero();
     }
@@ -145,6 +155,14 @@ class CategoryServiceTest {
         given(categoryRepository.save(any())).willReturn(saved);
 
         CategoryNode result = categoryService.createCategory(request);
+
+        ArgumentCaptor<CategoryTree> captor = ArgumentCaptor.forClass(CategoryTree.class);
+        verify(categoryRepository).save(captor.capture());
+        CategoryTree captured = captor.getValue();
+        assertThat(captured.getName()).isEqualTo("House");
+        assertThat(captured.getSlug()).isEqualTo("house");
+        assertThat(captured.getParent()).isEqualTo(parent);
+        assertThat(captured.getLevel()).isEqualTo(1);
 
         assertThat(result.level()).isEqualTo(1);
     }

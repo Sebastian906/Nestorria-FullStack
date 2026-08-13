@@ -48,6 +48,7 @@ public interface PropertySearchRepository extends JpaRepository<Property, String
                 ST_SetSRID(ST_MakePoint(:lng, :lat), 4326)::geography,
                 :radiusMeters
               )
+          AND (:categoryIds IS NULL OR p.category_id IN (:categoryIds))
           AND (:city IS NULL OR unaccent(LOWER(p.city)) LIKE '%' || unaccent(LOWER(:city)) || '%')
           AND (:propertyType IS NULL OR p.property_type = CAST(:propertyType AS text))
           AND (:minPrice IS NULL
@@ -68,7 +69,8 @@ public interface PropertySearchRepository extends JpaRepository<Property, String
             @Param("city") String city,
             @Param("propertyType") String propertyType,
             @Param("minPrice") Integer minPrice,
-            @Param("maxPrice") Integer maxPrice);
+            @Param("maxPrice") Integer maxPrice,
+            @Param("categoryIds") Set<Long> categoryIds);
 
     /**
      * Búsqueda solo con filtros tradicionales (sin componente espacial).

@@ -38,7 +38,7 @@ public class PropertySearchService {
 
         if (lat != null && lng != null && radiusKm != null) {
             return propertySearchRepository.findNearbyWithFilters(
-                lat, lng, radiusKm * 1000, city, propertyType, minPrice, maxPrice
+                lat, lng, radiusKm * 1000, city, propertyType, minPrice, maxPrice, categoryIds
             ).stream().map(PropertySummaryResponse::fromEntity).toList();
         }
         return propertySearchRepository.findByFilters(city, propertyType, minPrice, maxPrice, categoryIds)
