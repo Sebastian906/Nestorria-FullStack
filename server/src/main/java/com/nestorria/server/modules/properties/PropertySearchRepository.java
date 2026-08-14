@@ -7,6 +7,8 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
+import com.nestorria.server.common.datasource.ReadFromReplica;
+
 public interface PropertySearchRepository extends JpaRepository<Property, String> {
 
     /**
@@ -30,6 +32,8 @@ public interface PropertySearchRepository extends JpaRepository<Property, String
                    ST_SetSRID(ST_MakePoint(:lng, :lat), 4326)::geography
                  )
         """, nativeQuery = true)
+
+    @ReadFromReplica
     List<Property> findNearby(@Param("lat") double lat,
                               @Param("lng") double lng,
                               @Param("radiusMeters") double radiusMeters);
@@ -62,6 +66,8 @@ public interface PropertySearchRepository extends JpaRepository<Property, String
                    ST_SetSRID(ST_MakePoint(:lng, :lat), 4326)::geography
                  )
         """, nativeQuery = true)
+
+    @ReadFromReplica
     List<Property> findNearbyWithFilters(
             @Param("lat") double lat,
             @Param("lng") double lng,
@@ -72,9 +78,7 @@ public interface PropertySearchRepository extends JpaRepository<Property, String
             @Param("maxPrice") Integer maxPrice,
             @Param("categoryIds") Set<Long> categoryIds);
 
-    /**
-     * Búsqueda solo con filtros tradicionales (sin componente espacial).
-     */
+    // Búsqueda solo con filtros tradicionales (sin componente espacial).
     @Query(value = """
         SELECT p.* FROM properties p
         WHERE p.is_available = true
@@ -88,6 +92,8 @@ public interface PropertySearchRepository extends JpaRepository<Property, String
                OR (p.price_sale IS NOT NULL AND p.price_sale <= :maxPrice)
                OR (p.price_rent IS NOT NULL AND p.price_rent <= :maxPrice))
         """, nativeQuery = true)
+
+    @ReadFromReplica
     List<Property> findByFilters(
             @Param("city") String city,
             @Param("propertyType") String propertyType,

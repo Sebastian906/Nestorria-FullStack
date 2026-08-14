@@ -8,8 +8,11 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.nestorria.server.common.datasource.ReadFromReplica;
+
 public interface NotificationRepository extends JpaRepository<Notification, String> {
 
+    @ReadFromReplica
     Page<Notification> findByUserIdOrderByCreatedAtDesc(String userId, Pageable pageable);
 
     long countByUserIdAndIsReadFalse(String userId);
