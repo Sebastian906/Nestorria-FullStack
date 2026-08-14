@@ -1,0 +1,32 @@
+version: '3.8'
+
+services:
+  postgres-primary:
+    image: postgis/postgis:16-3.4
+    container_name: nestorria-primary
+    environment:
+      POSTGRES_DB: nestorria
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "5432:5432"
+    volumes:
+      - primary_data:/var/lib/postgresql/data
+
+  postgres-replica:
+    image: postgis/postgis:16-3.4
+    container_name: nestorria-replica
+    environment:
+      POSTGRES_DB: nestorria
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "5433:5432"
+    volumes:
+      - replica_data:/var/lib/postgresql/data
+    depends_on:
+      - postgres-primary
+
+volumes:
+  primary_data:
+  replica_data:
