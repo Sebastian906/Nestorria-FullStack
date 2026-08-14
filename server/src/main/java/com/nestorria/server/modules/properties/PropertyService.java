@@ -29,7 +29,10 @@ import com.nestorria.server.modules.properties.dto.ToggleAvailabilityRequest;
 import com.nestorria.server.modules.review.ReviewService;
 import com.nestorria.server.modules.review.ReviewService.RatingAggregate;
 
+import lombok.extern.slf4j.Slf4j;
+
 @Service
+@Slf4j
 public class PropertyService {
 
     private static final int MAX_IMAGES = 4;
@@ -161,15 +164,47 @@ public class PropertyService {
         List<CompletableFuture<String>> futures = limited.stream()
             .map(file -> CompletableFuture.supplyAsync(
                 () -> uploadSingle(file), imageUploadTaskExecutor))
-            .toList();
+                .toList();
 
-        // Esperar a que todas completen. Si alguna falla, join() lanza CompletionException
         List<String> urls = new ArrayList<>(futures.size());
-        for (CompletableFuture<String> future : futures) {
-            urls.add(future.join());
+        List<String> uploadedUrls = new ArrayList<>();
+        try {
+            for (CompletableFuture<String> future : futures) {
+                urls.add(future.join());
+            }
+            uploadedUrls.addAll(urls);
+        } catch (Exception e) {
+            // Compensación: eliminar imágenes que ya se subieron antes del fallo
+            log.warn("Fallo en subida paralela, eliminando {} imágenes previas", uploadedUrls.size());
+            uploadedUrls.forEach(this::deleteFromCloudinary);
+            throw e;
         }
 
         return urls;
+    }
+
+    /**
+     * Elimina una imagen previamente subida a Cloudinary (compensación ante fallo parcial).
+     * No lanza excepciones — si falla la eliminación, solo registra warning.
+     */
+    private void deleteFromCloudinary(String url) {
+        try {
+            String prefix = "/upload/";
+            int start = url.indexOf(prefix);
+            int lastSlash = url.lastIndexOf('/');
+            if (start < 0 || lastSlash < 0) return;
+
+            String path = url.substring(start + prefix.length(), lastSlash);
+            // Remover prefijo de versión si existe (v1234567890/)
+            if (path.matches("^v\\d+/.+")) {
+                path = path.substring(path.indexOf('/') + 1);
+            }
+
+            cloudinary.uploader().destroy(path, Map.of("resource_type", "image"));
+            log.info("Imagen huérfana eliminada de Cloudinary: {}", path);
+        } catch (Exception e) {
+            log.warn("No se pudo eliminar imagen huérfana de Cloudinary: {} — {}", url, e.getMessage());
+        }
     }
 
     @SuppressWarnings("unchecked")

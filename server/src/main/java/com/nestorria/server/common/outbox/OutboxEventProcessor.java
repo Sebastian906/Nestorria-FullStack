@@ -4,6 +4,8 @@ import java.time.Instant;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.Executor;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.stream.Collectors;
 
@@ -33,6 +35,7 @@ public class OutboxEventProcessor {
     private final List<EventHandler<?>> handlers;
     private final ObjectMapper objectMapper;
     private final TransactionTemplate transactionTemplate;
+    private final Executor outboxTaskExecutor;
 
     private Map<String, EventHandler<?>> handlerMap;
 
@@ -69,13 +72,22 @@ public class OutboxEventProcessor {
 
         log.debug("Procesando {} eventos pendientes", pendingEvents.size());
 
-        for (OutboxEvent event : pendingEvents) {
-            try {
-                transactionTemplate.executeWithoutResult(status -> processEvent(event));
-            } catch (RuntimeException e) {
-                persistFailureState(event.getId(), e);
-            }
-        }
+        // PARALELO: procesar eventos independientes concurrentemente
+        List<CompletableFuture<Void>> futures = pendingEvents.stream()
+            .map(event -> CompletableFuture.runAsync(() -> {
+                try {
+                    transactionTemplate.executeWithoutResult(
+                        status -> processEvent(event));
+                } catch (RuntimeException e) {
+                    persistFailureState(event.getId(), e);
+                }
+            }, outboxTaskExecutor))
+            .toList();
+
+        // Esperar a que todos completen antes del siguiente ciclo
+        CompletableFuture.allOf(futures.toArray(new CompletableFuture[0])).join();
+
+        log.debug("Lote de {} eventos procesado", pendingEvents.size());
     }
 
     private void processEvent(OutboxEvent event) {

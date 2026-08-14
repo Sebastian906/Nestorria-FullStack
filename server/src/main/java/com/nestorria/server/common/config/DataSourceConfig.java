@@ -11,6 +11,7 @@ import org.springframework.boot.jdbc.DataSourceBuilder;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Primary;
+import org.springframework.core.env.Environment;
 
 import com.nestorria.server.common.datasource.DataSourceType;
 import com.nestorria.server.common.datasource.DynamicDataSource;
@@ -19,21 +20,21 @@ import com.nestorria.server.common.datasource.DynamicDataSource;
 public class DataSourceConfig {
 
     @Bean
-    public DataSource primaryDataSource() {
+    public DataSource primaryDataSource(Environment env) {
         return DataSourceBuilder.create()
-            .url("${DB_URI:${DB_URL}}")
-            .username("${DB_USERNAME}")
-            .password("${DB_PASSWORD}")
+            .url(env.resolvePlaceholders("${DB_URI:${DB_URL:jdbc:postgresql://localhost:5432/nestorria}}"))
+            .username(env.resolvePlaceholders("${DB_USERNAME:postgres}"))
+            .password(env.resolvePlaceholders("${DB_PASSWORD:postgres}"))
             .build();
     }
 
     @Bean
     @ConditionalOnExpression("! '${app.db.replica-url:}'.isEmpty()")
-    public DataSource replicaDataSource() {
+    public DataSource replicaDataSource(Environment env) {
         return DataSourceBuilder.create()
-            .url("${app.db.replica-url}")
-            .username("${app.db.replica-username}")
-            .password("${app.db.replica-password}")
+            .url(env.resolvePlaceholders("${app.db.replica-url}"))
+            .username(env.resolvePlaceholders("${app.db.replica-username}"))
+            .password(env.resolvePlaceholders("${app.db.replica-password}"))
             .build();
     }
 

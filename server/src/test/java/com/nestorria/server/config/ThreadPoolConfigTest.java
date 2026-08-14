@@ -73,4 +73,36 @@ class ThreadPoolConfigTest {
     void emailAndNotificationExecutors_AreDifferentInstances() {
         assertThat(emailExecutor).isNotSameAs(notificationExecutor);
     }
+
+    @Autowired
+    @Qualifier("outboxTaskExecutor")
+    private Executor outboxExecutor;
+
+    @Test
+    void outboxExecutor_IsThreadPoolTaskExecutor() {
+        assertThat(outboxExecutor)
+            .isInstanceOf(org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor.class);
+    }
+
+    @Test
+    void outboxExecutor_HasCorrectPrefix() {
+        org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor tpte =
+            (org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor) outboxExecutor;
+        assertThat(tpte.getThreadNamePrefix()).isEqualTo("outbox-");
+    }
+
+    @Test
+    void outboxExecutor_HasCallerRunsPolicy() {
+        org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor tpte =
+            (org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor) outboxExecutor;
+        assertThat(tpte.getThreadPoolExecutor().getRejectedExecutionHandler())
+            .isInstanceOf(ThreadPoolExecutor.CallerRunsPolicy.class);
+    }
+
+    @Test
+    void outboxExecutor_MaxPoolSizeIs5() {
+        org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor tpte =
+            (org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor) outboxExecutor;
+        assertThat(tpte.getMaxPoolSize()).isEqualTo(5);
+    }
 }
