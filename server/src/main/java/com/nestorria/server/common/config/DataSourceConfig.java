@@ -19,7 +19,6 @@ import com.nestorria.server.common.datasource.DynamicDataSource;
 public class DataSourceConfig {
 
     @Bean
-    @Primary
     public DataSource primaryDataSource() {
         return DataSourceBuilder.create()
             .url("${DB_URI:${DB_URL}}")

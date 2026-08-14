@@ -1,3 +1,9 @@
+# Development-only: provides a primary PostgreSQL instance.
+# The postgres-replica service is an INDEPENDENT instance, NOT a streaming replica.
+# It does NOT receive WAL updates from primary — data is not in sync.
+# To enable read replica routing, configure streaming replication separately
+# and set DB_REPLICA_URL in .env. Until then, leave DB_REPLICA_URL commented out.
+
 version: '3.8'
 
 services:
@@ -13,20 +19,21 @@ services:
     volumes:
       - primary_data:/var/lib/postgresql/data
 
-  postgres-replica:
-    image: postgis/postgis:16-3.4
-    container_name: nestorria-replica
-    environment:
-      POSTGRES_DB: nestorria
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
-    ports:
-      - "5433:5432"
-    volumes:
-      - replica_data:/var/lib/postgresql/data
-    depends_on:
-      - postgres-primary
+  # Disabled by default. Uncomment and configure streaming replication before use.
+  # postgres-replica:
+  #   image: postgis/postgis:16-3.4
+  #   container_name: nestorria-replica
+  #   environment:
+  #     POSTGRES_DB: nestorria
+  #     POSTGRES_USER: postgres
+  #     POSTGRES_PASSWORD: postgres
+  #   ports:
+  #     - "5433:5432"
+  #   volumes:
+  #     - replica_data:/var/lib/postgresql/data
+  #   depends_on:
+  #     - postgres-primary
 
 volumes:
   primary_data:
-  replica_data:
+  # replica_data:
