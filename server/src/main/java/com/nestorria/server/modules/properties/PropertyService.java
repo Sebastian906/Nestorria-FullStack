@@ -161,54 +161,51 @@ public class PropertyService {
             ? files.subList(0, MAX_IMAGES)
             : files;
 
-        List<CompletableFuture<String>> futures = limited.stream()
+        List<CompletableFuture<UploadResult>> futures = limited.stream()
             .map(file -> CompletableFuture.supplyAsync(
                 () -> uploadSingle(file), imageUploadTaskExecutor))
                 .toList();
 
-        List<String> urls = new ArrayList<>(futures.size());
-        List<String> uploadedUrls = new ArrayList<>();
+        List<UploadResult> uploaded = new ArrayList<>();
         try {
-            for (CompletableFuture<String> future : futures) {
-                urls.add(future.join());
+            for (CompletableFuture<UploadResult> future : futures) {
+                uploaded.add(future.join());
             }
-            uploadedUrls.addAll(urls);
         } catch (Exception e) {
-            // Compensación: eliminar imágenes que ya se subieron antes del fallo
-            log.warn("Fallo en subida paralela, eliminando {} imágenes previas", uploadedUrls.size());
-            uploadedUrls.forEach(this::deleteFromCloudinary);
+            // Compensación: eliminar todas las imágenes que completaron antes del fallo
+            log.warn("Fallo en subida paralela, eliminando {} imágenes previas", uploaded.size());
+            uploaded.forEach(r -> deleteFromCloudinary(r.publicId()));
             throw e;
         }
 
-        return urls;
+        return uploaded.stream().map(UploadResult::url).toList();
     }
+
+    private record UploadResult(String url, String publicId) {}
 
     /**
      * Elimina una imagen previamente subida a Cloudinary (compensación ante fallo parcial).
      * No lanza excepciones — si falla la eliminación, solo registra warning.
      */
-    private void deleteFromCloudinary(String url) {
+    private void deleteFromCloudinary(String publicId) {
         try {
-            String prefix = "/upload/";
-            int start = url.indexOf(prefix);
-            int lastSlash = url.lastIndexOf('/');
-            if (start < 0 || lastSlash < 0) return;
+            @SuppressWarnings("unchecked")
+            Map<String, Object> result = cloudinary.uploader().destroy(
+                publicId, Map.of("resource_type", "image"));
 
-            String path = url.substring(start + prefix.length(), lastSlash);
-            // Remover prefijo de versión si existe (v1234567890/)
-            if (path.matches("^v\\d+/.+")) {
-                path = path.substring(path.indexOf('/') + 1);
+            String status = (String) result.get("result");
+            if ("ok".equals(status)) {
+                log.info("Imagen huérfana eliminada de Cloudinary: {}", publicId);
+            } else {
+                log.warn("Cloudinary destroy devolvió '{}' para publicId={}", status, publicId);
             }
-
-            cloudinary.uploader().destroy(path, Map.of("resource_type", "image"));
-            log.info("Imagen huérfana eliminada de Cloudinary: {}", path);
         } catch (Exception e) {
-            log.warn("No se pudo eliminar imagen huérfana de Cloudinary: {} — {}", url, e.getMessage());
+            log.warn("No se pudo eliminar imagen huérfana de Cloudinary: {} — {}", publicId, e.getMessage());
         }
     }
 
     @SuppressWarnings("unchecked")
-    private String uploadSingle(MultipartFile file) {
+    private UploadResult uploadSingle(MultipartFile file) {
         if (file == null || file.isEmpty()) {
             throw new BadRequestException("El archivo de imagen está vacío");
         }
@@ -224,7 +221,9 @@ public class PropertyService {
                     "resource_type", "image"
                 )
             );
-            return (String) result.get("secure_url");
+            return new UploadResult(
+                (String) result.get("secure_url"),
+                (String) result.get("public_id"));
         } catch (IOException e) {
             throw new ConflictException("Error al subir imagen a Cloudinary: " + e.getMessage());
         }
