@@ -29,7 +29,10 @@ import com.nestorria.server.modules.properties.dto.ToggleAvailabilityRequest;
 import com.nestorria.server.modules.review.ReviewService;
 import com.nestorria.server.modules.review.ReviewService.RatingAggregate;
 
+import lombok.extern.slf4j.Slf4j;
+
 @Service
+@Slf4j
 public class PropertyService {
 
     private static final int MAX_IMAGES = 4;
@@ -158,22 +161,51 @@ public class PropertyService {
             ? files.subList(0, MAX_IMAGES)
             : files;
 
-        List<CompletableFuture<String>> futures = limited.stream()
+        List<CompletableFuture<UploadResult>> futures = limited.stream()
             .map(file -> CompletableFuture.supplyAsync(
                 () -> uploadSingle(file), imageUploadTaskExecutor))
-            .toList();
+                .toList();
 
-        // Esperar a que todas completen. Si alguna falla, join() lanza CompletionException
-        List<String> urls = new ArrayList<>(futures.size());
-        for (CompletableFuture<String> future : futures) {
-            urls.add(future.join());
+        List<UploadResult> uploaded = new ArrayList<>();
+        try {
+            for (CompletableFuture<UploadResult> future : futures) {
+                uploaded.add(future.join());
+            }
+        } catch (Exception e) {
+            // Compensación: eliminar todas las imágenes que completaron antes del fallo
+            log.warn("Fallo en subida paralela, eliminando {} imágenes previas", uploaded.size());
+            uploaded.forEach(r -> deleteFromCloudinary(r.publicId()));
+            throw e;
         }
 
-        return urls;
+        return uploaded.stream().map(UploadResult::url).toList();
+    }
+
+    private record UploadResult(String url, String publicId) {}
+
+    /**
+     * Elimina una imagen previamente subida a Cloudinary (compensación ante fallo parcial).
+     * No lanza excepciones — si falla la eliminación, solo registra warning.
+     */
+    private void deleteFromCloudinary(String publicId) {
+        try {
+            @SuppressWarnings("unchecked")
+            Map<String, Object> result = cloudinary.uploader().destroy(
+                publicId, Map.of("resource_type", "image"));
+
+            String status = (String) result.get("result");
+            if ("ok".equals(status)) {
+                log.info("Imagen huérfana eliminada de Cloudinary: {}", publicId);
+            } else {
+                log.warn("Cloudinary destroy devolvió '{}' para publicId={}", status, publicId);
+            }
+        } catch (Exception e) {
+            log.warn("No se pudo eliminar imagen huérfana de Cloudinary: {} — {}", publicId, e.getMessage());
+        }
     }
 
     @SuppressWarnings("unchecked")
-    private String uploadSingle(MultipartFile file) {
+    private UploadResult uploadSingle(MultipartFile file) {
         if (file == null || file.isEmpty()) {
             throw new BadRequestException("El archivo de imagen está vacío");
         }
@@ -189,7 +221,9 @@ public class PropertyService {
                     "resource_type", "image"
                 )
             );
-            return (String) result.get("secure_url");
+            return new UploadResult(
+                (String) result.get("secure_url"),
+                (String) result.get("public_id"));
         } catch (IOException e) {
             throw new ConflictException("Error al subir imagen a Cloudinary: " + e.getMessage());
         }

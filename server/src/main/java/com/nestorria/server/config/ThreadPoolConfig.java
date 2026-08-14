@@ -66,4 +66,23 @@ public class ThreadPoolConfig {
         executor.initialize();
         return executor;
     }
+
+    /**
+     * Pool para procesamiento de eventos outbox: I/O-bound (DB + email + WebSocket).
+     * CallerRunsPolicy: si la cola se llena, el scheduler thread procesa el evento
+     * (fallback seguro — degrada a secuencial, same que antes).
+     */
+    @Bean("outboxTaskExecutor")
+    public Executor outboxTaskExecutor() {
+        ThreadPoolTaskExecutor executor = new ThreadPoolTaskExecutor();
+        executor.setCorePoolSize(2);
+        executor.setMaxPoolSize(5);
+        executor.setQueueCapacity(50);
+        executor.setThreadNamePrefix("outbox-");
+        executor.setRejectedExecutionHandler(new ThreadPoolExecutor.CallerRunsPolicy());
+        executor.setWaitForTasksToCompleteOnShutdown(true);
+        executor.setAwaitTerminationSeconds(60);
+        executor.initialize();
+        return executor;
+    }
 }
