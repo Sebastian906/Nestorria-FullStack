@@ -26,6 +26,11 @@ const navItems = [
         label: 'List Property',
         icon: assets.list
     },
+    {
+        path: '/reports',
+        label: 'Reports',
+        icon: assets.clipboard
+    },
 ]
 
 const checkAuth = () => {
