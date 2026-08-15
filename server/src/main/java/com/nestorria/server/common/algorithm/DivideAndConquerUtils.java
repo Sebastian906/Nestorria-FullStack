@@ -16,9 +16,10 @@ import java.util.function.Predicate;
  * Complejidad temporal de cada operación:
  * - mergeSort:         O(n log n) estable, peor caso garantizado
  * - binarySearch:      O(log n) para listas ordenadas
- * - parallelProcess:   O(n/p) donde p = número de threads
- * - quickselect:       O(n) promedio, O(n²) peor caso
+ * - quickselect:       O(n) promedio, O(n²) peor caso (three-way partition)
  * - filterParallel:    O(n/p) donde p = número de threads
+ * - countByParallel:   O(n/p) donde p = número de threads
+ * - mapParallel:       O(n/p) donde p = número de threads
  * - median:            O(n) promedio via quickselect
  */
 public final class DivideAndConquerUtils {
@@ -134,6 +135,7 @@ public final class DivideAndConquerUtils {
     /**
      * Quickselect: encuentra el k-ésimo elemento sin ordenar completamente la lista.
      * Divide-and-conquer variant de Quick Sort.
+     * Usa three-way partitioning para manejar duplicados eficientemente.
      * Time:  O(n) promedio, O(n²) peor caso (mitigado con pivot aleatorio)
      * Space: O(1) in-place
      * Uso recomendado: Encontrar mediana o percentiles sin ordenar toda la lista.
@@ -143,43 +145,60 @@ public final class DivideAndConquerUtils {
         if (list == null || list.isEmpty() || k < 0 || k >= list.size()) {
             throw new IllegalArgumentException("Invalid input: list=" + list + ", k=" + k);
         }
-        
+
         ArrayList<T> workingList = new ArrayList<>(list);
-        return quickselectInternal(workingList, 0, workingList.size() - 1, k);
-    }
+        int low = 0, high = workingList.size() - 1;
 
-    private static <T extends Comparable<T>> T quickselectInternal(
-            ArrayList<T> list, int left, int right, int k) {
-        if (left == right) return list.get(left);
-        
-        int pivotIndex = partition(list, left, right);
-        
-        if (k == pivotIndex) {
-            return list.get(k);
-        } else if (k < pivotIndex) {
-            return quickselectInternal(list, left, pivotIndex - 1, k);
-        } else {
-            return quickselectInternal(list, pivotIndex + 1, right, k);
-        }
-    }
+        while (low <= high) {
+            if (low == high) return workingList.get(low);
 
-    private static <T extends Comparable<T>> int partition(ArrayList<T> list, int left, int right) {
-        // Pivot aleatorio para evitar peor caso en datos ordenados
-        int randomIndex = left + (int) (Math.random() * (right - left + 1));
-        swap(list, randomIndex, right);
-        
-        T pivot = list.get(right);
-        int i = left - 1;
-        
-        for (int j = left; j < right; j++) {
-            if (list.get(j).compareTo(pivot) <= 0) {
-                i++;
-                swap(list, i, j);
+            int[] bounds = threeWayPartition(workingList, low, high);
+            int lt = bounds[0], gt = bounds[1];
+
+            if (k < lt) {
+                high = lt - 1;
+            } else if (k > gt) {
+                low = gt + 1;
+            } else {
+                return workingList.get(k);
             }
         }
-        
-        swap(list, i + 1, right);
-        return i + 1;
+
+        throw new IllegalStateException("quickselect failed — should never reach here");
+    }
+
+    /**
+     * Three-way partitioning (Dutch National Flag): agrupa elementos en [lt, gt]
+     * en三部分: menores, iguales, mayores al pivot.
+     * Devuelve [lt, gt] donde [lt..gt] son todos iguales al pivot.
+     * Time: O(n) — un solo pase sobre la porción.
+     */
+    private static <T extends Comparable<T>> int[] threeWayPartition(
+            ArrayList<T> list, int low, int high) {
+        // Pivot aleatorio para evitar peor caso
+        int randomIndex = low + (int) (Math.random() * (high - low + 1));
+        swap(list, randomIndex, low);
+
+        T pivot = list.get(low);
+        int lt = low;   // lt = boundary of elements < pivot
+        int i = low + 1; // current scanner
+        int gt = high;   // gt = boundary of elements > pivot
+
+        while (i <= gt) {
+            int cmp = list.get(i).compareTo(pivot);
+            if (cmp < 0) {
+                swap(list, lt, i);
+                lt++;
+                i++;
+            } else if (cmp > 0) {
+                swap(list, i, gt);
+                gt--;
+            } else {
+                i++;
+            }
+        }
+
+        return new int[]{lt, gt};
     }
 
     private static <T> void swap(ArrayList<T> list, int i, int j) {
@@ -191,35 +210,33 @@ public final class DivideAndConquerUtils {
     // MEDIAN
     /**
      * Calcula la mediana de una lista de números.
-     * Usa merge sort para ordenar, luego acceso directo al medio.
-     * Time:  O(n log n) por el merge sort
-     * Space: O(n)
+     * Usa quickselect O(n) promedio para encontrar el/los elementos del medio.
+     * Time:  O(n) promedio, O(n²) peor caso (mitigado con pivot aleatorio)
+     * Space: O(n) para la copia interna de quickselect
      * Uso recomendado: Estadísticas de precio (min, max, avg, median).
-     * Retorna Optional.empty() si la lista está vacía.
+     * Retorna Optional.empty() si la lista está vacía o todos los valores son null.
      */
     public static OptionalDouble median(List<? extends Number> numbers) {
         if (numbers == null || numbers.isEmpty()) {
             return OptionalDouble.empty();
         }
-        
-        // Convertir a Double y filtrar nulos
+
         List<Double> valid = numbers.stream()
             .filter(n -> n != null)
             .map(Number::doubleValue)
-            .sorted()
             .toList();
-        
+
         if (valid.isEmpty()) {
             return OptionalDouble.empty();
         }
-        
+
         int size = valid.size();
-        if (size % 2 == 0) {
-            double mid1 = valid.get(size / 2 - 1);
-            double mid2 = valid.get(size / 2);
-            return OptionalDouble.of((mid1 + mid2) / 2.0);
+        if (size % 2 == 1) {
+            return OptionalDouble.of(quickselect(valid, size / 2));
         } else {
-            return OptionalDouble.of(valid.get(size / 2));
+            double mid1 = quickselect(valid, size / 2 - 1);
+            double mid2 = quickselect(valid, size / 2);
+            return OptionalDouble.of((mid1 + mid2) / 2.0);
         }
     }
 
@@ -227,8 +244,12 @@ public final class DivideAndConquerUtils {
 
     /**
      * Divide una lista en chunks del tamaño indicado.
+     * Rechaza chunkSize <= 0 con IllegalArgumentException.
      */
     private static <T> List<List<T>> splitIntoChunks(List<T> items, int chunkSize) {
+        if (chunkSize <= 0) {
+            throw new IllegalArgumentException("chunkSize must be > 0, got: " + chunkSize);
+        }
         List<List<T>> chunks = new ArrayList<>();
         for (int i = 0; i < items.size(); i += chunkSize) {
             chunks.add(items.subList(i, Math.min(i + chunkSize, items.size())));

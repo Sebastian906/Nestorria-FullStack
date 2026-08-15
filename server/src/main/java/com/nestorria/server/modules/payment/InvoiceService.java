@@ -35,19 +35,22 @@ public class InvoiceService {
     private final EmailService emailService;
     private final OutboxEventService outboxEventService;
     private final Executor outboxTaskExecutor;
+    private final InvoiceTransactionWorker invoiceWorker;
 
     public InvoiceService(InvoiceRepository invoiceRepository,
                           InvoiceSequenceRepository invoiceSequenceRepository,
                           AppProperties appProperties,
                           EmailService emailService,
                           OutboxEventService outboxEventService,
-                          @Qualifier("outboxTaskExecutor") Executor outboxTaskExecutor) {
+                          @Qualifier("outboxTaskExecutor") Executor outboxTaskExecutor,
+                          InvoiceTransactionWorker invoiceWorker) {
         this.invoiceRepository = invoiceRepository;
         this.invoiceSequenceRepository = invoiceSequenceRepository;
         this.appProperties = appProperties;
         this.emailService = emailService;
         this.outboxEventService = outboxEventService;
         this.outboxTaskExecutor = outboxTaskExecutor;
+        this.invoiceWorker = invoiceWorker;
     }
 
     @Transactional
@@ -150,46 +153,15 @@ public class InvoiceService {
         }
 
         // Divide-and-conquer: procesar facturas en paralelo
-        // Cada factura se procesa en su propia transacción (thread-safe)
+        // Cada factura se procesa en su propia transacción a través del worker
         List<CompletableFuture<Void>> futures = overdueInvoices.stream()
             .map(invoice -> CompletableFuture.runAsync(
-                () -> processSingleOverdueInvoice(invoice), outboxTaskExecutor))
+                () -> invoiceWorker.processOverdueInvoice(invoice.getId()), outboxTaskExecutor))
             .toList();
 
-        // Esperar a que todas las facturas se procesen
         CompletableFuture.allOf(futures.toArray(new CompletableFuture[0])).join();
 
         log.info("Total facturas vencidas procesadas: {}", overdueInvoices.size());
-    }
-
-    /**
-     * Procesa una única factura vencida en su propia transacción.
-     * Divide-and-conquer: esta función es el "conquer" de una sola tarea.
-     */
-    @Transactional
-    public void processSingleOverdueInvoice(Invoice invoice) {
-        long lateFee = calculateLateFee(invoice);
-        invoice.setStatus(InvoiceStatus.OVERDUE);
-        invoice.setLateFee(lateFee);
-        invoiceRepository.save(invoice);
-
-        emailService.sendInvoiceOverdueEmail(buildInvoiceEmailData(invoice));
-
-        outboxEventService.publish(
-            new NotificationEvent(
-                invoice.getBooking().getUser().getId(),
-                NotificationType.INVOICE_OVERDUE,
-                NotificationType.INVOICE_OVERDUE.defaultTitle(),
-                "La factura %s ha vencido. Se ha aplicado un cargo por mora de %s.".formatted(
-                    invoice.getInvoiceNumber(), EmailService.formatAmount(lateFee, invoice.getCurrency())),
-                "invoice",
-                invoice.getId()
-            ),
-            "Invoice",
-            invoice.getId());
-
-        log.info("Factura marcada como vencida: {} (lateFee: {} cents)",
-            invoice.getInvoiceNumber(), lateFee);
     }
 
     @Scheduled(cron = "0 0 8 * * ?")
@@ -205,35 +177,12 @@ public class InvoiceService {
         // Divide-and-conquer: procesar recordatorios en paralelo
         List<CompletableFuture<Void>> futures = invoicesDueTomorrow.stream()
             .map(invoice -> CompletableFuture.runAsync(
-                () -> processSingleReminder(invoice), outboxTaskExecutor))
+                () -> invoiceWorker.processReminder(invoice.getId()), outboxTaskExecutor))
             .toList();
 
         CompletableFuture.allOf(futures.toArray(new CompletableFuture[0])).join();
 
         log.info("Total recordatorios enviados: {}", invoicesDueTomorrow.size());
-    }
-
-    /**
-     * Procesa un único recordatorio de factura en su propia transacción.
-     */
-    @Transactional
-    public void processSingleReminder(Invoice invoice) {
-        emailService.sendInvoiceReminderEmail(buildInvoiceEmailData(invoice));
-
-        outboxEventService.publish(
-            new NotificationEvent(
-                invoice.getBooking().getUser().getId(),
-                NotificationType.INVOICE_ISSUED,
-                "Recordatorio de factura",
-                "La factura %s vence mañana. Total a pagar: %s.".formatted(
-                    invoice.getInvoiceNumber(), EmailService.formatAmount(invoice.getTotal(), invoice.getCurrency())),
-                "invoice",
-                invoice.getId()
-            ),
-            "Invoice",
-            invoice.getId());
-
-        log.info("Recordatorio enviado para factura: {}", invoice.getInvoiceNumber());
     }
 
     private String generateInvoiceNumber() {

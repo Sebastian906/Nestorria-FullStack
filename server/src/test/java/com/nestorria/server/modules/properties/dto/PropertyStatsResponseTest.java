@@ -1,5 +1,6 @@
 package com.nestorria.server.modules.properties.dto;
 
+import java.util.Arrays;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -64,7 +65,7 @@ class PropertyStatsResponseTest {
     @Test
     void priceStatistics_withNulls() {
         var stats = PropertyStatsResponse.PriceStatistics.fromPrices(
-            List.of(100, null, 300, null, 500));
+            Arrays.asList(100, null, 300, null, 500));
         
         assertEquals(100, stats.min());
         assertEquals(500, stats.max());
@@ -77,7 +78,7 @@ class PropertyStatsResponseTest {
     @Test
     void priceStatistics_allNulls() {
         var stats = PropertyStatsResponse.PriceStatistics.fromPrices(
-            List.of(null, null, null));
+            Arrays.asList(null, null, null));
         
         assertNull(stats.min());
         assertNull(stats.max());

@@ -2,6 +2,7 @@ package com.nestorria.server.modules.payment;
 
 import java.time.LocalDate;
 import java.util.List;
+import java.util.concurrent.Executor;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
@@ -39,6 +40,12 @@ class InvoiceServiceParallelTest {
     @Mock
     private OutboxEventService outboxEventService;
 
+    @Mock
+    private Executor outboxTaskExecutor;
+
+    @Mock
+    private InvoiceTransactionWorker invoiceWorker;
+
     @InjectMocks
     private InvoiceService invoiceService;
 
@@ -52,7 +59,27 @@ class InvoiceServiceParallelTest {
 
         verify(invoiceRepository).findOverdueInvoicesWithBooking(
             any(InvoiceStatus.class), any(LocalDate.class));
-        verify(emailService, never()).sendInvoiceOverdueEmail(any());
+        verify(invoiceWorker, never()).processOverdueInvoice(anyString());
+    }
+
+    @Test
+    void markAsOverdue_withInvoices_delegatesToWorker() {
+        Booking booking = createMockBooking();
+        Invoice invoice1 = new Invoice(booking, "INV-001", LocalDate.now(),
+            LocalDate.now().plusDays(5), 10000L, 1000L, 11000L, "USD");
+        invoice1.setId("inv-1");
+        Invoice invoice2 = new Invoice(booking, "INV-002", LocalDate.now(),
+            LocalDate.now().plusDays(5), 20000L, 2000L, 22000L, "USD");
+        invoice2.setId("inv-2");
+
+        when(invoiceRepository.findOverdueInvoicesWithBooking(
+            any(InvoiceStatus.class), any(LocalDate.class)))
+            .thenReturn(List.of(invoice1, invoice2));
+
+        assertDoesNotThrow(() -> invoiceService.markAsOverdue());
+
+        verify(invoiceWorker).processOverdueInvoice("inv-1");
+        verify(invoiceWorker).processOverdueInvoice("inv-2");
     }
 
     @Test
@@ -65,7 +92,23 @@ class InvoiceServiceParallelTest {
 
         verify(invoiceRepository).findInvoicesDueOnDateWithBooking(
             any(InvoiceStatus.class), any(LocalDate.class));
-        verify(emailService, never()).sendInvoiceReminderEmail(any());
+        verify(invoiceWorker, never()).processReminder(anyString());
+    }
+
+    @Test
+    void sendDueDateReminders_withInvoices_delegatesToWorker() {
+        Booking booking = createMockBooking();
+        Invoice invoice = new Invoice(booking, "INV-003", LocalDate.now(),
+            LocalDate.now().plusDays(1), 15000L, 1500L, 16500L, "USD");
+        invoice.setId("inv-3");
+
+        when(invoiceRepository.findInvoicesDueOnDateWithBooking(
+            any(InvoiceStatus.class), any(LocalDate.class)))
+            .thenReturn(List.of(invoice));
+
+        assertDoesNotThrow(() -> invoiceService.sendDueDateReminders());
+
+        verify(invoiceWorker).processReminder("inv-3");
     }
 
     @Test

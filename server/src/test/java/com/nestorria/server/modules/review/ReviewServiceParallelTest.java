@@ -3,6 +3,7 @@ package com.nestorria.server.modules.review;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.Executor;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
@@ -28,6 +29,9 @@ class ReviewServiceParallelTest {
 
     @Mock
     private com.nestorria.server.modules.properties.PropertyRepository propertyRepository;
+
+    @Mock
+    private Executor notificationTaskExecutor;
 
     @InjectMocks
     private ReviewService reviewService;

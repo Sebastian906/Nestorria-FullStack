@@ -1,6 +1,7 @@
 package com.nestorria.server.common.algorithm;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
@@ -211,6 +212,17 @@ class DivideAndConquerUtilsTest {
     }
 
     @Test
+    void quickselect_allEqual_doesNotRecurseOneElementAtATime() {
+        // Regression: three-way partition must group all equals in one pass,
+        // so even 1000 identical elements resolve in O(n) without O(n²) recursion.
+        List<Integer> list = new ArrayList<>();
+        for (int i = 0; i < 1000; i++) list.add(7);
+        assertEquals(7, DivideAndConquerUtils.quickselect(list, 0));
+        assertEquals(7, DivideAndConquerUtils.quickselect(list, 499));
+        assertEquals(7, DivideAndConquerUtils.quickselect(list, 999));
+    }
+
+    @Test
     void quickselect_throwsOnInvalidInput() {
         assertThrows(IllegalArgumentException.class, () -> 
             DivideAndConquerUtils.quickselect(new ArrayList<Integer>(), 0));
@@ -251,14 +263,14 @@ class DivideAndConquerUtilsTest {
 
     @Test
     void median_allNulls() {
-        List<Integer> numbers = List.of(null, null, null);
+        java.util.List<Integer> numbers = Arrays.asList(null, null, null);
         OptionalDouble result = DivideAndConquerUtils.median(numbers);
         assertFalse(result.isPresent());
     }
 
     @Test
     void median_withNulls() {
-        List<Integer> numbers = List.of(1, null, 3, null, 5);
+        java.util.List<Integer> numbers = Arrays.asList(1, null, 3, null, 5);
         OptionalDouble result = DivideAndConquerUtils.median(numbers);
         assertTrue(result.isPresent());
         assertEquals(3.0, result.getAsDouble());
@@ -271,6 +283,14 @@ class DivideAndConquerUtilsTest {
             List.of(), n -> n > 5, executor, 10
         );
         assertTrue(result.isEmpty());
+    }
+
+    @Test
+    void filterParallel_invalidChunkSize_throws() {
+        assertThrows(IllegalArgumentException.class, () ->
+            DivideAndConquerUtils.filterParallel(List.of(1, 2, 3), n -> n > 1, executor, 0));
+        assertThrows(IllegalArgumentException.class, () ->
+            DivideAndConquerUtils.filterParallel(List.of(1, 2, 3), n -> n > 1, executor, -1));
     }
 
     @Test
