@@ -122,7 +122,10 @@ public class PropertyService {
     /**
      * Estadísticas de propiedades usando SearchUtils sobre datos cacheados.
      * Reutiliza getAllAvailable() que ya tiene @Cacheable.
+     * Divide-and-conquer: las estadísticas de precio incluyen mediana calculada
+     * via quickselect O(n) average, en lugar de sort O(n log n).
      * Complejidad: O(n) sobre la lista cacheada, sin queries adicionales a DB.
+     * La mediana agrega O(n) average via quickselect.
      */
     @Cacheable(cacheNames = "propertyStats", key = "'global'")
     @Transactional(readOnly = true)
@@ -139,10 +142,18 @@ public class PropertyService {
             PropertySummaryResponse::city
         );
 
+        // Divide-and-conquer: extraer precios y calcular estadísticas
+        List<Integer> prices = properties.stream()
+            .map(p -> p.price().getSale())
+            .toList();
+        PropertyStatsResponse.PriceStatistics priceStats = 
+            PropertyStatsResponse.PriceStatistics.fromPrices(prices);
+
         return new PropertyStatsResponse(
             properties.size(),
             byType,
-            byCity
+            byCity,
+            priceStats
         );
     }
 

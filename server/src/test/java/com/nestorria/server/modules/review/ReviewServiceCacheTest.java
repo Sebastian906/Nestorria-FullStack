@@ -1,16 +1,15 @@
 package com.nestorria.server.modules.review;
 
-import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.*;
-
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.when;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.cache.CacheManager;
@@ -83,8 +82,7 @@ class ReviewServiceCacheTest {
         testReview.setId("review-1");
     }
 
-    // ==================== getAverageRatings ====================
-
+    // getAverageRatings
     @Test
     void getAverageRatings_CacheMiss_ThenCacheHit() {
         List<String> propertyIds = List.of("prop-1");
@@ -114,8 +112,7 @@ class ReviewServiceCacheTest {
         assertTrue(result.isEmpty());
     }
 
-    // ==================== createReview evicts ====================
-
+    // createReview evicts
     @Test
     void createReview_EvictsRatingAggregatesCache() {
         List<String> propertyIds = List.of("prop-1");
@@ -144,8 +141,7 @@ class ReviewServiceCacheTest {
         assertEquals(afterPopulate.missCount() + 1, afterEvict.missCount());
     }
 
-    // ==================== updateReview evicts ====================
-
+    // updateReview evicts
     @Test
     void updateReview_EvictsRatingAggregatesCache() {
         List<String> propertyIds = List.of("prop-1");
@@ -166,8 +162,7 @@ class ReviewServiceCacheTest {
         assertEquals(afterPopulate.missCount() + 1, afterEvict.missCount());
     }
 
-    // ==================== deleteReview evicts ====================
-
+    // deleteReview evicts
     @Test
     void deleteReview_EvictsRatingAggregatesCache() {
         List<String> propertyIds = List.of("prop-1");

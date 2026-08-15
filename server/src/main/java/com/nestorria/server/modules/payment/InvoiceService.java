@@ -3,8 +3,10 @@ package com.nestorria.server.modules.payment;
 import java.time.LocalDate;
 import java.time.Year;
 import java.util.List;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.Executor;
 
-import org.springframework.context.ApplicationEventPublisher;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -32,17 +34,23 @@ public class InvoiceService {
     private final AppProperties appProperties;
     private final EmailService emailService;
     private final OutboxEventService outboxEventService;
+    private final Executor outboxTaskExecutor;
+    private final InvoiceTransactionWorker invoiceWorker;
 
     public InvoiceService(InvoiceRepository invoiceRepository,
                           InvoiceSequenceRepository invoiceSequenceRepository,
                           AppProperties appProperties,
                           EmailService emailService,
-                          OutboxEventService outboxEventService) {
+                          OutboxEventService outboxEventService,
+                          @Qualifier("outboxTaskExecutor") Executor outboxTaskExecutor,
+                          InvoiceTransactionWorker invoiceWorker) {
         this.invoiceRepository = invoiceRepository;
         this.invoiceSequenceRepository = invoiceSequenceRepository;
         this.appProperties = appProperties;
         this.emailService = emailService;
         this.outboxEventService = outboxEventService;
+        this.outboxTaskExecutor = outboxTaskExecutor;
+        this.invoiceWorker = invoiceWorker;
     }
 
     @Transactional
@@ -135,71 +143,46 @@ public class InvoiceService {
     }
 
     @Scheduled(cron = "0 0 2 * * ?")
-    @Transactional
     public void markAsOverdue() {
         LocalDate today = LocalDate.now();
         List<Invoice> overdueInvoices = invoiceRepository
             .findOverdueInvoicesWithBooking(InvoiceStatus.PENDING, today);
 
-        for (Invoice invoice : overdueInvoices) {
-            long lateFee = calculateLateFee(invoice);
-            invoice.setStatus(InvoiceStatus.OVERDUE);
-            invoice.setLateFee(lateFee);
-            invoiceRepository.save(invoice);
-
-            emailService.sendInvoiceOverdueEmail(buildInvoiceEmailData(invoice));
-
-            outboxEventService.publish(
-            new NotificationEvent(
-                invoice.getBooking().getUser().getId(),
-                NotificationType.INVOICE_OVERDUE,
-                NotificationType.INVOICE_OVERDUE.defaultTitle(),
-                "La factura %s ha vencido. Se ha aplicado un cargo por mora de %s.".formatted(
-                    invoice.getInvoiceNumber(), EmailService.formatAmount(lateFee, invoice.getCurrency())),
-                "invoice",
-                invoice.getId()
-            ),
-            "Invoice",
-            invoice.getId());
-
-            log.info("Factura marcada como vencida: {} (lateFee: {} cents)",
-                invoice.getInvoiceNumber(), lateFee);
+        if (overdueInvoices.isEmpty()) {
+            return;
         }
 
-        if (!overdueInvoices.isEmpty()) {
-            log.info("Total facturas vencidas procesadas: {}", overdueInvoices.size());
-        }
+        // Divide-and-conquer: procesar facturas en paralelo
+        // Cada factura se procesa en su propia transacción a través del worker
+        List<CompletableFuture<Void>> futures = overdueInvoices.stream()
+            .map(invoice -> CompletableFuture.runAsync(
+                () -> invoiceWorker.processOverdueInvoice(invoice.getId()), outboxTaskExecutor))
+            .toList();
+
+        CompletableFuture.allOf(futures.toArray(new CompletableFuture[0])).join();
+
+        log.info("Total facturas vencidas procesadas: {}", overdueInvoices.size());
     }
 
     @Scheduled(cron = "0 0 8 * * ?")
-    @Transactional
     public void sendDueDateReminders() {
         LocalDate tomorrow = LocalDate.now().plusDays(1);
         List<Invoice> invoicesDueTomorrow = invoiceRepository
             .findInvoicesDueOnDateWithBooking(InvoiceStatus.PENDING, tomorrow);
 
-        for (Invoice invoice : invoicesDueTomorrow) {
-            emailService.sendInvoiceReminderEmail(buildInvoiceEmailData(invoice));
-
-            outboxEventService.publish(
-            new NotificationEvent(
-                invoice.getBooking().getUser().getId(),
-                NotificationType.INVOICE_ISSUED,
-                "Recordatorio de factura",
-                "La factura %s vence mañana. Total a pagar: %s.".formatted(
-                    invoice.getInvoiceNumber(), EmailService.formatAmount(invoice.getTotal(), invoice.getCurrency())),
-                "invoice",
-                invoice.getId()
-            ),
-            "Invoice",
-            invoice.getId());
-
-            log.info("Recordatorio enviado para factura: {}", invoice.getInvoiceNumber());
+        if (invoicesDueTomorrow.isEmpty()) {
+            return;
         }
 
-        if (!invoicesDueTomorrow.isEmpty()) {
-            log.info("Total recordatorios enviados: {}", invoicesDueTomorrow.size());
-        }
+        // Divide-and-conquer: procesar recordatorios en paralelo
+        List<CompletableFuture<Void>> futures = invoicesDueTomorrow.stream()
+            .map(invoice -> CompletableFuture.runAsync(
+                () -> invoiceWorker.processReminder(invoice.getId()), outboxTaskExecutor))
+            .toList();
+
+        CompletableFuture.allOf(futures.toArray(new CompletableFuture[0])).join();
+
+        log.info("Total recordatorios enviados: {}", invoicesDueTomorrow.size());
     }
 
     private String generateInvoiceNumber() {
