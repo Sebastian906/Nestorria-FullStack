@@ -39,4 +39,15 @@ public interface BookingRepository extends JpaRepository<Booking, String> {
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("SELECT p FROM Property p WHERE p.id = :id")
     Optional<Property> findPropertyForUpdate(@Param("id") String id);
+
+    @Query("SELECT b FROM Booking b JOIN FETCH b.property JOIN FETCH b.agency " +
+           "WHERE b.agency.id = :agencyId " +
+           "AND b.createdAt >= :startDate " +
+           "AND b.createdAt <= :endDate " +
+           "ORDER BY b.createdAt DESC")
+    List<Booking> findByAgencyIdAndDateRange(
+        @Param("agencyId") String agencyId,
+        @Param("startDate") LocalDate startDate,
+        @Param("endDate") LocalDate endDate
+    );
 }
