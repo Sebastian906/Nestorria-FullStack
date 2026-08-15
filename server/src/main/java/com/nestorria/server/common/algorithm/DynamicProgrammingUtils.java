@@ -9,13 +9,11 @@ import java.util.function.Function;
 
 /**
  * Utilidades genéricas de Dynamic Programming (Programación Dinámica).
- * 
  * Tipos de DP soportados:
  * - Bottom-Up (Tabulation): Construye la solución desde subproblemas base
  * - Top-Down (Memoization): Resuelve recursivamente con cache
  * - Prefix-Sum: Sumas prefijas para rangos
  * - Acumulación: Agregación en una sola pasada
- * 
  * Complejidad de cada operación:
  * - bottomUp: O(n) tiempo, O(n) espacio
  * - topDown: O(n) tiempo, O(n) espacio (con memoización)
@@ -26,16 +24,13 @@ public final class DynamicProgrammingUtils {
 
     private DynamicProgrammingUtils() {}
 
-    // ==================== BOTTOM-UP (TABULATION) ====================
-    
+    // BOTTOM-UP (TABULATION)
     /**
      * Bottom-Up DP: construye la solución desde el caso base.
-     * 
      * @param n - tamaño del problema (número de subproblemas)
      * @param baseCase - valor para el caso base (dp[0])
      * @param transition - función de transición: dp[i] = f(i, dp[0..i-1])
      * @return el valor dp[n]
-     * 
      * Ejemplo de uso:
      * // Calcular Fibonacci
      * long fib = DynamicProgrammingUtils.bottomUp(10, 0L, (i, dp) -> dp[i-1] + dp[i-2]);
@@ -44,20 +39,19 @@ public final class DynamicProgrammingUtils {
                                  BiFunction<Integer, long[], Long> transition) {
         if (n < 0) throw new IllegalArgumentException("n must be >= 0");
         if (n == 0) return baseCase;
-        
+
         long[] dp = new long[n + 1];
         dp[0] = baseCase;
-        
+
         for (int i = 1; i <= n; i++) {
             dp[i] = transition.apply(i, dp);
         }
-        
+
         return dp[n];
     }
 
     /**
      * Bottom-Up DP con reconstrucción de camino.
-     * 
      * @param n - tamaño del problema
      * @param baseCase - valor para el caso base
      * @param transition - función de transición
@@ -68,14 +62,14 @@ public final class DynamicProgrammingUtils {
             int n, long baseCase,
             BiFunction<Integer, long[], Long> transition,
             BiFunction<Integer, long[], T> choice) {
-        
+
         if (n < 0) throw new IllegalArgumentException("n must be >= 0");
-        
+
         long[] dp = new long[n + 1];
         List<T> choices = new ArrayList<>();
-        
+
         dp[0] = baseCase;
-        
+
         for (int i = 1; i <= n; i++) {
             dp[i] = transition.apply(i, dp);
             choices.add(choice.apply(i, dp));
@@ -84,17 +78,14 @@ public final class DynamicProgrammingUtils {
         return Map.entry(dp[n], choices);
     }
 
-    // ==================== TOP-DOWN (MEMOIZATION) ====================
-    
+    // TOP-DOWN (MEMOIZATION)
     /**
      * Top-Down DP con memoización manual.
      * Resuelve el problema recursivamente cacheando resultados.
-     * 
      * @param n - tamaño del problema
      * @param baseCase - función que retorna el valor para casos base
      * @param recursive - función recursiva: f(n) = g(n, f(0..n-1))
      * @return el valor f(n)
-     * 
      * Ejemplo de uso:
      * // Calcular Fibonacci con memoización
      * long fib = DynamicProgrammingUtils.topDown(10, 
@@ -127,7 +118,6 @@ public final class DynamicProgrammingUtils {
     /**
      * Top-Down DP con cache personalizado (no array).
      * Útil cuando el índice no es un entero secuencial.
-     * 
      * @param key - clave del problema
      * @param cache - mapa de cache externo
      * @param baseCase - función que determina si es caso base
@@ -151,14 +141,11 @@ public final class DynamicProgrammingUtils {
         return result;
     }
 
-    // ==================== PREFIX-SUM ====================
-    
+    // PREFIX-SUM
     /**
      * Prefix-Sum: precalcula sumas acumuladas para queries de rango en O(1).
-     * 
      * @param values - array de valores
      * @return array de sumas prefijas donde prefix[i] = sum(values[0..i-1])
-     * 
      * Ejemplo de uso:
      * // Para calcular sum QUICK de values[l..r]:
      * long[] prefix = DynamicProgrammingUtils.prefixSum(values);
@@ -181,7 +168,6 @@ public final class DynamicProgrammingUtils {
 
     /**
      * Prefix-Sum 2D: para matrices y rangos 2D.
-     * 
      * @param matrix - matriz 2D de valores
      * @return matriz de sumas prefijas
      */
@@ -208,7 +194,6 @@ public final class DynamicProgrammingUtils {
 
     /**
      * Query de rango en O(1) usando prefix-sum 1D.
-     * 
      * @param prefix - array de sumas prefijas
      * @param left - índice izquierdo (inclusivo)
      * @param right - índice derecho (inclusivo)
@@ -223,7 +208,6 @@ public final class DynamicProgrammingUtils {
 
     /**
      * Query de rango en O(1) usando prefix-sum 2D.
-     * 
      * @param prefix - matriz de sumas prefijas
      * @param row1, col1 - esquina superior izquierda
      * @param row2, col2 - esquina inferior derecha
@@ -239,11 +223,9 @@ public final class DynamicProgrammingUtils {
             + prefix[row1][col1];
     }
 
-    // ==================== ACUMULACIÓN ====================
-    
+    // ACUMULACIÓN
     /**
      * Acumulación en una sola pasada: calcula múltiples estadísticas simultáneamente.
-     * 
      * @param values - lista de valores
      * @return estadísticas acumuladas (min, max, sum, count, avg)
      */
@@ -253,7 +235,7 @@ public final class DynamicProgrammingUtils {
         }
         
         double min = Double.MAX_VALUE;
-        double max = Double.MIN_VALUE;
+        double max = Double.NEGATIVE_INFINITY;
         double sum = 0;
         int count = 0;
         
@@ -273,7 +255,6 @@ public final class DynamicProgrammingUtils {
 
     /**
      * Acumulación con agrupación: calcula estadísticas por grupo en una pasada.
-     * 
      * @param items - lista de elementos
      * @param keyExtractor - función para extraer la clave de agrupación
      * @param valueExtractor - función para extraer el valor numérico
@@ -307,9 +288,7 @@ public final class DynamicProgrammingUtils {
         return result;
     }
 
-    /**
-     * Resultado de acumulación.
-     */
+    // Resultado de acumulación.
     public record AccumulationResult(
         double min,
         double max,

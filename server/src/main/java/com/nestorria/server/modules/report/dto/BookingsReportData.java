@@ -4,11 +4,9 @@ import java.util.List;
 
 /**
  * Datos para el reporte de bookings.
- * 
  * Incluye:
  * - Lista de filas con datos de cada booking
  * - Estadísticas acumuladas (totales, promedios)
- * 
  * Las estadísticas se calculan en una sola pasada (DP de acumulación)
  * durante la generación del reporte.
  */
@@ -20,9 +18,7 @@ public record BookingsReportData(
     double averageBookingValue
 ) {
     
-    /**
-     * Fila de datos de un booking en el reporte.
-     */
+    // Fila de datos de un booking en el reporte.
     public record BookingRow(
         String bookingId,
         String createdAt,
@@ -36,22 +32,6 @@ public record BookingsReportData(
         String status,
         boolean isPaid
     ) {}
-    
-    /**
-     * Calcula el revenue total de las filas.
-     * Complejidad: O(n)
-     */
-    public static long calculateTotalRevenue(List<BookingRow> rows) {
-        return rows.stream().mapToLong(BookingRow::totalPrice).sum();
-    }
-    
-    /**
-     * Calcula el total de noches.
-     * Complejidad: O(n)
-     */
-    public static int calculateTotalNights(List<BookingRow> rows) {
-        return rows.stream().mapToInt(BookingRow::nights).sum();
-    }
     
     /**
      * Filtra bookings pagados.

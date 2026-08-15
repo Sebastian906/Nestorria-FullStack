@@ -4,7 +4,6 @@ import java.time.YearMonth;
 
 /**
  * Métricas mensuales de bookings.
- * 
  * Implementa el patrón de acumulación DP:
  * - Cada booking se procesa en O(1)
  * - Las métricas se acumulan incrementalmente
@@ -28,9 +27,7 @@ public record MonthlyMetrics(
     
     /**
      * Agrega un booking a las métricas (acumulación DP).
-     * 
      * Complejidad: O(1)
-     * 
      * @param booking - booking a agregar
      * @return nuevas métricas acumuladas
      */
@@ -54,7 +51,6 @@ public record MonthlyMetrics(
     /**
      * Agrega datos pre-calculados a las métricas.
      * Útil cuando el booking cruza múltiples meses.
-     * 
      * @param bookings - número de bookings a agregar
      * @param revenue - revenue a agregar
      * @param nights - noches a agregar
@@ -77,9 +73,7 @@ public record MonthlyMetrics(
         );
     }
     
-    /**
-     * Calcula el número de noches de un booking.
-     */
+    // Calcula el número de noches de un booking.
     private int calculateNights(com.nestorria.server.modules.booking.Booking booking) {
         return (int) java.time.temporal.ChronoUnit.DAYS.between(
             booking.getCheckInDate(), 

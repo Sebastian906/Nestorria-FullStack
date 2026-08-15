@@ -1,14 +1,10 @@
 package com.nestorria.server.common.cache;
 
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.HashSet;
-import java.util.LinkedHashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.stream.Collectors;
 
 import org.springframework.stereotype.Component;
 
@@ -16,18 +12,15 @@ import com.nestorria.server.modules.properties.CategoryTree;
 
 /**
  * Cache de memoización para el árbol de categorías.
- * 
  * Implementa Bottom-Up DP para construir el cache de descendientes:
  * 1. Carga todas las categorías una vez
  * 2. Construye el mapa de hijos
  * 3. Calcula descendientes de cada nodo (bottom-up, post-order)
  * 4. Cachea los resultados para queries futuras
- * 
  * Complejidad:
  * - Construcción: O(n) donde n = total categorías
  * - Query: O(1) amortizado después de la construcción
  * - Invalidación: O(1)
- * 
  * Patrón: Bottom-Up DP con memoización
  * - Los subproblemas son "descendientes de nodo X"
  * - Se resuelven de hojas a raíz (bottom-up)
@@ -53,13 +46,11 @@ public class CategoryMemoizationCache {
 
     /**
      * Construye el cache bottom-up desde una lista de categorías.
-     * 
      * Algoritmo Bottom-Up DP:
      * 1. Construir mapa de hijos (parentId → children)
      * 2. Para cada nodo hoja (sin hijos): descendantCache[id] = {id}
      * 3. Para cada nodo padre: descendantCache[id] = {id} ∪ ∪(descendantCache[child])
      * 4. Los padres se procesan después de los hijos (post-order)
-     * 
      * @param categories - todas las categorías del sistema
      */
     public void buildCache(List<CategoryTree> categories) {
@@ -124,28 +115,26 @@ public class CategoryMemoizationCache {
 
     /**
      * Obtiene todos los IDs de descendientes de una categoría (incluyendo ella misma).
-     * 
      * Bottom-Up DP: el resultado ya está precalculado en el cache.
      * Complejidad: O(1)
-     * 
      * @param categoryId - ID de la categoría
      * @return Set de IDs de descendientes, o null si no está en el cache
      */
     public Set<Long> getDescendantIds(Long categoryId) {
-        return descendantCache.get(categoryId);
+        Set<Long> ids = descendantCache.get(categoryId);
+        return ids != null ? Set.copyOf(ids) : null;
     }
 
     /**
      * Obtiene el path de nombres de una categoría (de raíz a hoja).
-     * 
      * Top-Down DP: el resultado ya está precalculado en el cache.
      * Complejidad: O(1)
-     * 
      * @param categoryId - ID de la categoría
      * @return Lista de nombres del path, o null si no está en el cache
      */
     public List<String> getCategoryPath(Long categoryId) {
-        return pathCache.get(categoryId);
+        List<String> path = pathCache.get(categoryId);
+        return path != null ? List.copyOf(path) : null;
     }
 
     /**
@@ -167,24 +156,18 @@ public class CategoryMemoizationCache {
         dirty = true;
     }
 
-    /**
-     * Limpia completamente el cache.
-     */
+    // Limpia completamente el cache.
     public void clear() {
         invalidate();
         allCategories = new ArrayList<>();
     }
 
-    /**
-     * Verifica si el cache está sucio y necesita reconstrucción.
-     */
+    // Verifica si el cache está sucio y necesita reconstrucción.
     public boolean isDirty() {
         return dirty;
     }
 
-    /**
-     * Obtiene el número de categorías cacheadas.
-     */
+    // Obtiene el número de categorías cacheadas.
     public int size() {
         return descendantCache.size();
     }
@@ -199,9 +182,7 @@ public class CategoryMemoizationCache {
             .toList();
     }
 
-    /**
-     * Calcula la profundidad de una categoría (número de padres).
-     */
+    // Calcula la profundidad de una categoría (número de padres).
     private int getDepth(CategoryTree category) {
         int depth = 0;
         CategoryTree current = category;

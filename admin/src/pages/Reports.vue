@@ -25,6 +25,14 @@ const periods = [
     { value: 'custom', label: 'Personalizado' }
 ]
 
+// Formatea Date a YYYY-MM-DD usando timezone local (no UTC)
+const toLocalDateStr = (d) => {
+    const y = d.getFullYear()
+    const m = String(d.getMonth() + 1).padStart(2, '0')
+    const day = String(d.getDate()).padStart(2, '0')
+    return `${y}-${m}-${day}`
+}
+
 // Calcular fechas según período seleccionado
 const getDateRange = () => {
     const now = new Date()
@@ -32,45 +40,52 @@ const getDateRange = () => {
     const currentYear = now.getFullYear()
     
     switch (selectedPeriod.value) {
-        case 'current-month':
+        case 'current-month': {
             return {
                 startDate: `${currentYear}-${String(currentMonth + 1).padStart(2, '0')}-01`,
                 endDate: `${currentYear}-${String(currentMonth + 1).padStart(2, '0')}-${new Date(currentYear, currentMonth + 1, 0).getDate()}`
             }
-        case 'previous-month':
+        }
+        case 'previous-month': {
             const prevMonth = currentMonth === 0 ? 11 : currentMonth - 1
             const prevYear = currentMonth === 0 ? currentYear - 1 : currentYear
             return {
                 startDate: `${prevYear}-${String(prevMonth + 1).padStart(2, '0')}-01`,
                 endDate: `${prevYear}-${String(prevMonth + 1).padStart(2, '0')}-${new Date(prevYear, prevMonth + 1, 0).getDate()}`
             }
-        case 'current-year':
+        }
+        case 'current-year': {
             return {
                 startDate: `${currentYear}-01-01`,
                 endDate: `${currentYear}-12-31`
             }
-        case 'previous-year':
+        }
+        case 'previous-year': {
             return {
                 startDate: `${currentYear - 1}-01-01`,
                 endDate: `${currentYear - 1}-12-31`
             }
-        case 'last-3-months':
+        }
+        case 'last-3-months': {
             const threeMonthsAgo = new Date(currentYear, currentMonth - 2, 1)
             return {
-                startDate: threeMonthsAgo.toISOString().split('T')[0],
-                endDate: now.toISOString().split('T')[0]
+                startDate: toLocalDateStr(threeMonthsAgo),
+                endDate: toLocalDateStr(now)
             }
-        case 'last-6-months':
+        }
+        case 'last-6-months': {
             const sixMonthsAgo = new Date(currentYear, currentMonth - 5, 1)
             return {
-                startDate: sixMonthsAgo.toISOString().split('T')[0],
-                endDate: now.toISOString().split('T')[0]
+                startDate: toLocalDateStr(sixMonthsAgo),
+                endDate: toLocalDateStr(now)
             }
-        case 'custom':
+        }
+        case 'custom': {
             return {
                 startDate: customStartDate.value,
                 endDate: customEndDate.value
             }
+        }
         default:
             return { startDate: null, endDate: null }
     }
@@ -110,7 +125,7 @@ const downloadReport = async (format) => {
         // Nombre del archivo
         const fileExtension = format === 'xlsx' ? 'xlsx' : 'pdf'
         const reportName = reportType.value === 'bookings' ? 'bookings' : 'properties'
-        const dateStr = new Date().toISOString().split('T')[0]
+        const dateStr = toLocalDateStr(new Date())
         link.download = `${reportName}-report_${dateStr}.${fileExtension}`
         
         document.body.appendChild(link)
@@ -122,7 +137,15 @@ const downloadReport = async (format) => {
         
     } catch (error) {
         console.error('Error downloading report:', error)
-        toast.error(error.response?.data?.message ?? 'Error al descargar el reporte')
+        let message = 'Error al descargar el reporte'
+        if (error.response?.data instanceof Blob && error.response.data.size < 1024) {
+            try {
+                message = await error.response.data.text()
+            } catch { /* ignore parse error */ }
+        } else if (error.response?.data?.message) {
+            message = error.response.data.message
+        }
+        toast.error(message)
     } finally {
         loading.value = false
     }

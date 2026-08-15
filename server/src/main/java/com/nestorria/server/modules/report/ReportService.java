@@ -62,8 +62,11 @@ public class ReportService {
     public byte[] generateBookingsReport(String agencyId, LocalDate startDate, 
                                           LocalDate endDate, String format) {
         
+        Instant startInstant = startDate.atStartOfDay(ZONE).toInstant();
+        Instant endInstant = endDate.plusDays(1).atStartOfDay(ZONE).toInstant();
+        
         List<Booking> bookings = bookingRepository.findByAgencyIdAndDateRange(
-            agencyId, startDate, endDate);
+            agencyId, startInstant, endInstant);
         
         BookingsReportData reportData = accumulateBookingsData(bookings);
         
@@ -129,9 +132,7 @@ public class ReportService {
         );
     }
 
-    /**
-     * Convierte Instant a String de forma segura.
-     */
+    // Convierte Instant a String de forma segura.
     private String formatInstant(Instant instant) {
         if (instant == null) {
             return "N/A";
@@ -186,8 +187,7 @@ public class ReportService {
         return contractRepository.findByBookingId(booking.getId()).orElse(null);
     }
 
-    // ==================== GENERACIÓN EXCEL ====================
-    
+    // GENERACIÓN EXCEL
     private byte[] generateBookingsExcel(BookingsReportData data) {
         try (Workbook workbook = new XSSFWorkbook();
              ByteArrayOutputStream out = new ByteArrayOutputStream()) {
@@ -262,48 +262,50 @@ public class ReportService {
             PdfWriter writer = new PdfWriter(out);
             PdfDocument pdfDoc = new PdfDocument(writer);
             Document document = new Document(pdfDoc, PageSize.A4);
-            
-            document.add(new Paragraph("Bookings Report")
-                .setFontSize(20)
-                .setBold()
-                .setTextAlignment(TextAlignment.CENTER));
-            
-            document.add(new Paragraph(
-                String.format("Total Bookings: %d | Total Revenue: $%,d | Average: $%,.2f",
-                    data.totalBookings(), data.totalRevenue(), data.averageBookingValue()))
-                .setFontSize(12));
-            
-            Table table = new Table(UnitValue.createPercentArray(10))
-                .useAllAvailableWidth();
-            
-            String[] headers = {"ID", "Date", "Client", "Property", "Contract", 
-                              "Check-in", "Check-out", "Nights", "Amount", "Status"};
-            
-            DeviceRgb headerColor = new DeviceRgb(52, 152, 219);
-            
-            for (String header : headers) {
-                table.addHeaderCell(new com.itextpdf.layout.element.Cell()
-                    .add(new Paragraph(header).setBold().setFontSize(8))
-                    .setBackgroundColor(headerColor)
-                    .setFontColor(ColorConstants.WHITE)
+            try {
+                document.add(new Paragraph("Bookings Report")
+                    .setFontSize(20)
+                    .setBold()
                     .setTextAlignment(TextAlignment.CENTER));
+                
+                document.add(new Paragraph(
+                    String.format("Total Bookings: %d | Total Revenue: $%,d | Average: $%,.2f",
+                        data.totalBookings(), data.totalRevenue(), data.averageBookingValue()))
+                    .setFontSize(12));
+                
+                Table table = new Table(UnitValue.createPercentArray(10))
+                    .useAllAvailableWidth();
+                
+                String[] headers = {"ID", "Date", "Client", "Property", "Contract", 
+                                  "Check-in", "Check-out", "Nights", "Amount", "Status"};
+                
+                DeviceRgb headerColor = new DeviceRgb(52, 152, 219);
+                
+                for (String header : headers) {
+                    table.addHeaderCell(new com.itextpdf.layout.element.Cell()
+                        .add(new Paragraph(header).setBold().setFontSize(8))
+                        .setBackgroundColor(headerColor)
+                        .setFontColor(ColorConstants.WHITE)
+                        .setTextAlignment(TextAlignment.CENTER));
+                }
+                
+                for (BookingsReportData.BookingRow row : data.rows()) {
+                    table.addCell(createPdfCell(row.bookingId()));
+                    table.addCell(createPdfCell(row.createdAt()));
+                    table.addCell(createPdfCell(row.clientEmail()));
+                    table.addCell(createPdfCell(row.propertyTitle()));
+                    table.addCell(createPdfCell(row.contractId()));
+                    table.addCell(createPdfCell(row.checkInDate()));
+                    table.addCell(createPdfCell(row.checkOutDate()));
+                    table.addCell(createPdfCell(String.valueOf(row.nights())));
+                    table.addCell(createPdfCell(String.format("$%,d", row.totalPrice())));
+                    table.addCell(createPdfCell(row.status()));
+                }
+                
+                document.add(table);
+            } finally {
+                document.close();
             }
-            
-            for (BookingsReportData.BookingRow row : data.rows()) {
-                table.addCell(createPdfCell(row.bookingId()));
-                table.addCell(createPdfCell(row.createdAt()));
-                table.addCell(createPdfCell(row.clientEmail()));
-                table.addCell(createPdfCell(row.propertyTitle()));
-                table.addCell(createPdfCell(row.contractId()));
-                table.addCell(createPdfCell(row.checkInDate()));
-                table.addCell(createPdfCell(row.checkOutDate()));
-                table.addCell(createPdfCell(String.valueOf(row.nights())));
-                table.addCell(createPdfCell(String.format("$%,d", row.totalPrice())));
-                table.addCell(createPdfCell(row.status()));
-            }
-            
-            document.add(table);
-            document.close();
             
             return out.toByteArray();
             
@@ -313,8 +315,7 @@ public class ReportService {
         }
     }
 
-    // ==================== ESTILOS ====================
-    
+    // ESTILOS
     private CellStyle createHeaderStyle(Workbook workbook) {
         CellStyle style = workbook.createCellStyle();
         Font font = workbook.createFont();
@@ -341,8 +342,7 @@ public class ReportService {
             .setTextAlignment(TextAlignment.LEFT);
     }
 
-    // ==================== PROPIEDADES ====================
-    
+    // PROPIEDADES
     private byte[] generatePropertiesExcel(PropertiesReportData data) {
         try (Workbook workbook = new XSSFWorkbook();
              ByteArrayOutputStream out = new ByteArrayOutputStream()) {
@@ -395,42 +395,44 @@ public class ReportService {
             PdfWriter writer = new PdfWriter(out);
             PdfDocument pdfDoc = new PdfDocument(writer);
             Document document = new Document(pdfDoc, PageSize.A4);
-            
-            document.add(new Paragraph("Properties Report")
-                .setFontSize(20)
-                .setBold()
-                .setTextAlignment(TextAlignment.CENTER));
-            
-            Table table = new Table(UnitValue.createPercentArray(10))
-                .useAllAvailableWidth();
-            
-            String[] headers = {"ID", "Title", "City", "Country", "Type", 
-                              "Rent", "Sale", "Contracts", "Revenue", "Available"};
-            
-            DeviceRgb headerColor = new DeviceRgb(46, 204, 113);
-            
-            for (String header : headers) {
-                table.addHeaderCell(new com.itextpdf.layout.element.Cell()
-                    .add(new Paragraph(header).setBold().setFontSize(7))
-                    .setBackgroundColor(headerColor)
-                    .setFontColor(ColorConstants.WHITE));
+            try {
+                document.add(new Paragraph("Properties Report")
+                    .setFontSize(20)
+                    .setBold()
+                    .setTextAlignment(TextAlignment.CENTER));
+                
+                Table table = new Table(UnitValue.createPercentArray(10))
+                    .useAllAvailableWidth();
+                
+                String[] headers = {"ID", "Title", "City", "Country", "Type", 
+                                  "Rent", "Sale", "Contracts", "Revenue", "Available"};
+                
+                DeviceRgb headerColor = new DeviceRgb(46, 204, 113);
+                
+                for (String header : headers) {
+                    table.addHeaderCell(new com.itextpdf.layout.element.Cell()
+                        .add(new Paragraph(header).setBold().setFontSize(7))
+                        .setBackgroundColor(headerColor)
+                        .setFontColor(ColorConstants.WHITE));
+                }
+                
+                for (PropertiesReportData.PropertyRow row : data.rows()) {
+                    table.addCell(createPdfCell(row.propertyId()));
+                    table.addCell(createPdfCell(row.title()));
+                    table.addCell(createPdfCell(row.city()));
+                    table.addCell(createPdfCell(row.country()));
+                    table.addCell(createPdfCell(row.type()));
+                    table.addCell(createPdfCell(String.valueOf(row.rentPrice())));
+                    table.addCell(createPdfCell(String.valueOf(row.salePrice())));
+                    table.addCell(createPdfCell(String.valueOf(row.totalContracts())));
+                    table.addCell(createPdfCell(String.format("$%,d", row.totalRevenue())));
+                    table.addCell(createPdfCell(row.isAvailable() ? "Yes" : "No"));
+                }
+                
+                document.add(table);
+            } finally {
+                document.close();
             }
-            
-            for (PropertiesReportData.PropertyRow row : data.rows()) {
-                table.addCell(createPdfCell(row.propertyId()));
-                table.addCell(createPdfCell(row.title()));
-                table.addCell(createPdfCell(row.city()));
-                table.addCell(createPdfCell(row.country()));
-                table.addCell(createPdfCell(row.type()));
-                table.addCell(createPdfCell(String.valueOf(row.rentPrice())));
-                table.addCell(createPdfCell(String.valueOf(row.salePrice())));
-                table.addCell(createPdfCell(String.valueOf(row.totalContracts())));
-                table.addCell(createPdfCell(String.format("$%,d", row.totalRevenue())));
-                table.addCell(createPdfCell(row.isAvailable() ? "Yes" : "No"));
-            }
-            
-            document.add(table);
-            document.close();
             
             return out.toByteArray();
             

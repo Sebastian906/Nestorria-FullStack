@@ -1,22 +1,20 @@
 package com.nestorria.server.modules.booking;
 
+import java.time.Instant;
 import java.time.LocalDate;
 import java.time.YearMonth;
+import java.time.ZoneId;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
-import java.util.Comparator;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
-import java.util.stream.Collectors;
 
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.nestorria.server.common.algorithm.DynamicProgrammingUtils;
 import com.nestorria.server.common.algorithm.DynamicProgrammingUtils.AccumulationResult;
-import com.nestorria.server.modules.booking.dto.BookingResponse;
 import com.nestorria.server.modules.booking.dto.DashboardMetricsResponse;
 import com.nestorria.server.modules.booking.dto.MonthlyMetrics;
 import com.nestorria.server.modules.booking.dto.PeriodComparison;
@@ -25,12 +23,10 @@ import lombok.RequiredArgsConstructor;
 
 /**
  * Servicio de métricas para el dashboard del panel administrativo.
- * 
  * Implementa Prefix-Sum DP para:
  * 1. Revenue por mes: acumulación de ingresos en ventanas temporales
  * 2. Comparativas entre períodos: prefix-sum para O(1) queries de rango
  * 3. Ocupación: cálculo de noches reservadas vs disponibles
- * 
  * Complejidad:
  * - Preprocesamiento: O(n) donde n = total bookings
  * - Query de rango: O(1) usando prefix-sum
@@ -44,7 +40,6 @@ public class DashboardMetricsService {
 
     /**
      * Obtiene métricas completas del dashboard para un período dado.
-     * 
      * @param agencyId - ID de la agencia
      * @param startDate - fecha de inicio del período
      * @param endDate - fecha de fin del período
@@ -54,9 +49,14 @@ public class DashboardMetricsService {
     public DashboardMetricsResponse getAgencyMetrics(
             String agencyId, LocalDate startDate, LocalDate endDate) {
         
+        ZoneId zone = ZoneId.systemDefault();
+        Instant startInstant = startDate.atStartOfDay(zone).toInstant();
+        // endDate +1 day, half-open range [start, end)
+        Instant endInstant = endDate.plusDays(1).atStartOfDay(zone).toInstant();
+        
         // Obtener todos los bookings del período
         List<Booking> bookings = bookingRepository.findByAgencyIdAndDateRange(
-            agencyId, startDate, endDate);
+            agencyId, startInstant, endInstant);
         
         // DP: Acumulación en una sola pasada
         Map<YearMonth, MonthlyMetrics> metricsByMonth = accumulateMetrics(bookings);
@@ -85,9 +85,7 @@ public class DashboardMetricsService {
 
     /**
      * Compara dos períodos y retorna la diferencia.
-     * 
      * Prefix-Sum DP: permite comparar cualquier rango en O(1).
-     * 
      * @param agencyId - ID de la agencia
      * @param period1Start - inicio del primer período
      * @param period1End - fin del primer período
@@ -130,7 +128,6 @@ public class DashboardMetricsService {
 
     /**
      * Obtiene la comparativa del mes actual vs mes anterior.
-     * 
      * @param agencyId - ID de la agencia
      * @return comparación mensual
      */
@@ -148,28 +145,28 @@ public class DashboardMetricsService {
 
     /**
      * Obtiene la comparativa del año actual vs año anterior.
-     * 
+     * Compara año completo (enero 1 - hoy) vs año anterior completo.
      * @param agencyId - ID de la agencia
      * @return comparación anual
      */
     @Transactional(readOnly = true)
     public PeriodComparison getCurrentYearVsPrevious(String agencyId) {
-        YearMonth currentYear = YearMonth.now();
-        YearMonth previousYear = currentYear.minusYears(1);
+        LocalDate today = LocalDate.now();
+        LocalDate thisYearStart = today.withDayOfYear(1);
+        LocalDate lastYearStart = thisYearStart.minusYears(1);
+        LocalDate lastYearEnd = thisYearStart.minusDays(1);
         
         return comparePeriods(
             agencyId,
-            previousYear.atDay(1), previousYear.atEndOfMonth(),
-            currentYear.atDay(1), currentYear.atEndOfMonth()
+            lastYearStart, lastYearEnd,
+            thisYearStart, today
         );
     }
 
     /**
      * DP: Acumula métricas por mes en una sola pasada.
-     * 
      * Complejidad: O(n) donde n = total bookings
      * Espacio: O(m) donde m = meses únicos
-     * 
      * @param bookings - lista de bookings
      * @return mapa ordenado de mes → métricas
      */
@@ -177,14 +174,15 @@ public class DashboardMetricsService {
         Map<YearMonth, MonthlyMetrics> metrics = new TreeMap<>();
         
         for (Booking booking : bookings) {
-            YearMonth month = YearMonth.from(booking.getCheckInDate());
+            boolean sameMonth = booking.getCheckOutDate().getMonthValue() == booking.getCheckInDate().getMonthValue();
             
-            // Acumulación DP: actualizar métricas del mes
-            MonthlyMetrics current = metrics.getOrDefault(month, MonthlyMetrics.empty(month));
-            metrics.put(month, current.addBooking(booking));
-            
-            // Si el booking cruza meses, distribuir
-            if (booking.getCheckOutDate().getMonthValue() != booking.getCheckInDate().getMonthValue()) {
+            if (sameMonth) {
+                // Booking dentro de un solo mes: acumular directo
+                YearMonth month = YearMonth.from(booking.getCheckInDate());
+                MonthlyMetrics current = metrics.getOrDefault(month, MonthlyMetrics.empty(month));
+                metrics.put(month, current.addBooking(booking));
+            } else {
+                // Booking cruza meses: distribuir proporcionalmente (incluso check-in month)
                 distributeBookingAcrossMonths(booking, metrics);
             }
         }
@@ -194,7 +192,6 @@ public class DashboardMetricsService {
 
     /**
      * Distribuye un booking que cruza múltiples meses.
-     * 
      * DP: cada mes recibe una proporción del revenue proporcional a las noches
      */
     private void distributeBookingAcrossMonths(
@@ -247,10 +244,8 @@ public class DashboardMetricsService {
 
     /**
      * DP: Construye array de prefix-sum para revenue por mes.
-     * 
      * Preprocesamiento: O(m) donde m = meses
      * Query de rango: O(1)
-     * 
      * @param metricsByMonth - métricas agrupadas por mes
      * @return array de prefix-sum
      */

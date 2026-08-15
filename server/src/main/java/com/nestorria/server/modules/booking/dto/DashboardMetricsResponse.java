@@ -4,7 +4,6 @@ import java.util.List;
 
 /**
  * Respuesta de métricas del dashboard.
- * 
  * Incluye:
  * - Resumen total
  * - Desglose mensual (para gráficas)
@@ -21,11 +20,10 @@ public record DashboardMetricsResponse(
     
     /**
      * Obtiene el revenue total usando prefix-sum.
-     * 
      * Complejidad: O(1)
      */
     public long getRevenueInRange(int startIndex, int endIndex) {
-        if (startIndex < 0 || endIndex >= revenuePrefixSum.length || startIndex > endIndex) {
+        if (startIndex < 0 || endIndex + 1 >= revenuePrefixSum.length || startIndex > endIndex) {
             throw new IllegalArgumentException("Invalid range");
         }
         return revenuePrefixSum[endIndex + 1] - revenuePrefixSum[startIndex];
@@ -33,7 +31,6 @@ public record DashboardMetricsResponse(
     
     /**
      * Obtiene métricas de un mes específico.
-     * 
      * @param index - índice del mes (0 = primero)
      * @return métricas del mes, o null si el índice es inválido
      */
@@ -44,16 +41,12 @@ public record DashboardMetricsResponse(
         return monthlyMetrics.get(index);
     }
     
-    /**
-     * Obtiene el total de meses con datos.
-     */
+    // Obtiene el total de meses con datos.
     public int getMonthCount() {
         return monthlyMetrics.size();
     }
     
-    /**
-     * Verifica si hay datos disponibles.
-     */
+    // Verifica si hay datos disponibles.
     public boolean hasData() {
         return totalBookings > 0;
     }

@@ -15,19 +15,17 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.nestorria.server.common.exception.ResourceNotFoundException;
 import com.nestorria.server.modules.agency.Agency;
 import com.nestorria.server.modules.agency.AgencyRepository;
-import com.nestorria.server.common.exception.ResourceNotFoundException;
 
 import lombok.RequiredArgsConstructor;
 
 /**
  * Controlador para generación de reportes.
- * 
  * Endpoints:
  * - GET /api/reports/bookings/{format} - Reporte de bookings
  * - GET /api/reports/properties/{format} - Reporte de propiedades
- * 
  * Formatos soportados: xlsx, pdf
  */
 @RestController
@@ -40,7 +38,6 @@ public class ReportController {
 
     /**
      * Genera reporte de bookings en el formato especificado.
-     * 
      * @param jwt - token de autenticación
      * @param format - "xlsx" o "pdf"
      * @param startDate - fecha de inicio (opcional, default: primer día del mes)
@@ -67,12 +64,12 @@ public class ReportController {
             .orElseThrow(() -> new ResourceNotFoundException("No se encontró una agencia para este usuario"));
         
         // Fechas por defecto: mes actual
+        LocalDate now = LocalDate.now();
         if (startDate == null) {
-            startDate = LocalDate.now().withDayOfMonth(1);
+            startDate = now.withDayOfMonth(1);
         }
         if (endDate == null) {
-            endDate = LocalDate.now().withDayOfMonth(
-                LocalDate.now().lengthOfMonth());
+            endDate = now.withDayOfMonth(now.lengthOfMonth());
         }
         
         // Generar reporte
@@ -96,9 +93,7 @@ public class ReportController {
             .body(reportBytes);
     }
 
-    /**
-     * Genera reporte de propiedades en el formato especificado.
-     */
+    // Genera reporte de propiedades en el formato especificado.
     @GetMapping("/properties/{format}")
     public ResponseEntity<byte[]> generatePropertiesReport(
             @AuthenticationPrincipal Jwt jwt,

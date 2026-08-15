@@ -11,7 +11,7 @@ public interface ContractRepository extends JpaRepository<Contract, String> {
 
     boolean existsByBookingId(String bookingId);
 
-    @Query("SELECT c FROM Contract c JOIN c.booking b WHERE b.property.id = :propertyId")
+    @Query("SELECT c FROM Contract c JOIN FETCH c.booking b WHERE b.property.id = :propertyId")
     List<Contract> findByPropertyId(@Param("propertyId") String propertyId);
 
     @Query("SELECT c FROM Contract c WHERE c.booking.id = :bookingId")

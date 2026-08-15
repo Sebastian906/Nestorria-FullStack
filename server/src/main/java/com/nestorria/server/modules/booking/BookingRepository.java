@@ -1,5 +1,6 @@
 package com.nestorria.server.modules.booking;
 
+import java.time.Instant;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
@@ -43,11 +44,11 @@ public interface BookingRepository extends JpaRepository<Booking, String> {
     @Query("SELECT b FROM Booking b JOIN FETCH b.property JOIN FETCH b.agency " +
            "WHERE b.agency.id = :agencyId " +
            "AND b.createdAt >= :startDate " +
-           "AND b.createdAt <= :endDate " +
+           "AND b.createdAt < :endDate " +
            "ORDER BY b.createdAt DESC")
     List<Booking> findByAgencyIdAndDateRange(
         @Param("agencyId") String agencyId,
-        @Param("startDate") LocalDate startDate,
-        @Param("endDate") LocalDate endDate
+        @Param("startDate") Instant startDate,
+        @Param("endDate") Instant endDate
     );
 }
