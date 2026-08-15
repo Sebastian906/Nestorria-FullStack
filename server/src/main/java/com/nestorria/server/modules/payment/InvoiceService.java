@@ -3,8 +3,10 @@ package com.nestorria.server.modules.payment;
 import java.time.LocalDate;
 import java.time.Year;
 import java.util.List;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.Executor;
 
-import org.springframework.context.ApplicationEventPublisher;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -32,17 +34,20 @@ public class InvoiceService {
     private final AppProperties appProperties;
     private final EmailService emailService;
     private final OutboxEventService outboxEventService;
+    private final Executor outboxTaskExecutor;
 
     public InvoiceService(InvoiceRepository invoiceRepository,
                           InvoiceSequenceRepository invoiceSequenceRepository,
                           AppProperties appProperties,
                           EmailService emailService,
-                          OutboxEventService outboxEventService) {
+                          OutboxEventService outboxEventService,
+                          @Qualifier("outboxTaskExecutor") Executor outboxTaskExecutor) {
         this.invoiceRepository = invoiceRepository;
         this.invoiceSequenceRepository = invoiceSequenceRepository;
         this.appProperties = appProperties;
         this.emailService = emailService;
         this.outboxEventService = outboxEventService;
+        this.outboxTaskExecutor = outboxTaskExecutor;
     }
 
     @Transactional
@@ -135,21 +140,42 @@ public class InvoiceService {
     }
 
     @Scheduled(cron = "0 0 2 * * ?")
-    @Transactional
     public void markAsOverdue() {
         LocalDate today = LocalDate.now();
         List<Invoice> overdueInvoices = invoiceRepository
             .findOverdueInvoicesWithBooking(InvoiceStatus.PENDING, today);
 
-        for (Invoice invoice : overdueInvoices) {
-            long lateFee = calculateLateFee(invoice);
-            invoice.setStatus(InvoiceStatus.OVERDUE);
-            invoice.setLateFee(lateFee);
-            invoiceRepository.save(invoice);
+        if (overdueInvoices.isEmpty()) {
+            return;
+        }
 
-            emailService.sendInvoiceOverdueEmail(buildInvoiceEmailData(invoice));
+        // Divide-and-conquer: procesar facturas en paralelo
+        // Cada factura se procesa en su propia transacción (thread-safe)
+        List<CompletableFuture<Void>> futures = overdueInvoices.stream()
+            .map(invoice -> CompletableFuture.runAsync(
+                () -> processSingleOverdueInvoice(invoice), outboxTaskExecutor))
+            .toList();
 
-            outboxEventService.publish(
+        // Esperar a que todas las facturas se procesen
+        CompletableFuture.allOf(futures.toArray(new CompletableFuture[0])).join();
+
+        log.info("Total facturas vencidas procesadas: {}", overdueInvoices.size());
+    }
+
+    /**
+     * Procesa una única factura vencida en su propia transacción.
+     * Divide-and-conquer: esta función es el "conquer" de una sola tarea.
+     */
+    @Transactional
+    public void processSingleOverdueInvoice(Invoice invoice) {
+        long lateFee = calculateLateFee(invoice);
+        invoice.setStatus(InvoiceStatus.OVERDUE);
+        invoice.setLateFee(lateFee);
+        invoiceRepository.save(invoice);
+
+        emailService.sendInvoiceOverdueEmail(buildInvoiceEmailData(invoice));
+
+        outboxEventService.publish(
             new NotificationEvent(
                 invoice.getBooking().getUser().getId(),
                 NotificationType.INVOICE_OVERDUE,
@@ -162,26 +188,39 @@ public class InvoiceService {
             "Invoice",
             invoice.getId());
 
-            log.info("Factura marcada como vencida: {} (lateFee: {} cents)",
-                invoice.getInvoiceNumber(), lateFee);
-        }
-
-        if (!overdueInvoices.isEmpty()) {
-            log.info("Total facturas vencidas procesadas: {}", overdueInvoices.size());
-        }
+        log.info("Factura marcada como vencida: {} (lateFee: {} cents)",
+            invoice.getInvoiceNumber(), lateFee);
     }
 
     @Scheduled(cron = "0 0 8 * * ?")
-    @Transactional
     public void sendDueDateReminders() {
         LocalDate tomorrow = LocalDate.now().plusDays(1);
         List<Invoice> invoicesDueTomorrow = invoiceRepository
             .findInvoicesDueOnDateWithBooking(InvoiceStatus.PENDING, tomorrow);
 
-        for (Invoice invoice : invoicesDueTomorrow) {
-            emailService.sendInvoiceReminderEmail(buildInvoiceEmailData(invoice));
+        if (invoicesDueTomorrow.isEmpty()) {
+            return;
+        }
 
-            outboxEventService.publish(
+        // Divide-and-conquer: procesar recordatorios en paralelo
+        List<CompletableFuture<Void>> futures = invoicesDueTomorrow.stream()
+            .map(invoice -> CompletableFuture.runAsync(
+                () -> processSingleReminder(invoice), outboxTaskExecutor))
+            .toList();
+
+        CompletableFuture.allOf(futures.toArray(new CompletableFuture[0])).join();
+
+        log.info("Total recordatorios enviados: {}", invoicesDueTomorrow.size());
+    }
+
+    /**
+     * Procesa un único recordatorio de factura en su propia transacción.
+     */
+    @Transactional
+    public void processSingleReminder(Invoice invoice) {
+        emailService.sendInvoiceReminderEmail(buildInvoiceEmailData(invoice));
+
+        outboxEventService.publish(
             new NotificationEvent(
                 invoice.getBooking().getUser().getId(),
                 NotificationType.INVOICE_ISSUED,
@@ -194,12 +233,7 @@ public class InvoiceService {
             "Invoice",
             invoice.getId());
 
-            log.info("Recordatorio enviado para factura: {}", invoice.getInvoiceNumber());
-        }
-
-        if (!invoicesDueTomorrow.isEmpty()) {
-            log.info("Total recordatorios enviados: {}", invoicesDueTomorrow.size());
-        }
+        log.info("Recordatorio enviado para factura: {}", invoice.getInvoiceNumber());
     }
 
     private String generateInvoiceNumber() {
