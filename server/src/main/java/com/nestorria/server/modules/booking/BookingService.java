@@ -23,6 +23,8 @@ import com.nestorria.server.modules.booking.dto.AgencyDashboardResponse;
 import com.nestorria.server.modules.booking.dto.BookingResponse;
 import com.nestorria.server.modules.booking.dto.CheckAvailabilityRequest;
 import com.nestorria.server.modules.booking.dto.CreateBookingRequest;
+import com.nestorria.server.modules.booking.dto.MultiAvailabilityResponse;
+import com.nestorria.server.modules.booking.dto.PropertyAvailabilityResult;
 import com.nestorria.server.modules.notification.NotificationType;
 import com.nestorria.server.modules.payment.Invoice;
 import com.nestorria.server.modules.payment.InvoiceRepository;
@@ -190,25 +192,25 @@ public class BookingService {
     @Transactional
     public Map<String, String> createStripeCheckoutSession(String bookingId, String userId, String origin) {
         Booking booking = bookingRepository.findById(bookingId)
-            .orElseThrow(() -> new ResourceNotFoundException("Reserva no encontrada: " + bookingId));
+                .orElseThrow(() -> new ResourceNotFoundException("Reserva no encontrada: " + bookingId));
 
         String tenantId = booking.getUser().getId();
         String agencyOwnerId = booking.getAgency().getOwner().getId();
         if (!userId.equals(tenantId) && !userId.equals(agencyOwnerId)) {
             throw new org.springframework.security.access.AccessDeniedException(
-                "No eres parte de esta reserva");
+                    "No eres parte de esta reserva");
         }
 
         Invoice invoiceLookup = invoiceService.findByBookingId(bookingId);
 
         // Bloqueo pesimista: garantiza que solo una request puede crear sesión por factura
         Invoice invoice = invoiceRepository.findByIdForUpdate(invoiceLookup.getId())
-            .orElseThrow(() -> new ResourceNotFoundException(
-                "Factura no encontrada: " + invoiceLookup.getId()));
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        "Factura no encontrada: " + invoiceLookup.getId()));
 
         if (!InvoiceStatus.PAYABLE.contains(invoice.getStatus())) {
             throw new BadRequestException(
-                "La factura no se puede pagar. Estado actual: " + invoice.getStatus());
+                    "La factura no se puede pagar. Estado actual: " + invoice.getStatus());
         }
 
         // Reutilizar sesión activa existente
@@ -232,16 +234,60 @@ public class BookingService {
         long amountInCents = invoice.getAmountDue();
 
         var session = stripeClient.createCheckoutSession(
-            amountInCents,
-            invoice.getCurrency(),
-            metadata,
-            successUrl,
-            cancelUrl
-        );
+                amountInCents,
+                invoice.getCurrency(),
+                metadata,
+                successUrl,
+                cancelUrl);
 
         invoice.setStripeSessionId(session.getId());
         invoiceRepository.save(invoice);
 
         return Map.of("url", session.getUrl());
+    }
+
+    /**
+     * Verifica disponibilidad de múltiples propiedades para las mismas fechas.
+     * Implementación: loop independiente por propiedad — O(n) donde n = número de propiedades.
+     * ¿Por qué no backtracking? Las propiedades son independientes: reservar propiedad A
+     * no afecta la disponibilidad de propiedad B. Cada verificación es una query independiente.
+     * Backtracking solo se justifica cuando las decisiones son interdependientes.
+     * Set<String> se usa para detectar duplicados en input.
+     * Se retorna el primer conflicto por propiedad con razón específica.
+     */
+    @Transactional(readOnly = true)
+    public MultiAvailabilityResponse checkMultiPropertyAvailability(
+            List<String> propertyIds, LocalDate checkInDate, LocalDate checkOutDate, int guests) {
+
+        validateDateRange(checkInDate, checkOutDate);
+
+        // Set para detectar IDs duplicados en input — O(n) dedup
+        java.util.Set<String> seen = new java.util.LinkedHashSet<>();
+        List<PropertyAvailabilityResult> results = new java.util.ArrayList<>();
+
+        for (String propertyId : propertyIds) {
+            // Dedup: si el ID ya fue procesado, saltar
+            if (!seen.add(propertyId)) {
+                continue;
+            }
+
+            // Verificar que la propiedad existe
+            if (!propertyRepository.existsById(propertyId)) {
+                results.add(PropertyAvailabilityResult.unavailable(
+                    propertyId, "Propiedad no encontrada"));
+                continue;
+            }
+
+            // Verificar disponibilidad — reutiliza lógica existente
+            if (isPropertyAvailable(propertyId, checkInDate, checkOutDate)) {
+                results.add(PropertyAvailabilityResult.available(propertyId));
+            } else {
+                results.add(PropertyAvailabilityResult.unavailable(
+                    propertyId, "La propiedad no está disponible en las fechas seleccionadas"));
+            }
+        }
+
+        boolean allAvailable = results.stream().allMatch(PropertyAvailabilityResult::available);
+        return new MultiAvailabilityResponse(allAvailable, results);
     }
 }
