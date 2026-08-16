@@ -33,7 +33,9 @@ public interface InvoiceRepository extends JpaRepository<Invoice, String> {
     List<Invoice> findInvoicesDueOnDateWithBooking(
             @Param("status") InvoiceStatus status, @Param("date") LocalDate date);
 
-    @Query("SELECT i FROM Invoice i JOIN FETCH i.booking b JOIN FETCH b.user "
+    @Query("SELECT DISTINCT i FROM Invoice i "
+         + "JOIN FETCH i.booking b JOIN FETCH b.user "
+         + "LEFT JOIN FETCH i.paymentTransactions "
          + "WHERE b.user.id = :userId AND i.status IN ('PENDING', 'OVERDUE') "
          + "ORDER BY i.dueDate ASC")
     List<Invoice> findPayableInvoicesByUserId(@Param("userId") String userId);

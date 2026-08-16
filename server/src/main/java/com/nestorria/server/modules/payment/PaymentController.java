@@ -82,9 +82,9 @@ public class PaymentController {
         return ResponseEntity.ok(transactions);
     }
     
-    @Operation(summary = "Asignar un pago a múltiples facturas usando greedy")
-    @PostMapping("/allocate")
-    public ResponseEntity<PaymentAllocationResponse> allocatePayment(
+    @Operation(summary = "Previsualizar asignación de pago a facturas usando greedy (no persiste)")
+    @PostMapping("/allocate/preview")
+    public ResponseEntity<PaymentAllocationResponse> previewPaymentAllocation(
             @AuthenticationPrincipal Jwt jwt,
             @Valid @RequestBody AllocatePaymentRequest request) {
         String userId = jwt.getSubject();

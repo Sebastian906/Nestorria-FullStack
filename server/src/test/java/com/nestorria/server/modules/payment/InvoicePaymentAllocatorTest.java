@@ -128,19 +128,40 @@ class InvoicePaymentAllocatorTest {
 
     @Test
     void allocate_greedyResultCoversAtLeastAsMuchAsNaive() {
-        // Greedy should cover at least as many invoices as naive (FIFO) allocation
+        // Build a scenario where greedy's priority ordering clears more invoices than FIFO
         Invoice inv1 = createInvoice("INV-001", 1000, LocalDate.of(2026, 8, 10), InvoiceStatus.PENDING);
         Invoice inv2 = createInvoice("INV-002", 2000, LocalDate.of(2026, 8, 5), InvoiceStatus.OVERDUE);
         Invoice inv3 = createInvoice("INV-003", 1500, LocalDate.of(2026, 8, 15), InvoiceStatus.PENDING);
 
         long payment = 2500;
-        var greedyResult = InvoicePaymentAllocator.allocate(payment, List.of(inv1, inv2, inv3));
+        List<Invoice> invoices = List.of(inv1, inv2, inv3);
 
+        // Greedy allocation (sorted by priority)
+        var greedyResult = InvoicePaymentAllocator.allocate(payment, invoices);
+
+        // FIFO baseline (process in original order)
+        long remaining = payment;
+        int fifoCleared = 0;
+        for (Invoice inv : invoices) {
+            if (remaining <= 0) break;
+            long outstanding = inv.getOutstandingAmount();
+            long allocated = Math.min(remaining, outstanding);
+            if (allocated >= outstanding) fifoCleared++;
+            remaining -= allocated;
+        }
+
+        // Count fully cleared invoices in greedy result
+        long greedyCleared = greedyResult.allocations().stream()
+            .filter(a -> a.allocated() >= (a.amountDue() - a.paidAmount()))
+            .count();
+
+        // Greedy should clear at least as many invoices as FIFO
+        assertTrue(greedyCleared >= fifoCleared,
+            "greedy cleared " + greedyCleared + " invoices but FIFO cleared " + fifoCleared);
+
+        // Unallocated amount consistency
         long greedyTotal = greedyResult.allocations().stream()
             .mapToLong(InvoicePaymentAllocator.InvoiceAllocation::allocated).sum();
-
-        // Greedy covers at least as much as any naive strategy
-        assertTrue(greedyTotal >= payment || greedyTotal >= 2000);
         assertEquals(payment - greedyTotal, greedyResult.unallocatedAmount());
     }
 
