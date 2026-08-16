@@ -3,9 +3,9 @@ package com.nestorria.server.modules.booking;
 import java.net.URI;
 import java.util.Collections;
 import java.util.LinkedHashSet;
-import java.util.Set;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -25,6 +25,8 @@ import com.nestorria.server.modules.booking.dto.BookingResponse;
 import com.nestorria.server.modules.booking.dto.CheckAvailabilityRequest;
 import com.nestorria.server.modules.booking.dto.CheckAvailabilityResponse;
 import com.nestorria.server.modules.booking.dto.CreateBookingRequest;
+import com.nestorria.server.modules.booking.dto.MultiAvailabilityRequest;
+import com.nestorria.server.modules.booking.dto.MultiAvailabilityResponse;
 
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -55,6 +57,14 @@ public class BookingController {
             @Valid @RequestBody CheckAvailabilityRequest request) {
         boolean isAvailable = bookingService.checkAvailability(request);
         return new CheckAvailabilityResponse(isAvailable);
+    }
+
+    @Operation(summary = "Verificar disponibilidad de múltiples propiedades para las mismas fechas")
+    @PostMapping("/check-multi-availability")
+    public MultiAvailabilityResponse checkMultiAvailability(
+            @Valid @RequestBody MultiAvailabilityRequest request) {
+        return bookingService.checkMultiPropertyAvailability(
+            request.propertyIds(), request.checkInDate(), request.checkOutDate());
     }
 
     @Operation(summary = "Crear una nueva reserva")
