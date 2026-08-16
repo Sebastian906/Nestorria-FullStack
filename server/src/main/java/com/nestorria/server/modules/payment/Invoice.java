@@ -102,6 +102,26 @@ public class Invoice extends Auditable {
         return total + lateFee;
     }
 
+    /**
+     * Calcula el monto total pagado de esta factura desde las transacciones exitosas.
+     * No requiere campo persistido — se deriva de paymentTransactions.
+     * Time: O(k) donde k = número de transacciones (típicamente 1)
+     */
+    public long getPaidAmount() {
+        if (paymentTransactions == null) {
+            return 0;
+        }
+        return paymentTransactions.stream()
+            .filter(t -> t.getStatus() == TransactionStatus.SUCCEEDED)
+            .mapToLong(PaymentTransaction::getAmount)
+            .sum();
+    }
+
+    // Calcula el monto restante por pagar.
+    public long getOutstandingAmount() {
+        return getAmountDue() - getPaidAmount();
+    }
+
     public boolean isParty(String userId) {
         return booking.getUser().getId().equals(userId)
             || booking.getAgency().getOwner().getId().equals(userId);

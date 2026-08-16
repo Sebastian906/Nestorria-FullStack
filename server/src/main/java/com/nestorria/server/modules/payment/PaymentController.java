@@ -13,6 +13,8 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.nestorria.server.modules.payment.dto.AllocatePaymentRequest;
+import com.nestorria.server.modules.payment.dto.PaymentAllocationResponse;
 import com.nestorria.server.modules.payment.dto.PaymentResponse;
 import com.nestorria.server.modules.payment.dto.ProcessManualPaymentRequest;
 
@@ -27,9 +29,12 @@ import jakarta.validation.Valid;
 public class PaymentController {
 
     private final PaymentService paymentService;
+    private final InvoiceRepository invoiceRepository;
 
-    public PaymentController(PaymentService paymentService) {
+    public PaymentController(PaymentService paymentService,
+                             InvoiceRepository invoiceRepository) {
         this.paymentService = paymentService;
+        this.invoiceRepository = invoiceRepository;
     }
 
     private static final int MAX_WEBHOOK_PAYLOAD_BYTES = 256 * 1024;
@@ -73,7 +78,20 @@ public class PaymentController {
             @AuthenticationPrincipal Jwt jwt,
             @PathVariable String invoiceId) {
         List<PaymentResponse> transactions = paymentService.getTransactionHistory(
-            invoiceId, jwt.getSubject());
+                invoiceId, jwt.getSubject());
         return ResponseEntity.ok(transactions);
+    }
+    
+    @Operation(summary = "Previsualizar asignación de pago a facturas usando greedy (no persiste)")
+    @PostMapping("/allocate/preview")
+    public ResponseEntity<PaymentAllocationResponse> previewPaymentAllocation(
+            @AuthenticationPrincipal Jwt jwt,
+            @Valid @RequestBody AllocatePaymentRequest request) {
+        String userId = jwt.getSubject();
+        List<Invoice> unpaidInvoices = invoiceRepository
+            .findPayableInvoicesByUserId(userId);
+        InvoicePaymentAllocator.AllocationResult result =
+            InvoicePaymentAllocator.allocate(request.amountCents(), unpaidInvoices);
+        return ResponseEntity.ok(PaymentAllocationResponse.fromResult(result));
     }
 }
