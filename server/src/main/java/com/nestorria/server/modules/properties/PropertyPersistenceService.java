@@ -1,5 +1,7 @@
 package com.nestorria.server.modules.properties;
 
+import java.util.ArrayList;
+import java.util.LinkedHashSet;
 import java.util.List;
 
 import org.springframework.stereotype.Service;
@@ -26,12 +28,16 @@ public class PropertyPersistenceService {
         PropertyLocation location = null;
         if (request.latitude() != null && request.longitude() != null) {
             location = new PropertyLocation(
-                request.latitude(),
-                request.longitude(),
-                request.neighborhood(),
-                request.postalCode()
-            );
+                    request.latitude(),
+                    request.longitude(),
+                    request.neighborhood(),
+                    request.postalCode());
         }
+
+        List<String> amenities = request.amenities() != null
+            ? new ArrayList<>(new LinkedHashSet<>(request.amenities()))
+            : new ArrayList<>();
+
 
         Property property = new Property(
             agency,
@@ -44,7 +50,7 @@ public class PropertyPersistenceService {
             request.propertyType(),
             new PriceDetails(request.priceRent(), request.priceSale()),
             new FacilityDetails(request.bedrooms(), request.bathrooms(), request.garages()),
-            request.amenities(),
+            amenities,
             location
         );
         property.setImages(imageUrls);
