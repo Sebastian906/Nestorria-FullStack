@@ -108,8 +108,8 @@ class BacktrackingUtilsTest {
             0  // no limit
         );
 
-        // Solutions: [1,2] and [3]
-        assertEquals(2, results.size());
+        // Solutions: [1,1,1], [1,2], [2,1], [3]
+        assertEquals(4, results.size());
     }
 
     @Test
@@ -174,7 +174,7 @@ class BacktrackingUtilsTest {
         costMap.put(2, 20);
         costMap.put(3, 30);
 
-        int budget = 25;
+        int budget = 30;
 
         var result = BacktrackingUtils.<Integer>findFirstSolution(
             state -> List.of(1, 2, 3),

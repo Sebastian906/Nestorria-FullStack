@@ -64,7 +64,7 @@ public class BookingController {
     public MultiAvailabilityResponse checkMultiAvailability(
             @Valid @RequestBody MultiAvailabilityRequest request) {
         return bookingService.checkMultiPropertyAvailability(
-            request.propertyIds(), request.checkInDate(), request.checkOutDate(), request.guests());
+            request.propertyIds(), request.checkInDate(), request.checkOutDate());
     }
 
     @Operation(summary = "Crear una nueva reserva")

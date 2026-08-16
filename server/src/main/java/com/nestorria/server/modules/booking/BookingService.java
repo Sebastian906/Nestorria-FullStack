@@ -257,7 +257,7 @@ public class BookingService {
      */
     @Transactional(readOnly = true)
     public MultiAvailabilityResponse checkMultiPropertyAvailability(
-            List<String> propertyIds, LocalDate checkInDate, LocalDate checkOutDate, int guests) {
+            List<String> propertyIds, LocalDate checkInDate, LocalDate checkOutDate) {
 
         validateDateRange(checkInDate, checkOutDate);
 

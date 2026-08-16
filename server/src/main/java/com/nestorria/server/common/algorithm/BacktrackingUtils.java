@@ -1,6 +1,7 @@
 package com.nestorria.server.common.algorithm;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 import java.util.function.BiPredicate;
@@ -79,8 +80,8 @@ public final class BacktrackingUtils {
             return Optional.empty();
         }
 
-        // Goal test
-        if (isComplete.test(current, depth)) {
+        // Goal test: must be valid AND complete
+        if (isValid.test(current, depth) && isComplete.test(current, depth)) {
             return Optional.of(new Solution<>(List.copyOf(current), true));
         }
 
@@ -140,7 +141,8 @@ public final class BacktrackingUtils {
         if (depth > maxDepth) return;
         if (maxSolutions > 0 && solutions.size() >= maxSolutions) return;
 
-        if (isComplete.test(current, depth)) {
+        // Goal test: must be valid AND complete
+        if (isValid.test(current, depth) && isComplete.test(current, depth)) {
             solutions.add(new Solution<>(List.copyOf(current), true));
             return;
         }
