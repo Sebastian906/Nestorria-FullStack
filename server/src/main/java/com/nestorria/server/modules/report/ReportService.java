@@ -97,11 +97,13 @@ public class ReportService {
         int totalNights = 0;
 
         // 1 query batch + Map<bookingId, Contract> → lookups O(1) (HashMap)
-        java.util.Map<String, Contract> contractsByBookingId = contractRepository
-            .findByBookingIdIn(bookings.stream().map(Booking::getId).toList())
-            .stream()
-            .collect(java.util.stream.Collectors.toMap(
-                c -> c.getBooking().getId(), c -> c, (a, b) -> a));
+        java.util.Map<String, Contract> contractsByBookingId = bookings.isEmpty()
+            ? java.util.Map.of()
+            : contractRepository
+                .findByBookingIdIn(bookings.stream().map(Booking::getId).toList())
+                .stream()
+                .collect(java.util.stream.Collectors.toMap(
+                    c -> c.getBooking().getId(), c -> c, (a, b) -> a));
 
         for (Booking booking : bookings) {
             int nights = (int) java.time.temporal.ChronoUnit.DAYS.between(

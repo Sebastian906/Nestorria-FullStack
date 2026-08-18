@@ -44,8 +44,15 @@ export function useWebSocket() {
             // (server/.../common/websocket/WebSocketAuthInterceptor.java).
             client = new Client({
                 brokerURL: wsBaseUrl,
-                connectHeaders: { Authorization: `Bearer ${token}` },
                 reconnectDelay: 5000,
+                // Token fresco en CADA conexión/reconexión: beforeConnect corre
+                // antes de cada intento (incluidos los automáticos de
+                // reconnectDelay) y evita reenviar un JWT expirado capturado
+                // al construir el Client.
+                beforeConnect: async () => {
+                    const token = await getToken.value()
+                    return token ? { Authorization: `Bearer ${token}` } : {}
+                },
                 onConnect: () => {
                     if (!active) return
                     connected.value = true
@@ -54,7 +61,7 @@ export function useWebSocket() {
                     client.subscribe('/user/topic/notifications', (message) => {
                         try {
                             const notification = JSON.parse(message.body)
-                            notifications.value = [notification, ...notifications.value]
+                            notifications.value = [notification, ...notifications.value].slice(0, 20)
                             unreadCount.value += 1
                         } catch (e) {
                             console.error('Error parsing WebSocket message', e)
