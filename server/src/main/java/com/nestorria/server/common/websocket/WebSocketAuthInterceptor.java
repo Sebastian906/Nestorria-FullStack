@@ -24,8 +24,7 @@ public class WebSocketAuthInterceptor extends HttpSessionHandshakeInterceptor {
     @Override
     public boolean beforeHandshake(ServerHttpRequest request, ServerHttpResponse response,
                                    WebSocketHandler wsHandler, Map<String, Object> attributes) {
-        // Extract JWT from Authorization header: Authorization: Bearer <token>
-        String token = extractTokenFromAuthorizationHeader(request);
+        String token = extractToken(request);
         if (token == null) return false;
 
         try {
@@ -37,13 +36,21 @@ public class WebSocketAuthInterceptor extends HttpSessionHandshakeInterceptor {
         }
     }
 
-    private String extractTokenFromAuthorizationHeader(ServerHttpRequest request) {
-        // Get the original Servlet request to access HTTP headers
+    private String extractToken(ServerHttpRequest request) {
         HttpServletRequest servletRequest = ((ServletServerHttpRequest) request).getServletRequest();
+
+        // 1. Authorization header (funciona con SockJS XHR transport)
         String authorization = servletRequest.getHeader("Authorization");
-        if (authorization == null || !authorization.startsWith("Bearer ")) {
-            return null;
+        if (authorization != null && authorization.startsWith("Bearer ")) {
+            return authorization.substring("Bearer ".length()).trim();
         }
-        return authorization.substring("Bearer ".length()).trim();
+
+        // 2. Query parameter ?token=xxx (necesario para WebSocket raw)
+        String queryToken = servletRequest.getParameter("token");
+        if (queryToken != null && !queryToken.isBlank()) {
+            return queryToken.trim();
+        }
+
+        return null;
     }
 }

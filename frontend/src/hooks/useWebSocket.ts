@@ -22,9 +22,8 @@ export function useWebSocket() {
             }
 
             const client = new Client({
-                brokerURL: wsUrl,
+                brokerURL: `${wsUrl}?token=${token}`,
                 reconnectDelay: 5000,
-                connectHeaders: { Authorization: `Bearer ${token}` },
                 onConnect: () => {
                     if (!active) {
                         return;

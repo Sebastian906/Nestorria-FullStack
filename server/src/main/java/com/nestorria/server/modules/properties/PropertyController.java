@@ -25,6 +25,7 @@ import com.nestorria.server.modules.properties.PropertySortUtils.SortField;
 import com.nestorria.server.modules.properties.dto.CreatePropertyRequest;
 import com.nestorria.server.modules.properties.dto.NearbySearchRequest;
 import com.nestorria.server.modules.properties.dto.PropertyResponse;
+import com.nestorria.server.modules.properties.dto.PropertyRouteResponse;
 import com.nestorria.server.modules.properties.dto.PropertyStatsResponse;
 import com.nestorria.server.modules.properties.dto.PropertySummaryResponse;
 import com.nestorria.server.modules.properties.dto.ToggleAvailabilityRequest;
@@ -43,14 +44,20 @@ public class PropertyController {
     private final PropertyService propertyService;
     private final PropertySearchService propertySearchService;
     private final FavoriteService favoriteService;
+    private final PropertyRecommendationService recommendationService;
+    private final PropertyLocationGraphService locationGraphService;
 
     public PropertyController(
             PropertyService propertyService,
             PropertySearchService propertySearchService,
-            FavoriteService favoriteService) {
+            FavoriteService favoriteService,
+            PropertyRecommendationService recommendationService,
+            PropertyLocationGraphService locationGraphService) {
         this.propertyService = propertyService;
         this.propertySearchService = propertySearchService;
         this.favoriteService = favoriteService;
+        this.recommendationService = recommendationService;
+        this.locationGraphService = locationGraphService;
     }
 
     // POST /api/properties — requiere autenticación y agencia registrada
@@ -133,10 +140,35 @@ public class PropertyController {
             @AuthenticationPrincipal Jwt jwt,
             @Valid NearbySearchRequest request) {
         return propertySearchService.findByFilters(
-            request.city(), request.propertyType(),
-            request.minPrice(), request.maxPrice(),
-            request.categoryId(),
-            request.lat(), request.lng(), request.radiusKm()
-        );
+                request.city(), request.propertyType(),
+                request.minPrice(), request.maxPrice(),
+                request.categoryId(),
+                request.lat(), request.lng(), request.radiusKm());
+    }
+
+    @Operation(summary = "Obtener propiedades similares a una propiedad específica (público)")
+    @GetMapping("/{id}/similar")
+    public List<PropertySummaryResponse> getSimilarProperties(
+            @PathVariable String id,
+            @RequestParam(defaultValue = "6") int limit) {
+        return recommendationService.getSimilarProperties(id, Math.min(limit, 20));
+    }
+
+    @Operation(summary = "Obtener recomendaciones personalizadas para el usuario autenticado")
+    @GetMapping("/recommendations")
+    public List<PropertySummaryResponse> getRecommendations(
+            @AuthenticationPrincipal Jwt jwt,
+            @RequestParam(defaultValue = "10") int limit) {
+        return recommendationService.getRecommendations(jwt.getSubject(), Math.min(limit, 20));
+    }
+
+    @Operation(summary = "Encontrar la ruta más corta entre dos propiedades (público)")
+    @GetMapping("/route")
+    public ResponseEntity<PropertyRouteResponse> findRoute(
+            @RequestParam String from,
+            @RequestParam String to) {
+        return locationGraphService.findRoute(from, to)
+            .map(ResponseEntity::ok)
+            .orElse(ResponseEntity.notFound().build());
     }
 }

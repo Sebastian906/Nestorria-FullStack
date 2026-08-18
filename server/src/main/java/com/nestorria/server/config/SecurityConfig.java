@@ -51,6 +51,8 @@ public class SecurityConfig {
                 .requestMatchers(HttpMethod.POST, "/api/payments/stripe/webhook").permitAll()
                 // Actuator: health público para load balancers, el resto autenticado
                 .requestMatchers("/actuator/health").permitAll()
+                // WebSocket: auth manejada por WebSocketAuthInterceptor, no por BearerTokenAuthenticationFilter
+                .requestMatchers("/ws").permitAll()
                 .anyRequest().authenticated()
             )
             .oauth2ResourceServer(oauth2 -> oauth2.jwt(Customizer.withDefaults()))
