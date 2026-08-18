@@ -9,6 +9,11 @@ const MapExplorer = () => {
     const [selectedProperty, setSelectedProperty] = useState<Property | null>(null);
     const [cityFilter, setCityFilter] = useState<string>("");
 
+    // --- Route mode state ---
+    const [routeMode, setRouteMode] = useState(false);
+    const [routeFrom, setRouteFrom] = useState<string | null>(null);
+    const [routeTo, setRouteTo] = useState<string | null>(null);
+
     // Obtener ciudades únicas de las propiedades que tienen ubicación
     const cities = useMemo(() => {
         const citySet = new Set<string>();
@@ -51,6 +56,20 @@ const MapExplorer = () => {
         return [avgLat, avgLng];
     }, [propertiesWithCoords]);
 
+    // Handler de click en propiedad: en modo ruta selecciona origen/destino,
+    // en modo normal muestra detalles
+    const handlePropertyClick = (property: Property) => {
+        if (routeMode) {
+            if (!routeFrom) {
+                setRouteFrom(property._id);
+            } else if (!routeTo && property._id !== routeFrom) {
+                setRouteTo(property._id);
+            }
+        } else {
+            setSelectedProperty(property);
+        }
+    };
+
     return (
         <div className="bg-linear-to-r from-[#F0FDF4] to-white pt-24 min-h-screen">
             <div className="max-padd-container">
@@ -80,6 +99,21 @@ const MapExplorer = () => {
                                 </option>
                             ))}
                         </select>
+                        {/* Botón de modo ruta */}
+                        <button
+                            onClick={() => {
+                                setRouteMode(!routeMode);
+                                setRouteFrom(null);
+                                setRouteTo(null);
+                                setSelectedProperty(null);
+                            }}
+                            className={`px-4 py-2 text-sm rounded-lg border transition ${routeMode
+                                    ? "bg-blue-500 text-white border-blue-500"
+                                    : "bg-white border-slate-900/10 hover:bg-gray-50"
+                                }`}
+                        >
+                            {routeMode ? "Exit Route" : "Find Route"}
+                        </button>
                         <Link
                             to="/listing"
                             className="btn-outline px-4 py-2 text-sm rounded-lg"
@@ -98,12 +132,39 @@ const MapExplorer = () => {
                             center={mapCenter}
                             zoom={propertiesWithCoords.length === 0 ? 6 : 12}
                             height="calc(100vh - 200px)"
-                            onPropertyClick={setSelectedProperty}
+                            onPropertyClick={handlePropertyClick}
+                            showRoute={routeMode && routeFrom != null && routeTo != null}
+                            routeFrom={routeFrom ?? undefined}
+                            routeTo={routeTo ?? undefined}
                         />
                     </div>
 
                     {/* Sidebar con detalles de la propiedad seleccionada */}
                     <div className="w-full lg:w-96 shrink-0">
+                        {/* Indicador de modo ruta */}
+                        {routeMode && (
+                            <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 mb-4">
+                                <p className="text-sm font-medium text-blue-800">
+                                    {!routeFrom
+                                        ? "Click on the origin property"
+                                        : !routeTo
+                                            ? "Now click on the destination property"
+                                            : "Route calculated"}
+                                </p>
+                                {(routeFrom || routeTo) && (
+                                    <button
+                                        onClick={() => {
+                                            setRouteFrom(null);
+                                            setRouteTo(null);
+                                        }}
+                                        className="text-xs text-blue-600 hover:underline mt-1"
+                                    >
+                                        Reset route
+                                    </button>
+                                )}
+                            </div>
+                        )}
+
                         {selectedProperty ? (
                             <div className="bg-white rounded-xl border border-slate-900/10 p-5 sticky top-28">
                                 <img

@@ -33,7 +33,7 @@ interface NotificationResponse {
 }
 
 const NotificationBell = () => {
-    const { getToken } = useAuth()
+    const { getToken, isLoaded } = useAuth()
     const { connected, notifications: wsNotifications, unreadCount: wsUnreadCount } = useWebSocket()
     const [notifications, setNotifications] = useState<Notification[]>([])
     const [unreadCount, setUnreadCount] = useState(0)

@@ -2,6 +2,7 @@ package com.nestorria.server.common.websocket;
 
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.messaging.simp.config.ChannelRegistration;
 import org.springframework.messaging.simp.config.MessageBrokerRegistry;
 import org.springframework.web.socket.config.annotation.EnableWebSocketMessageBroker;
 import org.springframework.web.socket.config.annotation.StompEndpointRegistry;
@@ -11,10 +12,10 @@ import org.springframework.web.socket.config.annotation.WebSocketMessageBrokerCo
 @EnableWebSocketMessageBroker
 public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
 
+    private final WebSocketAuthInterceptor webSocketAuthInterceptor;
+
     @Value("${app.cors.allowed-origins}")
     private String allowedOrigins;
-
-    private final WebSocketAuthInterceptor webSocketAuthInterceptor;
 
     public WebSocketConfig(WebSocketAuthInterceptor webSocketAuthInterceptor) {
         this.webSocketAuthInterceptor = webSocketAuthInterceptor;
@@ -29,10 +30,15 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
     }
 
     @Override
+    public void configureClientInboundChannel(ChannelRegistration registration) {
+        // Autenticación en el frame STOMP CONNECT (header Authorization),
+        // que además establece el Principal de la sesión para /user/{id}/...
+        registration.interceptors(webSocketAuthInterceptor);
+    }
+
+    @Override
     public void registerStompEndpoints(StompEndpointRegistry registry) {
         registry.addEndpoint("/ws")
-            .addInterceptors(webSocketAuthInterceptor)
-            .setAllowedOrigins(allowedOrigins)
-            .withSockJS();
+            .setAllowedOriginPatterns(allowedOrigins.split(","));
     }
 }
