@@ -9,6 +9,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import static org.mockito.Mockito.when;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.test.util.ReflectionTestUtils;
 
 import com.nestorria.server.modules.agency.Agency;
 import com.nestorria.server.modules.properties.Property;
@@ -17,7 +18,6 @@ import com.nestorria.server.modules.properties.PropertyType;
 import com.nestorria.server.modules.properties.embeddable.FacilityDetails;
 import com.nestorria.server.modules.properties.embeddable.PriceDetails;
 import com.nestorria.server.modules.user.User;
-import com.nestorria.server.modules.user.UserRepository;
 
 @ExtendWith(MockitoExtension.class)
 class UserSimilarityGraphServiceTest {
@@ -26,15 +26,14 @@ class UserSimilarityGraphServiceTest {
     private BookingRepository bookingRepository;
     @Mock
     private PropertyRepository propertyRepository;
-    @Mock
-    private UserRepository userRepository;
 
     private UserSimilarityGraphService service;
 
     @BeforeEach
     void setUp() {
+        // self = misma instancia: en tests directos no hay proxy Spring ni caché
         service = new UserSimilarityGraphService(
-            bookingRepository, propertyRepository, userRepository);
+            bookingRepository, propertyRepository, service);
     }
 
     private User buildUser(String id) {
@@ -68,9 +67,25 @@ class UserSimilarityGraphServiceTest {
     void getCollaborativeRecommendations_noSimilarUsers_returnsEmpty() {
         when(propertyRepository.findByIsAvailableTrue()).thenReturn(List.of());
         when(bookingRepository.findAllConfirmed()).thenReturn(List.of());
-        when(bookingRepository.findByUserId("user1")).thenReturn(List.of());
 
         var recs = service.getCollaborativeRecommendations("user1", 10);
         assertTrue(recs.isEmpty());
+    }
+
+    @Test
+    void findSimilarUsers_sharedProperty_returnsOtherUser() {
+        User u1 = buildUser("user_1");
+        User u2 = buildUser("user_2");
+        Property p = buildProperty("prop_1");
+        ReflectionTestUtils.setField(p, "id", "prop_1");
+        Booking b1 = buildBooking(u1, p);
+        Booking b2 = buildBooking(u2, p);
+
+        when(propertyRepository.findByIsAvailableTrue()).thenReturn(List.of(p));
+        when(bookingRepository.findAllConfirmed()).thenReturn(List.of(b1, b2));
+
+        List<String> similar = service.findSimilarUsers("user_1", 10);
+
+        assertTrue(similar.contains("user_2"));
     }
 }

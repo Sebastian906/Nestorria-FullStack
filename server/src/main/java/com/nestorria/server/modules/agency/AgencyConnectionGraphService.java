@@ -13,7 +13,6 @@ import org.springframework.transaction.annotation.Transactional;
 import com.nestorria.server.common.algorithm.Graph;
 import com.nestorria.server.modules.booking.Booking;
 import com.nestorria.server.modules.booking.BookingRepository;
-import com.nestorria.server.modules.booking.BookingStatus;
 import com.nestorria.server.modules.properties.Property;
 import com.nestorria.server.modules.properties.PropertyRepository;
 
@@ -98,7 +97,7 @@ public class AgencyConnectionGraphService {
         }
 
         return graph.getNeighbors(agencyId).stream()
-            .limit(limit)
+            .limit(Math.max(0, limit))
             .toList();
     }
 
@@ -116,54 +115,44 @@ public class AgencyConnectionGraphService {
                 agencyId,
                 graph.getNeighbors(agencyId).size()))
             .sorted((a, b) -> Integer.compare(b.connectionCount(), a.connectionCount()))
-            .limit(limit)
+            .limit(Math.max(0, limit))
             .toList();
     }
 
     /**
      * Detecta comunidades de agencias (componentes conectados del grafo).
      * Cada comunidad es un grupo de agencias que están interconectadas
-     * a través de clientes compartidos.
+     * a través de clientes compartidos. Se omiten agencias aisladas.
      * Time: O(V + E)
      */
     @Transactional(readOnly = true)
     public List<Set<String>> findAgencyCommunities() {
         Graph<String> graph = buildAgencyGraph();
-        return graph.connectedComponents();
+        return graph.connectedComponents().stream()
+            .filter(component -> component.size() > 1)
+            .toList();
     }
 
     // Private helpers
     private Map<String, Set<String>> buildUserAgencyMap() {
         Map<String, Set<String>> userAgencies = new HashMap<>();
 
-        List<Property> allProperties = propertyRepository.findByIsAvailableTrue();
         Map<String, String> propertyToAgency = new HashMap<>();
-        for (Property p : allProperties) {
+        for (Property p : propertyRepository.findByIsAvailableTrue()) {
             propertyToAgency.put(p.getId(), p.getAgency().getId());
         }
 
-        // Para cada propiedad, obtener sus reservas y extraer usuarios
-        for (Property p : allProperties) {
-            // Usamos una query simplificada — en producción agregar
-            // findByPropertyIdAndStatus al BookingRepository
-            List<Booking> bookings = getBookingsForProperty(p.getId());
-            for (Booking b : bookings) {
-                if (b.getStatus() == BookingStatus.CONFIRMED) {
-                    String agencyId = propertyToAgency.get(p.getId());
-                    if (agencyId != null) {
-                        userAgencies
-                            .computeIfAbsent(b.getUser().getId(), k -> new HashSet<>())
-                            .add(agencyId);
-                    }
-                }
+        // Una sola pasada sobre reservas confirmadas (con user y property ya fetch-eados)
+        for (Booking b : bookingRepository.findAllConfirmed()) {
+            String agencyId = propertyToAgency.get(b.getProperty().getId());
+            if (agencyId != null) {
+                userAgencies
+                    .computeIfAbsent(b.getUser().getId(), k -> new HashSet<>())
+                    .add(agencyId);
             }
         }
 
         return userAgencies;
-    }
-
-    private List<Booking> getBookingsForProperty(String propertyId) {
-        return bookingRepository.findByPropertyIdAndConfirmedStatus(propertyId);
     }
 
     private int countEdges(Graph<String> graph) {

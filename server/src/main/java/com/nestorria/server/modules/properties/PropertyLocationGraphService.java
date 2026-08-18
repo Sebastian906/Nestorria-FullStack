@@ -6,6 +6,7 @@ import java.util.Map;
 import java.util.Optional;
 
 import org.springframework.cache.annotation.Cacheable;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -41,18 +42,22 @@ public class PropertyLocationGraphService {
     private static final double DEFAULT_MAX_DISTANCE_KM = 10.0;
 
     private final PropertyRepository propertyRepository;
+    private final PropertyLocationGraphService self;
 
-    public PropertyLocationGraphService(PropertyRepository propertyRepository) {
+    public PropertyLocationGraphService(PropertyRepository propertyRepository,
+                                        @Lazy PropertyLocationGraphService self) {
         this.propertyRepository = propertyRepository;
+        // En Spring llega el proxy @Lazy; en tests directos se usa this
+        this.self = self != null ? self : this;
     }
 
     /**
      * Construye el grafo de proximidad entre propiedades.
-     * Conecta propiedades que estén dentro de maxDistanceKm entre sí.
+     * Conecta propiedades que estén dentro de maxDistanceKM entre sí.
      * Time: O(N²) — cada par de propiedades se compara
      * Space: O(N + E) — adjacency list
      */
-    @Cacheable(cacheNames = "propertyProximityGraph", key = "#maxDistanceKm")
+    @Cacheable(cacheNames = "propertyProximityGraph", key = "#maxDistanceKM")
     @Transactional(readOnly = true)
     public Graph<String> buildProximityGraph(double maxDistanceKM) {
         List<Property> properties = propertyRepository.findByIsAvailableTrue();
@@ -94,7 +99,8 @@ public class PropertyLocationGraphService {
      */
     @Transactional(readOnly = true)
     public Optional<PropertyRouteResponse> findRoute(String fromPropertyId, String toPropertyId) {
-        Graph<String> graph = buildProximityGraph(DEFAULT_MAX_DISTANCE_KM);
+        // Llamada a través del proxy para que @Cacheable de buildProximityGraph se aplique
+        Graph<String> graph = self.buildProximityGraph(DEFAULT_MAX_DISTANCE_KM);
 
         if (!graph.containsVertex(fromPropertyId) || !graph.containsVertex(toPropertyId)) {
             return Optional.empty();
@@ -162,7 +168,7 @@ public class PropertyLocationGraphService {
      */
     @Transactional(readOnly = true)
     public Graph<String> findMinimumSpanningTree() {
-        Graph<String> graph = buildProximityGraph(DEFAULT_MAX_DISTANCE_KM);
+        Graph<String> graph = self.buildProximityGraph(DEFAULT_MAX_DISTANCE_KM);
 
         if (graph.getVertices().isEmpty()) {
             return new Graph<>();

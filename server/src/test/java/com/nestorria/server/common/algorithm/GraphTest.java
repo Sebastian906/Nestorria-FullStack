@@ -229,7 +229,7 @@ class GraphTest {
         for (String v : mst.getVertices()) {
             edgeCount += mst.getNeighbors(v).size();
         }
-        assertEquals(8, edgeCount / 2); // 4 edges × 2 directions
+        assertEquals(4, edgeCount / 2); // 4 edges × 2 directions
     }
 
     @Test

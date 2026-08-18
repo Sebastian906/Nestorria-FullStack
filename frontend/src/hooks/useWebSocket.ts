@@ -22,7 +22,10 @@ export function useWebSocket() {
             }
 
             const client = new Client({
-                brokerURL: `${wsUrl}?token=${token}`,
+                brokerURL: wsUrl,
+                // El JWT va en el frame STOMP CONNECT (nunca en el query string
+                // del handshake); el backend lo valida con un ChannelInterceptor.
+                connectHeaders: { Authorization: `Bearer ${token}` },
                 reconnectDelay: 5000,
                 onConnect: () => {
                     if (!active) {

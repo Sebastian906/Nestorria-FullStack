@@ -14,10 +14,10 @@ class HaversineUtilsTest {
 
     @Test
     void distanceKm_knownDistance_bogotaMedellin() {
-        // Bogotá → Medellin: ~415 km
+        // Bogotá → Medellín: ~239 km en línea recta (great-circle)
         double dist = HaversineUtils.distanceKm(4.711, -74.072, 6.244, -75.581);
-        assertTrue(dist > 380 && dist < 450,
-            "Expected ~415 km, got " + dist);
+        assertTrue(dist > 220 && dist < 260,
+            "Expected ~239 km, got " + dist);
     }
 
     @Test
@@ -37,7 +37,7 @@ class HaversineUtilsTest {
 
     @Test
     void distanceKm_nearbyPoints() {
-        // Dos puntos a ~1 km de distancia en Bogotá
+        // Dos puntos a ~0.15 km de distancia en Bogotá
         double dist = HaversineUtils.distanceKm(4.711, -74.072, 4.712, -74.073);
         assertTrue(dist > 0.1 && dist < 0.2,
             "Expected ~0.15 km, got " + dist);

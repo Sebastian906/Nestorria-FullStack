@@ -37,10 +37,10 @@ public interface BookingRepository extends JpaRepository<Booking, String> {
     @Query("SELECT b FROM Booking b JOIN FETCH b.property JOIN FETCH b.agency WHERE b.agency.id = :agencyId ORDER BY b.createdAt DESC")
     List<Booking> findByAgencyId(@Param("agencyId") String agencyId);
 
-    @Query("SELECT b FROM Booking b WHERE b.status = 'CONFIRMED'")
+    @Query("SELECT b FROM Booking b JOIN FETCH b.user JOIN FETCH b.property WHERE b.status = 'CONFIRMED'")
     List<Booking> findAllConfirmed();
 
-    @Query("SELECT b FROM Booking b WHERE b.property.id = :propertyId AND b.status = 'CONFIRMED'")
+    @Query("SELECT b FROM Booking b JOIN FETCH b.user JOIN FETCH b.property WHERE b.property.id = :propertyId AND b.status = 'CONFIRMED'")
     List<Booking> findByPropertyIdAndConfirmedStatus(@Param("propertyId") String propertyId);
 
     @Lock(LockModeType.PESSIMISTIC_WRITE)

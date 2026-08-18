@@ -31,7 +31,7 @@ class PropertyRecommendationServiceTest {
     @BeforeEach
     void setUp() {
         service = new PropertyRecommendationService(
-            propertyRepository, bookingRepository, favoriteRepository);
+            propertyRepository, bookingRepository, favoriteRepository, service);
     }
 
     private Property buildProperty(
@@ -64,7 +64,7 @@ class PropertyRecommendationServiceTest {
         double similarity = service.calculateSimilarity(a, b);
 
         // city=3 + type=2 + price=1 (30000/225000 < 0.3) + 1 amenity shared = 7
-        assertTrue(similarity >= 6.0);
+        assertEquals(7.0, similarity);
     }
 
     @Test

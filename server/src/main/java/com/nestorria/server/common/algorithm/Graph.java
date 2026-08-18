@@ -1,7 +1,10 @@
 package com.nestorria.server.common.algorithm;
 
+import java.util.ArrayDeque;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Comparator;
+import java.util.Deque;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashSet;
@@ -73,16 +76,17 @@ public class Graph<T> {
     }
 
     /**
-     * Retorna los vecinos de un vértice.
+     * Retorna los vecinos de un vértice como vista inmutable.
      * Time: O(1)
      */
     public Set<T> getNeighbors(T vertex) {
-        return adjacencyList.getOrDefault(vertex, Set.of());
+        Set<T> neighbors = adjacencyList.get(vertex);
+        return neighbors != null ? Collections.unmodifiableSet(neighbors) : Set.of();
     }
 
-    // Retorna todos los vértices del grafo.
+    // Retorna todos los vértices del grafo como vista inmutable.
     public Set<T> getVertices() {
-        return adjacencyList.keySet();
+        return Collections.unmodifiableSet(adjacencyList.keySet());
     }
 
     // Retorna el número de vértices.
@@ -267,12 +271,21 @@ public class Graph<T> {
         return path;
     }
 
-    private void dfsVisit(T vertex, Set<T> visited, Set<T> component) {
-        visited.add(vertex);
-        component.add(vertex);
-        for (T neighbor : getNeighbors(vertex)) {
-            if (!visited.contains(neighbor)) {
-                dfsVisit(neighbor, visited, component);
+    private void dfsVisit(T start, Set<T> visited, Set<T> component) {
+        // Iterativo con pila explícita: evita crecimiento del call stack en
+        // componentes grandes.
+        Deque<T> stack = new ArrayDeque<>();
+        stack.push(start);
+        while (!stack.isEmpty()) {
+            T vertex = stack.pop();
+            if (!visited.add(vertex)) {
+                continue;
+            }
+            component.add(vertex);
+            for (T neighbor : getNeighbors(vertex)) {
+                if (!visited.contains(neighbor)) {
+                    stack.push(neighbor);
+                }
             }
         }
     }

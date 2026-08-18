@@ -100,10 +100,18 @@ export default function PropertyMap({
     // Cargar ruta cuando cambian los IDs de origen/destino
     useEffect(() => {
         if (showRoute && routeFrom && routeTo) {
-            findPropertyRoute(routeFrom, routeTo).then(setRoute);
-        } else {
+            let active = true;
+            // Limpiar la ruta previa antes de cada petición nueva
             setRoute(null);
+            findPropertyRoute(routeFrom, routeTo).then(result => {
+                // Ignorar respuestas obsoletas si la petición fue superada
+                if (active) setRoute(result);
+            });
+            return () => {
+                active = false;
+            };
         }
+        setRoute(null);
     }, [showRoute, routeFrom, routeTo]);
 
     // Filtrar propiedades que tengan coordenadas válidas

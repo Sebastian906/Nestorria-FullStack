@@ -17,6 +17,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RequestPart;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
+import org.springframework.validation.annotation.Validated;
 
 import com.nestorria.server.common.exception.BadRequestException;
 import com.nestorria.server.modules.favorite.FavoriteService;
@@ -35,9 +36,11 @@ import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
+import jakarta.validation.constraints.Min;
 
 @RestController
 @RequestMapping("/api/properties")
+@Validated
 @Tag(name = "Properties", description = "Gestión de propiedades inmobiliarias")
 public class PropertyController {
 
@@ -150,7 +153,7 @@ public class PropertyController {
     @GetMapping("/{id}/similar")
     public List<PropertySummaryResponse> getSimilarProperties(
             @PathVariable String id,
-            @RequestParam(defaultValue = "6") int limit) {
+            @RequestParam(defaultValue = "6") @Min(1) int limit) {
         return recommendationService.getSimilarProperties(id, Math.min(limit, 20));
     }
 
@@ -158,7 +161,7 @@ public class PropertyController {
     @GetMapping("/recommendations")
     public List<PropertySummaryResponse> getRecommendations(
             @AuthenticationPrincipal Jwt jwt,
-            @RequestParam(defaultValue = "10") int limit) {
+            @RequestParam(defaultValue = "10") @Min(1) int limit) {
         return recommendationService.getRecommendations(jwt.getSubject(), Math.min(limit, 20));
     }
 

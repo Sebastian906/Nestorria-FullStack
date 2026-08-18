@@ -8,6 +8,8 @@ import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 
+import org.springframework.cache.annotation.Cacheable;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -15,7 +17,6 @@ import com.nestorria.server.common.algorithm.Graph;
 import com.nestorria.server.modules.properties.Property;
 import com.nestorria.server.modules.properties.PropertyRepository;
 import com.nestorria.server.modules.properties.dto.PropertySummaryResponse;
-import com.nestorria.server.modules.user.UserRepository;
 
 import lombok.extern.slf4j.Slf4j;
 
@@ -41,26 +42,35 @@ public class UserSimilarityGraphService {
 
     private final BookingRepository bookingRepository;
     private final PropertyRepository propertyRepository;
-    private final UserRepository userRepository;
+    private final UserSimilarityGraphService self;
 
     public UserSimilarityGraphService(
             BookingRepository bookingRepository,
             PropertyRepository propertyRepository,
-            UserRepository userRepository) {
+            @Lazy UserSimilarityGraphService self) {
         this.bookingRepository = bookingRepository;
         this.propertyRepository = propertyRepository;
-        this.userRepository = userRepository;
+        // En Spring llega el proxy @Lazy; en tests directos se usa this
+        this.self = self != null ? self : this;
     }
 
     /**
-     * Construye el grafo bipartito User ↔ Property.
+     * Grafo bipartito + conjunto de vértices que son usuarios.
+     * Se cachea junto con el grafo para filtrar comunidades sin re-scanear reservas.
+     */
+    public record BipartiteGraphData(Graph<String> graph, Set<String> userVertices) {}
+
+    /**
+     * Construye el grafo bipartito User ↔ Property (cacheado).
      * Cada usuario está conectado con las propiedades que reservó (no canceladas).
      * Time: O(U × P) — scan de todas las reservas
      * Space: O(U + P + E) — grafo bipartito
      */
+    @Cacheable(cacheNames = "userPropertyGraph", key = "'bipartite'")
     @Transactional(readOnly = true)
-    public Graph<String> buildBipartiteGraph() {
+    public BipartiteGraphData buildBipartiteGraph() {
         Graph<String> graph = new Graph<>();
+        Set<String> userVertices = new HashSet<>();
 
         List<Property> allProperties = propertyRepository.findByIsAvailableTrue();
         Set<String> allPropertyIds = allProperties.stream()
@@ -75,6 +85,7 @@ public class UserSimilarityGraphService {
             String propertyId = booking.getProperty().getId();
 
             graph.addVertex(userId);
+            userVertices.add(userId);
             if (allPropertyIds.contains(propertyId)) {
                 graph.addVertex(propertyId);
                 graph.addEdge(userId, propertyId);
@@ -84,7 +95,7 @@ public class UserSimilarityGraphService {
         log.info("Grafo bipartito construido: {} vértices, {} aristas",
             graph.size(), countEdges(graph));
 
-        return graph;
+        return new BipartiteGraphData(graph, userVertices);
     }
 
     /**
@@ -96,7 +107,7 @@ public class UserSimilarityGraphService {
      */
     @Transactional(readOnly = true)
     public List<String> findSimilarUsers(String userId, int limit) {
-        Graph<String> graph = buildBipartiteGraph();
+        Graph<String> graph = self.buildBipartiteGraph().graph();
 
         if (!graph.containsVertex(userId)) {
             return List.of();
@@ -111,14 +122,13 @@ public class UserSimilarityGraphService {
         visited.add(userId);
         visited.addAll(userProperties);
 
-        // Nivel 2: usuarios que reservaron esas propiedades
+        // Nivel 2: usuarios que reservaron esas propiedades.
+        // El grafo bipartito garantiza que los vecinos de una propiedad son usuarios.
         for (String propertyId : userProperties) {
             for (String neighbor : graph.getNeighbors(propertyId)) {
-                if (!visited.contains(neighbor) && neighbor.startsWith("user_")) {
-                    // heuristic: user IDs start with "user_" or are UUIDs
-                    // En este proyecto los user IDs son strings de Clerk
-                    similarUsers.add(neighbor);
+                if (!visited.contains(neighbor)) {
                     visited.add(neighbor);
+                    similarUsers.add(neighbor);
                     if (similarUsers.size() >= limit) break;
                 }
             }
@@ -138,12 +148,12 @@ public class UserSimilarityGraphService {
     public List<PropertySummaryResponse> getCollaborativeRecommendations(
             String userId, int limit) {
 
-        // 1. Obtener propiedades del usuario
-        List<Booking> userBookings = bookingRepository.findByUserId(userId);
-        Set<String> ownPropertyIds = userBookings.stream()
-            .filter(b -> b.getStatus() != BookingStatus.CANCELLED)
-            .map(b -> b.getProperty().getId())
-            .collect(Collectors.toSet());
+        // 1. Grafo bipartito (cacheado): aristas solo entre usuarios y propiedades
+        // reservadas confirmadas, por lo que no hay que re-filtrar por estado.
+        Graph<String> graph = self.buildBipartiteGraph().graph();
+
+        // Propiedades reservadas por el usuario objetivo
+        Set<String> ownPropertyIds = graph.getNeighbors(userId);
 
         // 2. Encontrar usuarios similares
         List<String> similarUserIds = findSimilarUsers(userId, 20);
@@ -152,15 +162,14 @@ public class UserSimilarityGraphService {
             return List.of();
         }
 
-        // 3. Obtener propiedades de usuarios similares, excluyendo las propias
+        // 3. Propiedades de usuarios similares, excluyendo las propias.
+        // Los vecinos de un usuario en el grafo bipartito son sus reservas confirmadas.
         Map<String, Long> propertyScore = new HashMap<>();
 
         for (String similarUserId : similarUserIds) {
-            List<Booking> similarBookings = bookingRepository.findByUserId(similarUserId);
-            for (Booking b : similarBookings) {
-                if (b.getStatus() != BookingStatus.CANCELLED
-                        && !ownPropertyIds.contains(b.getProperty().getId())) {
-                    propertyScore.merge(b.getProperty().getId(), 1L, Long::sum);
+            for (String propertyId : graph.getNeighbors(similarUserId)) {
+                if (!ownPropertyIds.contains(propertyId)) {
+                    propertyScore.merge(propertyId, 1L, Long::sum);
                 }
             }
         }
@@ -192,17 +201,21 @@ public class UserSimilarityGraphService {
     /**
      * Encuentra comunidades de usuarios (componentes conectados del grafo).
      * Cada comunidad es un grupo de usuarios que están conectados
-     * a través de propiedades compartidas.
+     * a través de propiedades compartidas. Los IDs de propiedades se
+     * descartan de la respuesta.
      * Time: O(V + E)
      */
     @Transactional(readOnly = true)
     public List<Set<String>> findUserCommunities() {
-        Graph<String> graph = buildBipartiteGraph();
-        List<Set<String>> allComponents = graph.connectedComponents();
+        BipartiteGraphData data = self.buildBipartiteGraph();
 
-        // Filtrar solo componentes que contengan al menos un usuario
-        return allComponents.stream()
-            .filter(component -> component.size() > 1)
+        // Intersección de cada componente con el conjunto de usuarios
+        return data.graph().connectedComponents().stream()
+            .map(component -> {
+                component.retainAll(data.userVertices());
+                return component;
+            })
+            .filter(component -> !component.isEmpty())
             .toList();
     }
 

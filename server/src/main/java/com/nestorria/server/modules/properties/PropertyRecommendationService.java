@@ -10,6 +10,7 @@ import java.util.Map;
 import java.util.Set;
 
 import org.springframework.cache.annotation.Cacheable;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -54,14 +55,18 @@ public class PropertyRecommendationService {
     private final PropertyRepository propertyRepository;
     private final BookingRepository bookingRepository;
     private final FavoriteRepository favoriteRepository;
+    private final PropertyRecommendationService self;
 
     public PropertyRecommendationService(
             PropertyRepository propertyRepository,
             BookingRepository bookingRepository,
-            FavoriteRepository favoriteRepository) {
+            FavoriteRepository favoriteRepository,
+            @Lazy PropertyRecommendationService self) {
         this.propertyRepository = propertyRepository;
         this.bookingRepository = bookingRepository;
         this.favoriteRepository = favoriteRepository;
+        // En Spring llega el proxy @Lazy; en tests directos se usa this
+        this.self = self != null ? self : this;
     }
 
     /**
@@ -147,13 +152,14 @@ public class PropertyRecommendationService {
      */
     @Transactional(readOnly = true)
     public List<PropertySummaryResponse> getSimilarProperties(String propertyId, int limit) {
-        Graph<String> graph = buildSimilarityGraph();
+        // A través del proxy para que @Cacheable de buildSimilarityGraph se aplique
+        Graph<String> graph = self.buildSimilarityGraph();
 
         if (!graph.containsVertex(propertyId)) {
             return List.of();
         }
 
-        // BFS limitado por el número de vértices a explorar
+        // BFS limitado: nunca agrega más de `limit` resultados
         Set<String> visited = new HashSet<>();
         java.util.Queue<String> queue = new java.util.LinkedList<>();
         queue.add(propertyId);
@@ -163,6 +169,7 @@ public class PropertyRecommendationService {
         while (!queue.isEmpty() && similar.size() < limit) {
             String current = queue.poll();
             for (String neighbor : graph.getNeighbors(current)) {
+                if (similar.size() >= limit) break;
                 if (!visited.contains(neighbor)) {
                     visited.add(neighbor);
                     similar.add(neighbor);
@@ -219,13 +226,13 @@ public class PropertyRecommendationService {
         List<Property> bookedProperties = propertyRepository.findAllById(new ArrayList<>(bookedPropertyIds));
         for (Property p : bookedProperties) {
             interestedAgencyIds.add(p.getAgency().getId());
-            interestedCities.add(p.getCity());
+            if (p.getCity() != null) interestedCities.add(p.getCity());
         }
 
         List<Property> favoritedProperties = propertyRepository.findAllById(new ArrayList<>(favoritePropertyIds));
         for (Property p : favoritedProperties) {
             interestedAgencyIds.add(p.getAgency().getId());
-            interestedCities.add(p.getCity());
+            if (p.getCity() != null) interestedCities.add(p.getCity());
         }
 
         // 4. Buscar propiedades de las agencias/ciudades de interés, excluyendo las ya reservadas/favoritas
@@ -239,7 +246,7 @@ public class PropertyRecommendationService {
             .filter(p -> interestedAgencyIds.contains(p.getAgency().getId())
                 || interestedCities.contains(p.getCity()))
             .map(PropertySummaryResponse::fromEntity)
-            .toList();
+            .collect(java.util.stream.Collectors.toCollection(ArrayList::new));
 
         // 5. Si no hay suficientes candidatos, rellenar con propiedades similares a las reservadas
         if (candidates.size() < limit && !bookedPropertyIds.isEmpty()) {
@@ -249,7 +256,6 @@ public class PropertyRecommendationService {
                 for (PropertySummaryResponse s : similar) {
                     if (!excludeIds.contains(s.id()) && !additionalIds.contains(s.id())) {
                         additionalIds.add(s.id());
-                        candidates = new ArrayList<>(candidates);
                         candidates.add(s);
                         if (candidates.size() >= limit) break;
                     }
@@ -264,6 +270,8 @@ public class PropertyRecommendationService {
     // --- Private helpers ---
 
     private boolean isPriceSimilar(Property a, Property b) {
+        if (a.getPrice() == null || b.getPrice() == null) return false;
+
         Integer priceA = a.getPrice().getSale() != null ? a.getPrice().getSale() : a.getPrice().getRent();
         Integer priceB = b.getPrice().getSale() != null ? b.getPrice().getSale() : b.getPrice().getRent();
 

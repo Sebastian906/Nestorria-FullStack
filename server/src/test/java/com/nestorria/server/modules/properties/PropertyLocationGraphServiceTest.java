@@ -10,8 +10,10 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
+import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.Mockito.when;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.test.util.ReflectionTestUtils;
 
 import com.nestorria.server.common.algorithm.Graph;
 import com.nestorria.server.modules.agency.Agency;
@@ -30,7 +32,8 @@ class PropertyLocationGraphServiceTest {
 
     @BeforeEach
     void setUp() {
-        service = new PropertyLocationGraphService(propertyRepository);
+        // self = misma instancia: en tests directos no hay proxy Spring ni caché
+        service = new PropertyLocationGraphService(propertyRepository, service);
     }
 
     private Property buildProperty(String id, double lat, double lng) {
@@ -46,6 +49,8 @@ class PropertyLocationGraphServiceTest {
             100, PropertyType.APARTMENT, price, facilities,
             List.of(), location
         );
+        // El id es GenerationType.UUID y es null en memoria: se fija explícitamente
+        ReflectionTestUtils.setField(p, "id", id);
         return p;
     }
 
@@ -81,6 +86,7 @@ class PropertyLocationGraphServiceTest {
         Property p2 = buildProperty("2", 4.712, -74.073);
 
         when(propertyRepository.findByIsAvailableTrue()).thenReturn(List.of(p1, p2));
+        when(propertyRepository.findAllById(anyList())).thenReturn(List.of(p1, p2));
 
         Optional<PropertyRouteResponse> route = service.findRoute(p1.getId(), p2.getId());
         assertTrue(route.isPresent());
