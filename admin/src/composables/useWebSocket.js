@@ -39,17 +39,43 @@ export function useWebSocket() {
                 return
             }
 
-            // Send bearer token via HTTP handshake query parameter expected by
-            // WebSocketAuthInterceptor, instead of STOMP connectHeaders.
-            const wsUrl = `${wsBaseUrl}?token=${token}`
-
+            // El JWT va en el frame STOMP CONNECT (connectHeaders), nunca en el
+            // query string del handshake — lo exige WebSocketAuthInterceptor
+            // (server/.../common/websocket/WebSocketAuthInterceptor.java).
             client = new Client({
-                brokerURL: wsUrl,
+                brokerURL: wsBaseUrl,
                 reconnectDelay: 5000,
-                // connectHeaders removed: token sent through HTTP handshake above
+                // Token fresco en CADA conexión/reconexión: beforeConnect corre
+                // antes de cada intento (incluidos los automáticos de
+                // reconnectDelay) y evita reenviar un JWT expirado capturado
+                // al construir el Client.
+                beforeConnect: async () => {
+                    const token = await getToken.value()
+                    return token ? { Authorization: `Bearer ${token}` } : {}
+                },
                 onConnect: () => {
                     if (!active) return
                     connected.value = true
+
+                    // Mismo contrato que frontend/src/hooks/useWebSocket.ts
+                    client.subscribe('/user/topic/notifications', (message) => {
+                        try {
+                            const notification = JSON.parse(message.body)
+                            notifications.value = [notification, ...notifications.value].slice(0, 20)
+                            unreadCount.value += 1
+                        } catch (e) {
+                            console.error('Error parsing WebSocket message', e)
+                        }
+                    })
+
+                    client.subscribe('/user/topic/notifications/unread-count', (message) => {
+                        try {
+                            const { count } = JSON.parse(message.body)
+                            unreadCount.value = count
+                        } catch (e) {
+                            console.error('Error parsing unread count', e)
+                        }
+                    })
                 },
                 onDisconnect: () => {
                     connected.value = false

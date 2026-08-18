@@ -16,6 +16,7 @@ import jakarta.persistence.FetchType;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
+import jakarta.persistence.Index;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.OneToMany;
 import jakarta.persistence.OneToOne;
@@ -30,7 +31,8 @@ import lombok.Setter;
 @Entity
 @Table(
     name = "invoices",
-    uniqueConstraints = @UniqueConstraint(columnNames = {"booking_id"})
+    uniqueConstraints = @UniqueConstraint(columnNames = {"booking_id"}),
+    indexes = @Index(name = "idx_invoice_status_due_date", columnList = "status, due_date")
 )
 @Getter
 @Setter

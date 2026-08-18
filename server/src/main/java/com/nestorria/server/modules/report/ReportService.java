@@ -95,19 +95,27 @@ public class ReportService {
         List<BookingsReportData.BookingRow> rows = new java.util.ArrayList<>();
         long totalRevenue = 0;
         int totalNights = 0;
-        
+
+        // 1 query batch + Map<bookingId, Contract> → lookups O(1) (HashMap)
+        java.util.Map<String, Contract> contractsByBookingId = bookings.isEmpty()
+            ? java.util.Map.of()
+            : contractRepository
+                .findByBookingIdIn(bookings.stream().map(Booking::getId).toList())
+                .stream()
+                .collect(java.util.stream.Collectors.toMap(
+                    c -> c.getBooking().getId(), c -> c, (a, b) -> a));
+
         for (Booking booking : bookings) {
             int nights = (int) java.time.temporal.ChronoUnit.DAYS.between(
                 booking.getCheckInDate(), booking.getCheckOutDate());
-            
+
             totalRevenue += booking.getTotalPrice();
             totalNights += nights;
-            
-            Contract contract = getContractForBooking(booking);
-            
-            // Convertir Instant a String de forma segura
+
+            Contract contract = contractsByBookingId.get(booking.getId());  // O(1), null si no hay
+
             String createdAtStr = formatInstant(booking.getCreatedAt());
-            
+
             rows.add(new BookingsReportData.BookingRow(
                 booking.getId(),
                 createdAtStr,
@@ -122,7 +130,7 @@ public class ReportService {
                 booking.isPaid()
             ));
         }
-        
+
         return new BookingsReportData(
             rows,
             bookings.size(),
@@ -181,10 +189,6 @@ public class ReportService {
             .filter(booking -> booking != null && booking.isPaid())
             .mapToLong(Booking::getTotalPrice)
             .sum();
-    }
-
-    private Contract getContractForBooking(Booking booking) {
-        return contractRepository.findByBookingId(booking.getId()).orElse(null);
     }
 
     // GENERACIÓN EXCEL
