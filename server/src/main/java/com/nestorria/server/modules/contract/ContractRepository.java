@@ -17,6 +17,9 @@ public interface ContractRepository extends JpaRepository<Contract, String> {
     @Query("SELECT c FROM Contract c WHERE c.booking.id = :bookingId")
     Optional<Contract> findByBookingId(@Param("bookingId") String bookingId);
 
+    @Query("SELECT c FROM Contract c JOIN FETCH c.booking WHERE c.booking.id IN :bookingIds")
+    List<Contract> findByBookingIdIn(@Param("bookingIds") java.util.Collection<String> bookingIds);
+
     @Query("SELECT c FROM Contract c LEFT JOIN FETCH c.clauses LEFT JOIN FETCH c.signatures WHERE c.id = :id")
     Optional<Contract> findByIdWithDetails(@Param("id") String id);
 

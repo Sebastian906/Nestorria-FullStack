@@ -2,6 +2,7 @@ package com.nestorria.server.modules.favorite;
 
 import java.util.List;
 
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -29,23 +30,28 @@ public class FavoriteService {
     }
 
     @Transactional
-    public boolean toggleFavorite(String userId, String propertyId) {
-        User user = userRepository.findById(userId)
-            .orElseThrow(() -> new ResourceNotFoundException("Usuario no encontrado: " + userId));
+public boolean toggleFavorite(String userId, String propertyId) {
+    User user = userRepository.findById(userId)
+        .orElseThrow(() -> new ResourceNotFoundException("Usuario no encontrado: " + userId));
 
-        Property property = propertyRepository.findById(propertyId)
-            .orElseThrow(() -> new ResourceNotFoundException("Propiedad no encontrada: " + propertyId));
+    Property property = propertyRepository.findById(propertyId)
+        .orElseThrow(() -> new ResourceNotFoundException("Propiedad no encontrada: " + propertyId));
 
-        return favoriteRepository.findByUserIdAndPropertyId(userId, propertyId)
-            .map(existing -> {
-                favoriteRepository.delete(existing);
-                return false;
-            })
-            .orElseGet(() -> {
+    return favoriteRepository.findByUserIdAndPropertyId(userId, propertyId)
+        .map(existing -> {
+            favoriteRepository.delete(existing);
+            return false;
+        })
+        .orElseGet(() -> {
+            try {
                 favoriteRepository.save(new Favorite(user, property));
                 return true;
-            });
-    }
+            } catch (DataIntegrityViolationException e) {
+                favoriteRepository.deleteByUserIdAndPropertyId(userId, propertyId);
+                return false;
+            }
+        });
+}
 
     @Transactional(readOnly = true)
     public List<FavoriteResponse> getUserFavorites(String userId) {

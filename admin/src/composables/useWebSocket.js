@@ -39,17 +39,36 @@ export function useWebSocket() {
                 return
             }
 
-            // Send bearer token via HTTP handshake query parameter expected by
-            // WebSocketAuthInterceptor, instead of STOMP connectHeaders.
-            const wsUrl = `${wsBaseUrl}?token=${token}`
-
+            // El JWT va en el frame STOMP CONNECT (connectHeaders), nunca en el
+            // query string del handshake — lo exige WebSocketAuthInterceptor
+            // (server/.../common/websocket/WebSocketAuthInterceptor.java).
             client = new Client({
-                brokerURL: wsUrl,
+                brokerURL: wsBaseUrl,
+                connectHeaders: { Authorization: `Bearer ${token}` },
                 reconnectDelay: 5000,
-                // connectHeaders removed: token sent through HTTP handshake above
                 onConnect: () => {
                     if (!active) return
                     connected.value = true
+
+                    // Mismo contrato que frontend/src/hooks/useWebSocket.ts
+                    client.subscribe('/user/topic/notifications', (message) => {
+                        try {
+                            const notification = JSON.parse(message.body)
+                            notifications.value = [notification, ...notifications.value]
+                            unreadCount.value += 1
+                        } catch (e) {
+                            console.error('Error parsing WebSocket message', e)
+                        }
+                    })
+
+                    client.subscribe('/user/topic/notifications/unread-count', (message) => {
+                        try {
+                            const { count } = JSON.parse(message.body)
+                            unreadCount.value = count
+                        } catch (e) {
+                            console.error('Error parsing unread count', e)
+                        }
+                    })
                 },
                 onDisconnect: () => {
                     connected.value = false
