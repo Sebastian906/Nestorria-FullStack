@@ -245,7 +245,13 @@ onMounted(() => {
     if (auth.isLoaded?.value) {
         fetchUnreadCount()
     } else {
-        // @clerk/vue expone isLoaded como ref; si no está lista, se espera el watch
+        // Clerk aún hidratando: dispara el primer fetch en cuanto la sesión cargue
+        const stop = watch(() => auth.isLoaded?.value, (loaded) => {
+            if (loaded) {
+                stop()
+                fetchUnreadCount()
+            }
+        })
     }
     pollingInterval = setInterval(fetchUnreadCount, 30000) // fallback
     document.addEventListener('click', handleOutsideClick)

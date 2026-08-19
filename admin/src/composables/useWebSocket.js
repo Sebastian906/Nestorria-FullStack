@@ -7,6 +7,7 @@ import { Client } from '@stomp/stompjs'
 // distribuyen a todas las instancias suscritas.
 let sharedClient = null
 let subscriberCount = 0
+let deactivation = null // Promise de apagado pendiente: evita clientes solapados
 const listeners = new Set()
 
 export function useWebSocket() {
@@ -23,10 +24,17 @@ export function useWebSocket() {
 
     const listener = { connected, notifications, unreadCount }
 
-    onMounted(() => {
+    onMounted(async () => {
         active = true
         subscriberCount++
         listeners.add(listener)
+
+        // Si el cliente anterior aún se está apagando, esperar su cierre antes
+        // de crear uno nuevo: evita dos conexiones STOMP solapadas.
+        if (deactivation) {
+            await deactivation
+        }
+        if (!active || subscriberCount <= 0) return
 
         if (!sharedClient) {
             sharedClient = new Client({
@@ -68,6 +76,10 @@ export function useWebSocket() {
                 onDisconnect: () => {
                     listeners.forEach((l) => { l.connected.value = false })
                 },
+                // Cierre inesperado del transporte: onDisconnect puede no dispararse
+                onWebSocketClose: () => {
+                    listeners.forEach((l) => { l.connected.value = false })
+                },
                 onStompError: (frame) => {
                     console.error('STOMP error:', frame.headers['message'], frame.body)
                 },
@@ -76,6 +88,9 @@ export function useWebSocket() {
                 },
             })
             sharedClient.activate()
+        } else if (sharedClient.connected) {
+            // Cliente compartido ya conectado: sincroniza este listener
+            connected.value = true
         }
     })
 
@@ -84,8 +99,12 @@ export function useWebSocket() {
         listeners.delete(listener)
         subscriberCount--
         if (subscriberCount <= 0 && sharedClient) {
-            sharedClient.deactivate()
+            const client = sharedClient
             sharedClient = null
+            // El apagado es asíncrono: los futuros montajes esperan esta promesa
+            const shutdown = client.deactivate().catch(() => {})
+            deactivation = shutdown
+            shutdown.then(() => { if (deactivation === shutdown) deactivation = null })
         }
     })
 
