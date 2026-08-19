@@ -160,7 +160,7 @@ const isCustomDateValid = () => {
 </script>
 
 <template>
-    <div class="md:px-8 py-6 xl:py-8 m-1 sm:m-3 h-[97vh] overflow-y-scroll lg:w-11/12 bg-white shadow rounded-xl">
+    <div class="px-4 md:px-8 py-6 xl:py-8 m-1 sm:m-3 h-[97vh] overflow-y-scroll lg:w-11/12 bg-white shadow rounded-xl">
         <!-- Header -->
         <div class="mb-6">
             <h1 class="text-2xl font-bold text-gray-800 mb-2">Reportes</h1>

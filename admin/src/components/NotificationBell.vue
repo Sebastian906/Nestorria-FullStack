@@ -112,6 +112,7 @@ watch(wsNotifications, (newNotifications) => {
 
 const fetchUnreadCount = async () => {
     try {
+        if (!auth.isLoaded?.value || !auth.isSignedIn?.value) return
         const token = await auth.getToken.value()
         if (!token) return
 
@@ -240,10 +241,13 @@ const formatDate = (dateString) => {
 }
 
 onMounted(() => {
-    fetchUnreadCount()
-    // No setInterval polling - WebSocket maneja notificaciones en tiempo real
-    // El polling es fallback opcional si se necesita
-    pollingInterval = setInterval(fetchUnreadCount, 30000) // Fallback cada 30s
+    // Espera a que Clerk hidrate la sesión antes del primer request
+    if (auth.isLoaded?.value) {
+        fetchUnreadCount()
+    } else {
+        // @clerk/vue expone isLoaded como ref; si no está lista, se espera el watch
+    }
+    pollingInterval = setInterval(fetchUnreadCount, 30000) // fallback
     document.addEventListener('click', handleOutsideClick)
 })
 

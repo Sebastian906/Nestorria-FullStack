@@ -12,9 +12,12 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.BDDMockito.given;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
+
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import com.nestorria.server.common.exception.BadRequestException;
 import com.nestorria.server.common.exception.ResourceNotFoundException;
 import com.nestorria.server.modules.properties.dto.CategoryNode;
 import com.nestorria.server.modules.properties.dto.CreateCategoryRequest;
@@ -176,5 +179,27 @@ class CategoryServiceTest {
         cat.setLevel(level);
         cat.setActive(true);
         return cat;
+    }
+
+    @Test
+    void createCategory_invalidSlug_throwsBadRequest() {
+        CreateCategoryRequest request =
+            new CreateCategoryRequest("Casa", "Casa Bonita", null, null);
+
+        assertThatThrownBy(() -> categoryService.createCategory(request))
+            .isInstanceOf(BadRequestException.class);
+        verify(categoryRepository, never()).save(any());
+    }
+
+    @Test
+    void createCategory_validSlugWithDigits_saves() {
+        CreateCategoryRequest request =
+            new CreateCategoryRequest("Apartamento 2B", "apartamento-2b", null, null);
+        CategoryTree saved = createCategory(2L, "Apartamento 2B", "apartamento-2b", null, 0);
+        given(categoryRepository.save(any())).willReturn(saved);
+
+        CategoryNode result = categoryService.createCategory(request);
+
+        assertThat(result.slug()).isEqualTo("apartamento-2b");
     }
 }
