@@ -34,6 +34,7 @@ import dashboard from './dashboard.svg'
 import housePlus from './house-plus.svg'
 import signature from './signature.svg'
 import clipboard from './clipboard.svg'
+import network from './network.svg'
 import userImg from './user.png'
 import user1 from './user1.png'
 import user2 from './user2.png'
@@ -86,6 +87,7 @@ export const assets = {
     housePlus,
     list,
     clipboard,
+    network,
     signature,
     userImg,
     user1,

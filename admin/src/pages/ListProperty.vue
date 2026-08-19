@@ -61,8 +61,7 @@ onMounted(() => {
 </script>
 
 <template>
-    <div class="md:px-8 py-6 xl:py-8 m-1 sm:m-3 h-[97vh] overflow-y-scroll lg:w-11/12 bg-white shadow rounded-xl">
-
+    <div class="md:px-8 pt-2 md:pt-6 pb-6 xl:py-8 m-1 sm:m-3 h-[97vh] overflow-y-scroll lg:w-11/12 bg-white shadow rounded-xl">
         <div v-if="loading" class="flex justify-center items-center h-40 text-gray-400 text-sm">
             Loading properties…
         </div>

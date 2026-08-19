@@ -31,6 +31,11 @@ const navItems = [
         label: 'Reports',
         icon: assets.clipboard
     },
+    {
+        path: '/categories',
+        label: 'Categories',
+        icon: assets.network
+    },
 ]
 
 const checkAuth = () => {

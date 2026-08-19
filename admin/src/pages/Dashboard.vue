@@ -42,7 +42,8 @@ onMounted(() => {
 </script>
 
 <template>
-    <div class="md:px-8 py-6 xl:py-8 m-1 sm:m-3 h-[97vh] overflow-y-scroll lg:w-11/12 bg-white shadow rounded-xl">
+    <div
+        class="md:px-8 pt-2 md:pt-6 pb-6 xl:py-8 m-1 sm:m-3 h-[97vh] overflow-y-scroll lg:w-11/12 bg-white shadow rounded-xl">
         <div class="grid grid-cols-2 gap-4">
             <div class="flexStart gap-7 p-5 bg-[#F0FDF4] lg:min-w-56 rounded-xl">
                 <img :src="assets.house" alt="" class="hidden sm:flex w-8" />

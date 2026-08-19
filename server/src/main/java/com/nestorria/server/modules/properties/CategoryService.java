@@ -1,6 +1,7 @@
 package com.nestorria.server.modules.properties;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -11,6 +12,8 @@ import java.util.stream.Collectors;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.nestorria.server.common.algorithm.FiniteAutomaton;
+import com.nestorria.server.common.exception.BadRequestException;
 import com.nestorria.server.common.exception.ResourceNotFoundException;
 import com.nestorria.server.modules.properties.dto.CategoryNode;
 import com.nestorria.server.modules.properties.dto.CreateCategoryRequest;
@@ -22,6 +25,9 @@ import lombok.RequiredArgsConstructor;
 public class CategoryService {
 
     private final CategoryRepository categoryRepository;
+
+    // AFD para ^[a-z0-9]+(?:-[a-z0-9]+)*$ — misma regla que @Pattern del DTO.
+    private static final FiniteAutomaton SLUG_AUTOMATON = slugAutomaton();
 
     @Transactional(readOnly = true)
     public List<CategoryNode> getTree() {
@@ -70,6 +76,10 @@ public class CategoryService {
 
     @Transactional
     public CategoryNode createCategory(CreateCategoryRequest request) {
+        if (!SLUG_AUTOMATON.accepts(request.slug())) {
+            throw new BadRequestException(
+                "Slug inválido: solo minúsculas, dígitos y guiones simples entre segmentos");
+        }
         CategoryTree category = new CategoryTree();
         category.setName(request.name());
         category.setSlug(request.slug());
@@ -84,6 +94,23 @@ public class CategoryService {
 
         CategoryTree saved = categoryRepository.save(category);
         return CategoryNode.fromEntity(saved);
+    }
+
+    // ---- Helpers privados a nivel de clase (NO dentro de createCategory) ----
+
+    private static FiniteAutomaton slugAutomaton() {
+        // 0=start, 1=segmento, 2=tras guión (exige un carácter alfanumérico después)
+        Map<Integer, Map<Character, Integer>> t = new HashMap<>();
+        Map<Character, Integer> d0 = new HashMap<>(); alnum(d0, 1);
+        Map<Character, Integer> d1 = new HashMap<>(); alnum(d1, 1); d1.put('-', 2);
+        Map<Character, Integer> d2 = new HashMap<>(); alnum(d2, 1);
+        t.put(0, d0); t.put(1, d1); t.put(2, d2);
+        return new FiniteAutomaton(0, Set.of(1), t);
+    }
+
+    private static void alnum(Map<Character, Integer> m, int target) {
+        for (char c = 'a'; c <= 'z'; c++) m.put(c, target);
+        for (char c = '0'; c <= '9'; c++) m.put(c, target);
     }
 
     @Transactional(readOnly = true)
