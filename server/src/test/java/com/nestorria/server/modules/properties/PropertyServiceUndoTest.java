@@ -10,7 +10,9 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
+import org.mockito.InOrder;
 import org.mockito.Mock;
+import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -51,8 +53,9 @@ class PropertyServiceUndoTest {
         MultipartFile file = mock(MultipartFile.class);
         when(file.isEmpty()).thenReturn(false);
         when(file.getContentType()).thenReturn("image/jpeg");
-        when(file.getBytes()).thenReturn(publicId.getBytes());
-        when(uploader.upload(any(byte[].class), any(Map.class)))
+        byte[] bytes = publicId.getBytes();
+        when(file.getBytes()).thenReturn(bytes);
+        when(uploader.upload(eq(bytes), any(Map.class)))
             .thenReturn(Map.of("secure_url", url, "public_id", publicId));
         return file;
     }
@@ -73,8 +76,32 @@ class PropertyServiceUndoTest {
         assertThrows(ConflictException.class, () ->
             propertyService.create("owner-1", request(), List.of(image("p1", "u1"), image("p2", "u2"))));
 
+        // LIFO: la última imagen subida (p2) se elimina primero
+        InOrder inOrder = inOrder(uploader);
+        inOrder.verify(uploader).destroy("p2", Map.of("resource_type", "image"));
+        inOrder.verify(uploader).destroy("p1", Map.of("resource_type", "image"));
+    }
+
+    @Test
+    void firstUploadFails_cleansLaterSuccessfulUpload() throws Exception {
+        when(agencyRepository.findByOwnerId("owner-1")).thenReturn(Optional.of(mock(Agency.class)));
+
+        byte[] badBytes = new byte[]{9};
+        MultipartFile badFile = mock(MultipartFile.class);
+        when(badFile.isEmpty()).thenReturn(false);
+        when(badFile.getContentType()).thenReturn("image/jpeg");
+        when(badFile.getBytes()).thenReturn(badBytes);
+        when(uploader.upload(eq(badBytes), any(Map.class)))
+            .thenThrow(new ConflictException("upload failed"));
+
+        MultipartFile okFile = image("p2", "u2");
+
+        assertThrows(RuntimeException.class, () ->
+            propertyService.create("owner-1", request(), List.of(badFile, okFile)));
+
+        // La subida que completó DESPUÉS del primer fallo también se elimina
         verify(uploader).destroy("p2", Map.of("resource_type", "image"));
-        verify(uploader).destroy("p1", Map.of("resource_type", "image"));
+        verify(persistenceService, never()).persistProperty(any(), any(), any());
     }
 
     @Test

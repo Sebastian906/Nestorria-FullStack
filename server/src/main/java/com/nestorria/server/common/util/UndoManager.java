@@ -32,9 +32,21 @@ public class UndoManager {
     }
 
     // Deshace todas las acciones en orden LIFO (inverso al registro).
+    // Si una acción falla, continúa drenando el resto de la pila y relanza
+    // la primera excepción una vez que todas las acciones se ejecutaron.
     public void undoAll() {
-        while (undo()) {
-            // no-op: undo() ya avanza la pila
+        RuntimeException failure = null;
+        while (!undoStack.isEmpty()) {
+            try {
+                undoStack.pop().undo();
+            } catch (RuntimeException e) {
+                if (failure == null) {
+                    failure = e;
+                }
+            }
+        }
+        if (failure != null) {
+            throw failure;
         }
     }
 

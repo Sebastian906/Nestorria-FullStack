@@ -5,6 +5,7 @@ import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import org.junit.jupiter.api.Test;
 
@@ -39,6 +40,20 @@ class UndoManagerTest {
     void undoAll_onEmptyStack_isNoOp() {
         UndoManager undo = new UndoManager();
         undo.undoAll();
+        assertEquals(0, undo.size());
+    }
+
+    @Test
+    void undoAll_continuesDrainingAfterFailingCallback() {
+        List<String> log = new ArrayList<>();
+        UndoManager undo = new UndoManager();
+        undo.push(() -> log.add("undo-A"));
+        undo.push(() -> { throw new IllegalStateException("cleanup failed"); });
+        undo.push(() -> log.add("undo-C"));
+
+        assertThrows(IllegalStateException.class, undo::undoAll);
+        // La acción registrada ANTES del fallo también se ejecuta
+        assertEquals(List.of("undo-C", "undo-A"), log);
         assertEquals(0, undo.size());
     }
 }

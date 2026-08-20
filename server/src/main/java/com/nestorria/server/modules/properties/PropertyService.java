@@ -189,15 +189,24 @@ public class PropertyService {
                 .toList();
 
         List<UploadResult> uploaded = new ArrayList<>();
-        try {
-            for (CompletableFuture<UploadResult> future : futures) {
+        RuntimeException firstFailure = null;
+        for (CompletableFuture<UploadResult> future : futures) {
+            try {
                 uploaded.add(future.join());
+            } catch (RuntimeException e) {
+                if (firstFailure == null) {
+                    firstFailure = e;
+                }
             }
-        } catch (Exception e) {
-            // Compensación: eliminar todas las imágenes que completaron antes del fallo
+        }
+
+        if (firstFailure != null) {
+            // Compensación: esperar a que TODAS las subidas se asienten, luego
+            // eliminar todas las que completaron (incluidas las que terminaron
+            // después del primer fallo) y relanzar la primera excepción.
             log.warn("Fallo en subida paralela, eliminando {} imágenes previas", uploaded.size());
             uploaded.forEach(r -> deleteFromCloudinary(r.publicId()));
-            throw e;
+            throw firstFailure;
         }
 
         // Retorna UploadResult (url + publicId): la compensación interna
