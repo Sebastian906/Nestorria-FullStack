@@ -29,21 +29,37 @@ public class DataSourceConfig {
 
         String url = env.getProperty("spring.datasource.url");
         if (url == null || url.isBlank()) {
-            url = isProd
-                ? env.resolveRequiredPlaceholders("${DB_URI}")
-                : env.resolvePlaceholders("${DB_URI:${DB_URL:jdbc:postgresql://localhost:5432/nestorria}}");
+            if (isProd) {
+                url = env.resolveRequiredPlaceholders("${DB_URI}");
+            } else {
+                url = env.resolvePlaceholders("${DB_URI:${DB_URL:jdbc:postgresql://localhost:5432/nestorria}}");
+                if (url == null || url.isBlank()) {
+                    // DB_URI/DB_URL presentes pero vacíos → default de desarrollo
+                    url = "jdbc:postgresql://localhost:5432/nestorria";
+                }
+            }
         }
         String username = env.getProperty("spring.datasource.username");
         if (username == null || username.isBlank()) {
-            username = isProd
-                ? env.resolveRequiredPlaceholders("${DB_USERNAME}")
-                : env.resolvePlaceholders("${DB_USERNAME:postgres}");
+            if (isProd) {
+                username = env.resolveRequiredPlaceholders("${DB_USERNAME}");
+            } else {
+                username = env.resolvePlaceholders("${DB_USERNAME:postgres}");
+                if (username == null || username.isBlank()) {
+                    username = "postgres";
+                }
+            }
         }
         String password = env.getProperty("spring.datasource.password");
         if (password == null || password.isBlank()) {
-            password = isProd
-                ? env.resolveRequiredPlaceholders("${DB_PASSWORD}")
-                : env.resolvePlaceholders("${DB_PASSWORD:postgres}");
+            if (isProd) {
+                password = env.resolveRequiredPlaceholders("${DB_PASSWORD}");
+            } else {
+                password = env.resolvePlaceholders("${DB_PASSWORD:postgres}");
+                if (password == null || password.isBlank()) {
+                    password = "postgres";
+                }
+            }
         }
 
         if (!isProd) {

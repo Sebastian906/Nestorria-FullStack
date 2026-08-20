@@ -20,10 +20,13 @@
    Only one instance wins per event; losers skip it. Portable across H2 and
    PostgreSQL. `FOR UPDATE SKIP LOCKED` is a future throughput optimization
    (PostgreSQL only, requires Testcontainers for tests).
-2. **Instance identity.** `app.instance-id` resolves as `APP_INSTANCE_ID` >
-   `HOSTNAME` (Docker/K8s) > random UUID (local). Exposed in
-   `GET /api/health/` (`instanceId`) and in every log line via MDC
-   (`logging.pattern.level` includes `%X{instanceId}`).
+2. **Instance identity.** `InstanceIdProvider` resolves `app.instance-id`
+   once per process as `APP_INSTANCE_ID` > `HOSTNAME` (Docker/K8s) > random
+   UUID (local), and the same value reaches `GET /api/health/`
+   (`instanceId`), request-thread logs (`InstanceIdMdcFilter` puts it in the
+   MDC), and async/scheduled logs (`MdcTaskDecorator` propagates it to every
+   executor and to the `@Scheduled` scheduler). `logging.pattern.level`
+   includes `%X{instanceId}`.
 3. **Graceful shutdown.** `server.shutdown=graceful` plus a 30s
    timeout-per-shutdown-phase so rolling deploys drain in-flight requests.
    Executors already use `waitForTasksToCompleteOnShutdown=true`.
@@ -61,9 +64,11 @@
 
 ## Known limitations
 
-- A crash after `claimEvent` but before completion leaves the event stuck in
-  `PROCESSING` (the poll only selects `PENDING`). Reclaiming stale
-  `PROCESSING` events (e.g. by `processed_at` age) is a follow-up item.
+- Outbox processing is at-least-once: `claimEvent`, the handler and the
+  `COMPLETED` update run in one transaction, so a crash mid-processing rolls
+  back to `PENDING` and the event is reprocessed. Event handlers must be
+  idempotent; they already are (guard checks before side effects). A
+  `PROCESSING` event is never durably committed.
 - Caffeine evictions do not propagate across instances until Redis is
   enabled.
 

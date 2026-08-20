@@ -4,13 +4,13 @@ import java.time.Instant;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.cache.Cache;
 import org.springframework.cache.CacheManager;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.nestorria.server.common.config.InstanceIdProvider;
 import com.nestorria.server.common.outbox.DeadLetterEventRepository;
 import com.nestorria.server.common.outbox.OutboxEventRepository;
 import com.nestorria.server.common.outbox.OutboxEventStatus;
@@ -26,16 +26,16 @@ public class HealthController {
     private final CacheManager cacheManager;
     private final OutboxEventRepository outboxEventRepository;
     private final DeadLetterEventRepository deadLetterEventRepository;
-
-    @Value("${app.instance-id:${HOSTNAME:${random.uuid}}}")
-    private String instanceId;
+    private final InstanceIdProvider instanceIdProvider;
 
     public HealthController(CacheManager cacheManager,
                             OutboxEventRepository outboxEventRepository,
-                            DeadLetterEventRepository deadLetterEventRepository) {
+                            DeadLetterEventRepository deadLetterEventRepository,
+                            InstanceIdProvider instanceIdProvider) {
         this.cacheManager = cacheManager;
         this.outboxEventRepository = outboxEventRepository;
         this.deadLetterEventRepository = deadLetterEventRepository;
+        this.instanceIdProvider = instanceIdProvider;
     }
 
     @Operation(summary = "Health check de la API — estado e identidad de instancia")
@@ -43,7 +43,7 @@ public class HealthController {
     public Map<String, Object> health() {
         Map<String, Object> result = new LinkedHashMap<>();
         result.put("status", "UP");
-        result.put("instanceId", instanceId);
+        result.put("instanceId", instanceIdProvider.get());
         result.put("timestamp", Instant.now());
         return result;
     }

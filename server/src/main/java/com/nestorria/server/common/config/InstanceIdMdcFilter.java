@@ -3,7 +3,6 @@ package com.nestorria.server.common.config;
 import java.io.IOException;
 
 import org.slf4j.MDC;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.Ordered;
 import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Component;
@@ -18,14 +17,17 @@ import jakarta.servlet.http.HttpServletResponse;
 @Order(Ordered.HIGHEST_PRECEDENCE)
 public class InstanceIdMdcFilter extends OncePerRequestFilter {
 
-    @Value("${app.instance-id:${HOSTNAME:${random.uuid}}}")
-    private String instanceId;
+    private final InstanceIdProvider instanceIdProvider;
+
+    public InstanceIdMdcFilter(InstanceIdProvider instanceIdProvider) {
+        this.instanceIdProvider = instanceIdProvider;
+    }
 
     @Override
     protected void doFilterInternal(HttpServletRequest request,
                                     HttpServletResponse response,
                                     FilterChain filterChain) throws ServletException, IOException {
-        MDC.put("instanceId", instanceId);
+        MDC.put("instanceId", instanceIdProvider.get());
         try {
             filterChain.doFilter(request, response);
         } finally {
