@@ -6,11 +6,10 @@ import java.util.UUID;
 
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
-import org.springframework.stereotype.Repository;
 
-@Repository
 public interface OutboxEventRepository extends JpaRepository<OutboxEvent, UUID> {
 
     @Query("""
@@ -26,4 +25,12 @@ public interface OutboxEventRepository extends JpaRepository<OutboxEvent, UUID> 
     );
 
     long countByStatus(OutboxEventStatus status);
+
+    @Modifying
+    @Query("""
+        UPDATE OutboxEvent e
+        SET e.status = 'PROCESSING'
+        WHERE e.id = :id AND e.status = 'PENDING'
+        """)
+    int claimEvent(@Param("id") UUID id);
 }

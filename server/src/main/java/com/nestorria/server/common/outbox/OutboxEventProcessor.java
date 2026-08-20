@@ -91,8 +91,13 @@ public class OutboxEventProcessor {
     }
 
     private void processEvent(OutboxEvent event) {
-        event.setStatus(OutboxEventStatus.PROCESSING);
-        outboxRepository.save(event);
+        // Claim atómico multi-instancia: solo una instancia gana el UPDATE condicional.
+        // 0 filas = otra instancia ya lo está procesando → omitir (evita duplicados).
+        if (outboxRepository.claimEvent(event.getId()) == 0) {
+            log.debug("Evento ya reclamado por otra instancia, se omite: id={}", event.getId());
+            return;
+        }
+        event.setStatus(OutboxEventStatus.PROCESSING);  // refleja el estado persistido
 
         EventHandler<?> handler = handlerMap.get(event.getEventType());
         if (handler == null) {

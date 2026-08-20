@@ -1,5 +1,6 @@
 package com.nestorria.server.controller;
 
+import java.time.Instant;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
@@ -9,6 +10,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.nestorria.server.common.config.InstanceIdProvider;
 import com.nestorria.server.common.outbox.DeadLetterEventRepository;
 import com.nestorria.server.common.outbox.OutboxEventRepository;
 import com.nestorria.server.common.outbox.OutboxEventStatus;
@@ -24,19 +26,26 @@ public class HealthController {
     private final CacheManager cacheManager;
     private final OutboxEventRepository outboxEventRepository;
     private final DeadLetterEventRepository deadLetterEventRepository;
+    private final InstanceIdProvider instanceIdProvider;
 
     public HealthController(CacheManager cacheManager,
                             OutboxEventRepository outboxEventRepository,
-                            DeadLetterEventRepository deadLetterEventRepository) {
+                            DeadLetterEventRepository deadLetterEventRepository,
+                            InstanceIdProvider instanceIdProvider) {
         this.cacheManager = cacheManager;
         this.outboxEventRepository = outboxEventRepository;
         this.deadLetterEventRepository = deadLetterEventRepository;
+        this.instanceIdProvider = instanceIdProvider;
     }
 
-    @Operation(summary = "Health check de la API")
+    @Operation(summary = "Health check de la API — estado e identidad de instancia")
     @GetMapping("/")
-    public String health() {
-        return "API successfully connected";
+    public Map<String, Object> health() {
+        Map<String, Object> result = new LinkedHashMap<>();
+        result.put("status", "UP");
+        result.put("instanceId", instanceIdProvider.get());
+        result.put("timestamp", Instant.now());
+        return result;
     }
 
     @Operation(summary = "Estado del cache — hit/miss/stats por cada cache")
@@ -69,20 +78,13 @@ public class HealthController {
     @GetMapping("/queues")
     public Map<String, Object> queueHealth() {
         Map<String, Object> result = new LinkedHashMap<>();
-
-        long pending = outboxEventRepository.countByStatus(OutboxEventStatus.PENDING);
-        long processing = outboxEventRepository.countByStatus(OutboxEventStatus.PROCESSING);
-        long completed = outboxEventRepository.countByStatus(OutboxEventStatus.COMPLETED);
-        long failed = outboxEventRepository.countByStatus(OutboxEventStatus.FAILED);
-        long deadLetter = deadLetterEventRepository.count();
-
-        result.put("pending", pending);
-        result.put("processing", processing);
-        result.put("completed", completed);
-        result.put("failed", failed);
-        result.put("deadLetter", deadLetter);
-        result.put("totalActive", pending + processing);
-
+        result.put("pending", outboxEventRepository.countByStatus(OutboxEventStatus.PENDING));
+        result.put("processing", outboxEventRepository.countByStatus(OutboxEventStatus.PROCESSING));
+        result.put("completed", outboxEventRepository.countByStatus(OutboxEventStatus.COMPLETED));
+        result.put("failed", outboxEventRepository.countByStatus(OutboxEventStatus.FAILED));
+        result.put("deadLetter", deadLetterEventRepository.count());
+        result.put("totalActive", outboxEventRepository.countByStatus(OutboxEventStatus.PENDING)
+                + outboxEventRepository.countByStatus(OutboxEventStatus.PROCESSING));
         return result;
     }
 }
