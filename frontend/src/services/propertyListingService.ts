@@ -42,6 +42,11 @@ export function mapApiProperty(prop: any): Property {
 }
 
 export async function fetchListingPage(params: ListingParams): Promise<PropertyPage> {
-    const { data } = await axios.get("/api/properties/me", { params });
+    const { data } = await axios.get("/api/properties/me", {
+        params,
+        // Serializa arrays sin índices (types=House&types=Villa, no types[]=...)
+        // para que Spring los enlace a @RequestParam List<String>/Set<String>.
+        paramsSerializer: { indexes: null },
+    });
     return { ...data, content: data.content.map(mapApiProperty) };
 }

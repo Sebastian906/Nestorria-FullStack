@@ -78,9 +78,9 @@ public class PropertyController {
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 
-    // GET /api/properties/me — público
+    // GET /api/properties/me — público (solo sin page ni size; si llega cualquiera de los dos, va al paginado)
     @Operation(summary = "Obtener todas las propiedades disponibles")
-    @GetMapping("/me")
+    @GetMapping(value = "/me", params = { "!page", "!size" })
     public List<PropertySummaryResponse> getAllAvailable(
             @Parameter(description = "Campo de ordenamiento: PRICE, DATE, AREA, RATING")
             @RequestParam(required = false) SortField sortBy,
@@ -99,9 +99,11 @@ public class PropertyController {
         return properties;
     }
 
-    // GET /api/properties/me?page=0&size=9 — paginación server-side (modo lista si no hay page/size)
+    // GET /api/properties/me?page=0&size=9 — paginación server-side.
+    // Default del mapping: captura cualquier request con page y/o size (incompleto incluido)
+    // para que pasen por la validación @Min/@Max en vez de caer en el modo lista.
     @Operation(summary = "Listar propiedades disponibles con paginación server-side y filtros")
-    @GetMapping(value = "/me", params = { "page", "size" })
+    @GetMapping("/me")
     public Page<PropertySummaryResponse> getAvailablePage(
             @RequestParam(defaultValue = "0") @Min(0) int page,
             @RequestParam(defaultValue = "9") @Min(1) @Max(100) int size,
