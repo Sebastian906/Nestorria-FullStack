@@ -2,14 +2,19 @@ package com.nestorria.server.modules.properties;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executor;
 
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
@@ -22,6 +27,8 @@ import com.nestorria.server.common.exception.ResourceNotFoundException;
 import com.nestorria.server.common.util.UndoManager;
 import com.nestorria.server.modules.agency.Agency;
 import com.nestorria.server.modules.agency.AgencyRepository;
+import com.nestorria.server.modules.properties.PropertySortUtils.SortDirection;
+import com.nestorria.server.modules.properties.PropertySortUtils.SortField;
 import com.nestorria.server.modules.properties.dto.CreatePropertyRequest;
 import com.nestorria.server.modules.properties.dto.PropertyResponse;
 import com.nestorria.server.modules.properties.dto.PropertyStatsResponse;
@@ -251,17 +258,99 @@ public class PropertyService {
         }
         try {
             Map<String, Object> result = cloudinary.uploader().upload(
-                file.getBytes(),
-                Map.of(
-                    "folder", "nestorria/properties",
-                    "resource_type", "image"
-                )
-            );
+                    file.getBytes(),
+                    Map.of(
+                            "folder", "nestorria/properties",
+                            "resource_type", "image"));
             return new UploadResult(
-                (String) result.get("secure_url"),
-                (String) result.get("public_id"));
+                    (String) result.get("secure_url"),
+                    (String) result.get("public_id"));
         } catch (IOException e) {
             throw new ConflictException("Error al subir imagen a Cloudinary: " + e.getMessage());
+        }
+    }
+
+    /**
+     * Paginación server-side sobre el dataset cacheado (getAllAvailable ya está
+     * cacheado con Caffeine). Filtra -> ordena -> pagina EN MEMORIA.
+     * El techo: el dataset completo se consulta una vez por ventana de cache (5 min).
+     * Cuando la BD crezca a decenas de miles, mover filtro+LIMIT/OFFSET a SQL
+     * sin cambiar este contrato (Page<PropertySummaryResponse>).
+     */
+    public Page<PropertySummaryResponse> getAvailablePage(Pageable pageable, PropertyPageFilter filter) {
+        List<PropertySummaryResponse> all = listingService.getAllAvailable(); // proxy -> cache hit
+
+        Comparator<PropertySummaryResponse> comparator = PropertySortUtils
+            .getComparator(filter.sortBy(), filter.direction())
+            .thenComparing(PropertySummaryResponse::id); // desempate determinista
+
+        List<PropertySummaryResponse> sorted = all.stream()
+            .filter(filter::matches)
+            .sorted(comparator)
+            .toList();
+
+        int total = sorted.size();
+        int from = (int) Math.min((long) pageable.getPageNumber() * pageable.getPageSize(), total);
+        int to = (int) Math.min((long) from + pageable.getPageSize(), total);
+        List<PropertySummaryResponse> content = from < to ? sorted.subList(from, to) : List.of();
+
+        return new PageImpl<>(content, pageable, total);
+    }
+
+    /**
+     * Filtros del listado. La semántica replica EXACTAMENTE la lógica del frontend
+     * actual de Listing.tsx: tipos por displayName, rangos de precio sobre price.sale,
+     * búsqueda sobre título/ciudad/país, favoritos por id (lista vacía = nada matchea).
+     */
+    public record PropertyPageFilter(
+            List<String> propertyTypes,
+            List<String> priceRanges,
+            String q,
+            Set<String> favoriteIds,
+            SortField sortBy,
+            SortDirection direction
+    ) {
+        public boolean matches(PropertySummaryResponse p) {
+            if (propertyTypes != null && !propertyTypes.isEmpty()
+                    && !propertyTypes.contains(p.propertyType().getDisplayName())) {
+                return false;
+            }
+            if (priceRanges != null && !priceRanges.isEmpty() && !matchesPrice(p, priceRanges)) {
+                return false;
+            }
+            if (q != null && !q.isBlank()) {
+                String needle = q.toLowerCase().trim();
+                boolean hit = (p.title() != null && p.title().toLowerCase().contains(needle))
+                        || (p.city() != null && p.city().toLowerCase().contains(needle))
+                        || (p.country() != null && p.country().toLowerCase().contains(needle));
+                if (!hit) return false;
+            }
+            // Importante: favoriteIds presente (aunque vacío) = filtrar por favoritos.
+            // Lista vacía -> ninguna propiedad matchea (igual que el frontend actual).
+            if (favoriteIds != null && !favoriteIds.contains(p.id())) {
+                return false;
+            }
+            return true;
+        }
+
+        private static boolean matchesPrice(PropertySummaryResponse p, List<String> ranges) {
+            Integer sale = p.price() != null ? p.price().getSale() : null;
+            if (sale == null) return false;
+            for (String range : ranges) {
+                try {
+                    if (range.endsWith("+")) {
+                        if (sale >= Integer.parseInt(range.substring(0, range.length() - 1).trim())) return true;
+                    } else {
+                        String[] parts = range.split(" to ");
+                        int lo = Integer.parseInt(parts[0].trim());
+                        int hi = Integer.parseInt(parts[1].trim());
+                        if (sale >= lo && sale <= hi) return true;
+                    }
+                } catch (NumberFormatException | ArrayIndexOutOfBoundsException ignored) {
+                    // rango malformado se ignora (validación de entrada en trust boundary)
+                }
+            }
+            return false;
         }
     }
 }

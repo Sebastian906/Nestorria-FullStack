@@ -2,12 +2,16 @@ package com.nestorria.server.modules.properties;
 
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.oauth2.jwt.Jwt;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -17,7 +21,6 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RequestPart;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
-import org.springframework.validation.annotation.Validated;
 
 import com.nestorria.server.common.exception.BadRequestException;
 import com.nestorria.server.modules.favorite.FavoriteService;
@@ -36,6 +39,7 @@ import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
+import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
 
 @RestController
@@ -88,11 +92,36 @@ public class PropertyController {
         if (sortBy != null) {
             SortDirection dir = direction != null ? direction : SortDirection.ASC;
             properties = properties.stream()
-                .sorted(PropertySortUtils.getComparator(sortBy, dir))
-                .toList();
+                    .sorted(PropertySortUtils.getComparator(sortBy, dir))
+                    .toList();
         }
 
         return properties;
+    }
+
+    // GET /api/properties/me?page=0&size=9 — paginación server-side (modo lista si no hay page/size)
+    @Operation(summary = "Listar propiedades disponibles con paginación server-side y filtros")
+    @GetMapping(value = "/me", params = { "page", "size" })
+    public Page<PropertySummaryResponse> getAvailablePage(
+            @RequestParam(defaultValue = "0") @Min(0) int page,
+            @RequestParam(defaultValue = "9") @Min(1) @Max(100) int size,
+            @Parameter(description = "Campo de ordenamiento: PRICE, DATE, AREA, RATING")
+            @RequestParam(required = false) SortField sortBy,
+            @Parameter(description = "Dirección del ordenamiento: ASC o DESC")
+            @RequestParam(required = false) SortDirection direction,
+            @RequestParam(required = false) List<String> types,
+            @RequestParam(required = false) List<String> priceRanges,
+            @RequestParam(required = false) String q,
+            @RequestParam(required = false) Set<String> favoriteIds) {
+
+        int clampedSize = Math.min(size, 100);
+        SortField field = sortBy != null ? sortBy : SortField.DATE;
+        SortDirection dir = direction != null ? direction : SortDirection.DESC;
+
+        return propertyService.getAvailablePage(
+            PageRequest.of(page, clampedSize),
+            new PropertyService.PropertyPageFilter(types, priceRanges, q, favoriteIds, field, dir)
+        );
     }
 
     // GET /api/properties/stats — Estadísticas de propiedades (usa SearchUtils sobre datos cacheados)
