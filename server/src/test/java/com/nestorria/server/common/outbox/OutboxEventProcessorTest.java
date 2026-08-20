@@ -136,4 +136,16 @@ class OutboxEventProcessorTest {
         OutboxEvent after = outboxRepository.findById(event.getId()).orElseThrow();
         assertThat(after.getErrorMessage()).isNotNull().isNotEmpty();
     }
+
+    @Test
+    void claimEvent_onlyFirstClaimWins() {
+        outboxEventService.publish(
+            new NotificationEvent("user-1", NotificationType.BOOKING_CONFIRMED,
+                "Test", "Test message", "booking", "b-1"),
+            "Booking", "b-1");
+        UUID eventId = outboxRepository.findAll().get(0).getId();
+
+        assertThat(outboxRepository.claimEvent(eventId)).isEqualTo(1); // yo gano
+        assertThat(outboxRepository.claimEvent(eventId)).isEqualTo(0); // segunda instancia pierde
+    }
 }

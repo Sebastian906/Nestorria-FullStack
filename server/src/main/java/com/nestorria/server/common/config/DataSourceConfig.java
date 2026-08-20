@@ -27,15 +27,24 @@ public class DataSourceConfig {
     public DataSource primaryDataSource(Environment env) {
         boolean isProd = env.acceptsProfiles(Profiles.of("prod"));
 
-        String url = isProd
-            ? env.resolveRequiredPlaceholders("${DB_URI}")
-            : env.resolvePlaceholders("${DB_URI:${DB_URL:jdbc:postgresql://localhost:5432/nestorria}}");
-        String username = isProd
-            ? env.resolveRequiredPlaceholders("${DB_USERNAME}")
-            : env.resolvePlaceholders("${DB_USERNAME:postgres}");
-        String password = isProd
-            ? env.resolveRequiredPlaceholders("${DB_PASSWORD}")
-            : env.resolvePlaceholders("${DB_PASSWORD:postgres}");
+        String url = env.getProperty("spring.datasource.url");
+        if (url == null || url.isBlank()) {
+            url = isProd
+                ? env.resolveRequiredPlaceholders("${DB_URI}")
+                : env.resolvePlaceholders("${DB_URI:${DB_URL:jdbc:postgresql://localhost:5432/nestorria}}");
+        }
+        String username = env.getProperty("spring.datasource.username");
+        if (username == null || username.isBlank()) {
+            username = isProd
+                ? env.resolveRequiredPlaceholders("${DB_USERNAME}")
+                : env.resolvePlaceholders("${DB_USERNAME:postgres}");
+        }
+        String password = env.getProperty("spring.datasource.password");
+        if (password == null || password.isBlank()) {
+            password = isProd
+                ? env.resolveRequiredPlaceholders("${DB_PASSWORD}")
+                : env.resolvePlaceholders("${DB_PASSWORD:postgres}");
+        }
 
         if (!isProd) {
             log.warn("Usando credenciales de desarrollo para DataSource. " +

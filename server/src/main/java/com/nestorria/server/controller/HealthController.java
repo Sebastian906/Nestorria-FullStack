@@ -1,8 +1,10 @@
 package com.nestorria.server.controller;
 
+import java.time.Instant;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.cache.Cache;
 import org.springframework.cache.CacheManager;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -25,6 +27,9 @@ public class HealthController {
     private final OutboxEventRepository outboxEventRepository;
     private final DeadLetterEventRepository deadLetterEventRepository;
 
+    @Value("${app.instance-id:${HOSTNAME:${random.uuid}}}")
+    private String instanceId;
+
     public HealthController(CacheManager cacheManager,
                             OutboxEventRepository outboxEventRepository,
                             DeadLetterEventRepository deadLetterEventRepository) {
@@ -33,10 +38,14 @@ public class HealthController {
         this.deadLetterEventRepository = deadLetterEventRepository;
     }
 
-    @Operation(summary = "Health check de la API")
+    @Operation(summary = "Health check de la API — estado e identidad de instancia")
     @GetMapping("/")
-    public String health() {
-        return "API successfully connected";
+    public Map<String, Object> health() {
+        Map<String, Object> result = new LinkedHashMap<>();
+        result.put("status", "UP");
+        result.put("instanceId", instanceId);
+        result.put("timestamp", Instant.now());
+        return result;
     }
 
     @Operation(summary = "Estado del cache — hit/miss/stats por cada cache")
@@ -69,20 +78,13 @@ public class HealthController {
     @GetMapping("/queues")
     public Map<String, Object> queueHealth() {
         Map<String, Object> result = new LinkedHashMap<>();
-
-        long pending = outboxEventRepository.countByStatus(OutboxEventStatus.PENDING);
-        long processing = outboxEventRepository.countByStatus(OutboxEventStatus.PROCESSING);
-        long completed = outboxEventRepository.countByStatus(OutboxEventStatus.COMPLETED);
-        long failed = outboxEventRepository.countByStatus(OutboxEventStatus.FAILED);
-        long deadLetter = deadLetterEventRepository.count();
-
-        result.put("pending", pending);
-        result.put("processing", processing);
-        result.put("completed", completed);
-        result.put("failed", failed);
-        result.put("deadLetter", deadLetter);
-        result.put("totalActive", pending + processing);
-
+        result.put("pending", outboxEventRepository.countByStatus(OutboxEventStatus.PENDING));
+        result.put("processing", outboxEventRepository.countByStatus(OutboxEventStatus.PROCESSING));
+        result.put("completed", outboxEventRepository.countByStatus(OutboxEventStatus.COMPLETED));
+        result.put("failed", outboxEventRepository.countByStatus(OutboxEventStatus.FAILED));
+        result.put("deadLetter", deadLetterEventRepository.count());
+        result.put("totalActive", outboxEventRepository.countByStatus(OutboxEventStatus.PENDING)
+                + outboxEventRepository.countByStatus(OutboxEventStatus.PROCESSING));
         return result;
     }
 }
