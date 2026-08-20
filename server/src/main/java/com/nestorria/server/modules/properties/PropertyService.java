@@ -19,6 +19,7 @@ import com.nestorria.server.common.algorithm.SearchUtils;
 import com.nestorria.server.common.exception.BadRequestException;
 import com.nestorria.server.common.exception.ConflictException;
 import com.nestorria.server.common.exception.ResourceNotFoundException;
+import com.nestorria.server.common.util.UndoManager;
 import com.nestorria.server.modules.agency.Agency;
 import com.nestorria.server.modules.agency.AgencyRepository;
 import com.nestorria.server.modules.properties.dto.CreatePropertyRequest;
@@ -66,8 +67,18 @@ public class PropertyService {
     public PropertyResponse create(String userId, CreatePropertyRequest request, List<MultipartFile> files) {
         Agency agency = agencyRepository.findByOwnerId(userId)
                 .orElseThrow(() -> new ResourceNotFoundException("No se encontró una agencia para este usuario"));
-        List<String> imageUrls = uploadImagesParallel(files);
-        return persistenceService.persistProperty(agency, request, imageUrls);
+        UndoManager undo = new UndoManager();
+        try {
+            List<UploadResult> uploaded = uploadImagesParallel(files);
+            // Registrar compensación: si la persistencia falla, eliminar
+            // las imágenes subidas (recursos externos no transaccionales).
+            uploaded.forEach(r -> undo.push(() -> deleteFromCloudinary(r.publicId())));
+            return persistenceService.persistProperty(
+                agency, request, uploaded.stream().map(UploadResult::url).toList());
+        } catch (RuntimeException e) {
+            undo.undoAll();
+            throw e;
+        }
     }
 
     /**
@@ -163,7 +174,7 @@ public class PropertyService {
      * Usa imageUploadTaskExecutor (pool dedicado I/O-bound) para no competir
      * con emails (SMTP) en el mismo pool.
      */
-    private List<String> uploadImagesParallel(List<MultipartFile> files) {
+    private List<UploadResult> uploadImagesParallel(List<MultipartFile> files) {
         if (files == null || files.isEmpty()) {
             return List.of();
         }
@@ -189,7 +200,12 @@ public class PropertyService {
             throw e;
         }
 
-        return uploaded.stream().map(UploadResult::url).toList();
+        // Retorna UploadResult (url + publicId): la compensación interna
+        // cubre fallos DURANTE la subida; el UndoManager de create() cubre
+        // fallos posteriores (persistencia). Si falla la subida, este método
+        // ya compensó y lanza antes de que el UndoManager tenga acciones.
+        return uploaded;
+
     }
 
     private record UploadResult(String url, String publicId) {}
