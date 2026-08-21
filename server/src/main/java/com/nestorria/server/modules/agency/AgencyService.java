@@ -1,5 +1,7 @@
 package com.nestorria.server.modules.agency;
 
+import java.util.List;
+
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -53,7 +55,15 @@ public class AgencyService {
     @Transactional(readOnly = true)
     public AgencyResponse getMyAgency(String userId) {
         Agency agency = agencyRepository.findByOwnerId(userId)
-            .orElseThrow(() -> new ResourceNotFoundException("El usuario no tiene una agencia registrada"));
+                .orElseThrow(() -> new ResourceNotFoundException("El usuario no tiene una agencia registrada"));
         return AgencyResponse.fromEntity(agency);
+    }
+
+    @Transactional(readOnly = true)
+    public List<AgencyResponse> getAllAgencies() {
+        return agencyRepository.findAll()
+            .stream()
+            .map(AgencyResponse::fromEntity)
+            .toList();
     }
 }

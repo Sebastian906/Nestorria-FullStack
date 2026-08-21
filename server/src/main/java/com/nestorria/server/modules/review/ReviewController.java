@@ -54,6 +54,11 @@ public class ReviewController {
         return reviewService.getPropertyReviews(propertyId);
     }
 
+    @GetMapping("/reviews/me")
+    public List<ReviewResponse> getMyReviews(@AuthenticationPrincipal Jwt jwt) {
+        return reviewService.getUserReviews(jwt.getSubject());
+    }
+
     @Operation(summary = "Actualizar una reseña (requiere autenticación y ser autor)")
     @ApiResponse(responseCode = "200", description = "Reseña actualizada exitosamente")
     @ApiResponse(responseCode = "403", description = "No eres el autor de esta reseña")
