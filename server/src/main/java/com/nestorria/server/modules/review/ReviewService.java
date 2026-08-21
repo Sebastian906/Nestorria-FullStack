@@ -62,6 +62,14 @@ public class ReviewService {
     @Transactional(readOnly = true)
     public List<ReviewResponse> getPropertyReviews(String propertyId) {
         return reviewRepository.findByPropertyIdOrderByCreatedAtDesc(propertyId)
+                .stream()
+                .map(ReviewResponse::fromEntity)
+                .toList();
+    }
+
+    @Transactional(readOnly = true)
+    public List<ReviewResponse> getUserReviews(String userId) {
+        return reviewRepository.findByUserIdOrderByCreatedAtDesc(userId)
             .stream()
             .map(ReviewResponse::fromEntity)
             .toList();

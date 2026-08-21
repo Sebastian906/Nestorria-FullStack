@@ -8,14 +8,19 @@ import toast from "react-hot-toast"
 const backendUrl = (import.meta.env.VITE_BACKEND_URL || 'http://127.0.0.1:4000').replace(/\/$/, '')
 axios.defaults.baseURL = backendUrl
 
+export interface SearchedCity {
+    city: string
+    searchedAt: string
+}
+
 interface AppContextType {
     navigate: NavigateFunction;
     properties: Property[];
     currency: string;
     user: any;
     isOwner: boolean;
-    searchedCities: string[];
-    setSearchedCities: Dispatch<SetStateAction<string[]>>;
+    searchedCities: SearchedCity[];
+    setSearchedCities: Dispatch<SetStateAction<SearchedCity[]>>;
     showAgencyReg: boolean;
     setShowAgencyReg: (show: boolean) => void;
     refreshProfile: () => Promise<void>;
@@ -35,7 +40,7 @@ export const AppContextProvider = ({ children }: { children: ReactNode }) => {
     const [properties, setProperties] = useState<Property[]>([])
     const [showAgencyReg, setShowAgencyReg] = useState<boolean>(false)
     const [isOwner, setIsOwner] = useState<boolean>(false)
-    const [searchedCities, setSearchedCities] = useState<string[]>([])
+    const [searchedCities, setSearchedCities] = useState<SearchedCity[]>([])
     const [searchQuery, setSearchQuery] = useState<string>('')
     const [favoriteIds, setFavoriteIds] = useState<Set<string>>(new Set())
 
@@ -77,7 +82,12 @@ export const AppContextProvider = ({ children }: { children: ReactNode }) => {
                 headers: { Authorization: `Bearer ${token}` }
             })
             setIsOwner(data.role === 'AGENCY_OWNER')
-            setSearchedCities(data.recentSearchedCities ?? [])
+            setSearchedCities(
+                (data.recentSearchedCities ?? []).map((city: string) => ({
+                    city,
+                    searchedAt: new Date().toISOString()
+                }))
+            )
         } catch (error: any) {
             toast.error(error?.response?.data?.message ?? 'No se pudo cargar tu perfil')
         }

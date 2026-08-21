@@ -11,7 +11,8 @@ const Navbar: React.FC<NavbarProps> = ({ setMenuOpened, containerStyles }) => {
         { path: '/', title: 'Home' },
         { path: '/listing', title: 'Listing' },
         { path: '/map', title: 'Map' },
-        { path: '/blog', title: 'Blog' },
+        { path: '/guides', title: 'Guides' },
+        { path: '/agencies', title: 'Agencies' },
         { path: '/contact', title: 'Contact' }
     ];
 

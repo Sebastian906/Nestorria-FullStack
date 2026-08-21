@@ -1,5 +1,7 @@
 package com.nestorria.server.modules.agency;
 
+import java.util.List;
+
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -13,6 +15,8 @@ import org.springframework.web.bind.annotation.RestController;
 import com.nestorria.server.modules.agency.dto.AgencyRegistrationRequest;
 import com.nestorria.server.modules.agency.dto.AgencyResponse;
 
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 
@@ -38,5 +42,12 @@ public class AgencyController {
     @GetMapping("/me")
     public AgencyResponse getMyAgency(@AuthenticationPrincipal Jwt jwt) {
         return agencyService.getMyAgency(jwt.getSubject());
+    }
+
+    @Operation(summary = "Listar todas las agencias (público)")
+    @ApiResponse(responseCode = "200", description = "Lista de agencias")
+    @GetMapping
+    public List<AgencyResponse> getAllAgencies() {
+        return agencyService.getAllAgencies();
     }
 }

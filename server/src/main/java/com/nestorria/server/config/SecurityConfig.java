@@ -49,6 +49,7 @@ public class SecurityConfig {
                 .requestMatchers(HttpMethod.GET, "/api/properties/nearby").permitAll()
                 .requestMatchers(HttpMethod.GET, "/api/properties/*/reviews").permitAll()
                 .requestMatchers(HttpMethod.POST, "/api/payments/stripe/webhook").permitAll()
+                .requestMatchers(HttpMethod.GET, "/api/agencies").permitAll()
                 // Actuator: health público para load balancers, el resto autenticado
                 .requestMatchers("/actuator/health").permitAll()
                 // WebSocket: auth manejada por WebSocketAuthInterceptor, no por BearerTokenAuthenticationFilter
