@@ -66,11 +66,13 @@ const Compare = () => {
                         Select up to {MAX_COMPARE} properties to compare ({selectedIds.size}/{MAX_COMPARE})
                     </p>
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
-                        {properties.slice(0, 20).map((property) => (
-                            <div
+                        {properties.map((property) => (
+                            <button
                                 key={property._id}
+                                type="button"
                                 onClick={() => toggleSelect(property._id)}
-                                className={`cursor-pointer p-3 rounded-lg border transition-all ${selectedIds.has(property._id)
+                                aria-pressed={selectedIds.has(property._id)}
+                                className={`cursor-pointer p-3 rounded-lg border text-left transition-all ${selectedIds.has(property._id)
                                         ? 'border-secondary bg-secondary/10 ring-2 ring-secondary/30'
                                         : 'border-slate-900/10 bg-white hover:border-secondary/50'
                                     }`}
@@ -91,7 +93,7 @@ const Compare = () => {
                                         </svg>
                                     )}
                                 </div>
-                            </div>
+                            </button>
                         ))}
                     </div>
                 </div>

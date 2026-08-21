@@ -48,7 +48,7 @@ const MyReviews = () => {
             const token = await getToken()
             await axios.patch(`/api/reviews/${reviewId}`, {
                 rating: editRating,
-                comment: editComment.trim() || undefined
+                comment: editComment.trim()
             }, { headers: { Authorization: `Bearer ${token}` } })
             toast.success("Review updated")
             setEditingId(null)
@@ -104,7 +104,12 @@ const MyReviews = () => {
                                 <div className="flex items-center gap-2">
                                     <span className="text-sm">Rating:</span>
                                     {Array.from({ length: 5 }, (_, i) => (
-                                        <button key={i} onClick={() => setEditRating(i + 1)}>
+                                        <button
+                                            key={i}
+                                            onClick={() => setEditRating(i + 1)}
+                                            aria-label={`${i + 1} star${i === 0 ? '' : 's'}`}
+                                            aria-pressed={i < editRating}
+                                        >
                                             <img src={assets.star} alt="" width={20}
                                                 className={i < editRating ? "text-amber-400" : "text-gray-300 opacity-30"} />
                                         </button>

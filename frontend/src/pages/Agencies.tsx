@@ -16,18 +16,22 @@ interface AgencyData {
 const Agencies = () => {
     const [agencies, setAgencies] = useState<AgencyData[]>([])
     const [loading, setLoading] = useState(true)
+    const [error, setError] = useState<string | null>(null)
+
+    const fetchAgencies = async () => {
+        try {
+            setLoading(true)
+            setError(null)
+            const { data } = await axios.get("/api/agencies")
+            setAgencies(data)
+        } catch (err: any) {
+            setError(err.response?.data?.message || "Failed to load agencies")
+        } finally {
+            setLoading(false)
+        }
+    }
 
     useEffect(() => {
-        const fetchAgencies = async () => {
-            try {
-                const { data } = await axios.get("/api/agencies")
-                setAgencies(data)
-            } catch (error) {
-                console.warn("Error loading agencies:", error)
-            } finally {
-                setLoading(false)
-            }
-        }
         fetchAgencies()
     }, [])
 
@@ -36,9 +40,18 @@ const Agencies = () => {
             <div className='max-padd-container'>
                 <h2 className='h2 mb-6'>Agencies</h2>
                 {loading && <p className="text-gray-500 text-center py-10">Loading agencies...</p>}
-                {!loading && agencies.length === 0 && (
+                {!loading && error && (
+                    <div className="text-center py-10">
+                        <p className="text-red-500 mb-3">{error}</p>
+                        <button onClick={fetchAgencies} className="px-4 py-2 rounded-lg border border-slate-900/10 bg-white hover:bg-secondary/10 transition text-sm">
+                            Retry
+                        </button>
+                    </div>
+                )}
+                {!loading && !error && agencies.length === 0 && (
                     <p className="text-gray-500 text-center py-10">No agencies found.</p>
                 )}
+                {!loading && !error && agencies.length > 0 && (
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
                     {agencies.map((agency) => (
                         <div key={agency.id} className='bg-white ring-1 ring-slate-900/5 p-4 rounded-xl'>
@@ -62,6 +75,7 @@ const Agencies = () => {
                         </div>
                     ))}
                 </div>
+                )}
             </div>
         </div>
     )

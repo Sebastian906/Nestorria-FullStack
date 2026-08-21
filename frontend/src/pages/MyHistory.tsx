@@ -19,23 +19,26 @@ const MyHistory = () => {
     const { getToken } = useAuth()
     const [events, setEvents] = useState<HistoryEvent[]>([])
     const [loading, setLoading] = useState(true)
+    const [failedSources, setFailedSources] = useState<string[]>([])
 
     const loadHistory = useCallback(async () => {
         if (!user) return
         setLoading(true)
+        setFailedSources([])
         try {
             const token = await getToken()
             const timeline: HistoryEvent[] = []
+            const failures: string[] = []
 
-            // Recent searches from context
-            searchedCities.forEach((city, i) => {
+            // Recent searches from context (with persisted timestamps)
+            searchedCities.forEach((item) => {
                 timeline.push({
-                    id: `search-${i}`,
+                    id: `search-${item.city}`,
                     type: "search",
-                    title: `Searched: ${city}`,
-                    detail: `You searched for properties in ${city}`,
-                    date: new Date().toISOString(),
-                    link: `/listing?destination=${encodeURIComponent(city)}`
+                    title: `Searched: ${item.city}`,
+                    detail: `You searched for properties in ${item.city}`,
+                    date: item.searchedAt,
+                    link: `/listing?destination=${encodeURIComponent(item.city)}`
                 })
             })
 
@@ -54,7 +57,9 @@ const MyHistory = () => {
                         link: `/my-bookings`
                     })
                 })
-            } catch { /* bookings endpoint may fail silently */ }
+            } catch {
+                failures.push("bookings")
+            }
 
             // Invoices
             try {
@@ -70,9 +75,11 @@ const MyHistory = () => {
                         date: inv.issueDate
                     })
                 })
-            } catch { /* invoices endpoint may fail silently */ }
+            } catch {
+                failures.push("invoices")
+            }
 
-            // Sort by date descending
+            setFailedSources(failures)
             timeline.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
             setEvents(timeline)
         } catch (error: any) {
@@ -139,6 +146,11 @@ const MyHistory = () => {
             <div className='max-padd-container'>
                 <h2 className='h2 mb-6'>My History</h2>
                 {loading && <p className="text-gray-500 text-center py-10">Loading history...</p>}
+                {!loading && failedSources.length > 0 && (
+                    <p className="text-amber-600 bg-amber-50 text-sm p-3 rounded-lg mb-4 text-center">
+                        Some data couldn't be loaded: {failedSources.join(", ")}. Showing partial results.
+                    </p>
+                )}
                 {!loading && events.length === 0 && (
                     <p className="text-gray-500 text-center py-10">No activity yet.</p>
                 )}

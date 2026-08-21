@@ -27,7 +27,7 @@ const Hero = () => {
 
         // Add destination to searchedCities max 3 recent searches
         setSearchedCities((prevSearchedCities: any) => {
-            const updatedSearchedCities = [...prevSearchedCities, city]
+            const updatedSearchedCities = [...prevSearchedCities, { city, searchedAt: new Date().toISOString() }]
             if (updatedSearchedCities.length > 3) {
                 updatedSearchedCities.shift()
             }
@@ -83,9 +83,9 @@ const Hero = () => {
                                 required
                             />
                             <datalist id='destinations'>
-                                {searchedCities.map((city, index) => (
+                                {searchedCities.map((item, index) => (
                                     <option
-                                        value={city}
+                                        value={item.city}
                                         key={index}
                                     />
                                 ))}

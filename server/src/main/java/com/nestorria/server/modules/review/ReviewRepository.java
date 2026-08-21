@@ -14,7 +14,6 @@ public interface ReviewRepository extends JpaRepository<Review, String> {
     @ReadFromReplica
     List<Review> findByPropertyIdOrderByCreatedAtDesc(String propertyId);
 
-    @ReadFromReplica
     List<Review> findByUserIdOrderByCreatedAtDesc(String userId);
 
     boolean existsByUserIdAndPropertyId(String userId, String propertyId);
