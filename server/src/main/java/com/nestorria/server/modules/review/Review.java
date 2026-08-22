@@ -14,6 +14,7 @@ import jakarta.persistence.Index;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
+import jakarta.persistence.UniqueConstraint;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
 import lombok.AccessLevel;
@@ -22,7 +23,9 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 
 @Entity
-@Table(name = "reviews", indexes = {
+@Table(name = "reviews", 
+    uniqueConstraints = @UniqueConstraint(name = "uk_review_user_property", columnNames = {"user_id", "property_id"}),
+    indexes = {
     @Index(name = "idx_review_property_created", columnList = "property_id, created_at DESC"),
     @Index(name = "idx_review_user_created", columnList = "user_id, created_at DESC")
 })

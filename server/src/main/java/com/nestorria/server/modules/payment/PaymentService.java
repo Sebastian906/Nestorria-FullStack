@@ -9,6 +9,7 @@ import java.util.Set;
 import java.util.function.Consumer;
 
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -92,19 +93,8 @@ public class PaymentService {
         com.stripe.model.PaymentIntent paymentIntent = stripeClient.createPaymentIntent(
             invoice.getAmountDue(), invoice.getCurrency(), metadata);
 
-        // Evitar transacciones duplicadas en doble-click
-        Optional<PaymentTransaction> existing = paymentTransactionRepository
-            .findByGatewayReference(paymentIntent.getId());
-        if (existing.isPresent()) {
-            log.info("Transacción ya existe para PaymentIntent {}: {}", paymentIntent.getId(), existing.get().getId());
-            return new PaymentIntentResponse(
-                invoice.getId(),
-                paymentIntent.getClientSecret(),
-                invoice.getAmountDue(),
-                invoice.getCurrency()
-            );
-        }
-
+        // Evitar transacciones duplicadas en doble-click: si el save falla por
+        // la unique constraint en gateway_reference, re-leer la transacción existente.
         PaymentTransaction transaction = new PaymentTransaction(
             invoice,
             invoice.getAmountDue(),
@@ -115,7 +105,15 @@ public class PaymentService {
             null,
             null
         );
-        paymentTransactionRepository.save(transaction);
+        try {
+            paymentTransactionRepository.save(transaction);
+        } catch (DataIntegrityViolationException e) {
+            log.info("Transacción duplicada detectada para PaymentIntent {}: releyendo",
+                paymentIntent.getId());
+            transaction = paymentTransactionRepository
+                .findByGatewayReference(paymentIntent.getId())
+                .orElseThrow(() -> e);
+        }
 
         log.info("PaymentIntent creado para factura {}: {} (amount: {} cents)",
             invoiceId, paymentIntent.getId(), invoice.getAmountDue());
