@@ -13,7 +13,8 @@ import jakarta.persistence.LockModeType;
 
 public interface InvoiceRepository extends JpaRepository<Invoice, String> {
 
-    Optional<Invoice> findByBookingId(String bookingId);
+    @Query("SELECT i FROM Invoice i JOIN FETCH i.booking JOIN FETCH i.booking.property JOIN FETCH i.booking.agency WHERE i.booking.id = :bookingId")
+     Optional<Invoice> findByBookingId(@Param("bookingId") String bookingId);
 
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("SELECT i FROM Invoice i WHERE i.id = :id")

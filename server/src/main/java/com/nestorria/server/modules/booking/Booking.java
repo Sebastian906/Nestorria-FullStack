@@ -30,8 +30,9 @@ import lombok.Setter;
 
 @Entity
 @Table(name = "bookings", indexes = {
-    @Index(name = "idx_booking_property_dates", columnList = "property_id, check_in_date"),
-    @Index(name = "idx_booking_agency_created", columnList = "agency_id, created_at")
+    @Index(name = "idx_booking_user_created", columnList = "user_id, created_at DESC"),
+    @Index(name = "idx_booking_property_status", columnList = "property_id, status"),
+    @Index(name = "idx_booking_dates", columnList = "check_in_date, check_out_date")
 })
 @Getter
 @Setter

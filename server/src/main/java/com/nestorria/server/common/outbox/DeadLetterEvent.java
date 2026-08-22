@@ -21,8 +21,8 @@ import lombok.Setter;
 
 @Entity
 @Table(name = "dead_letter_events", indexes = {
-    @Index(name = "idx_dlq_original_event", columnList = "originalEventId"),
-    @Index(name = "idx_dlq_failed_at", columnList = "failedAt")
+    @Index(name = "idx_dlq_original_event", columnList = "original_event_id"),
+    @Index(name = "idx_dlq_failed_at", columnList = "failed_at")
 })
 @Getter
 @Setter

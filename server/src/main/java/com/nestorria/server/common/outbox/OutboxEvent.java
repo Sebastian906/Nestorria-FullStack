@@ -23,8 +23,8 @@ import lombok.Setter;
 
 @Entity
 @Table(name = "outbox_events", indexes = {
-    @Index(name = "idx_outbox_status_retry", columnList = "status, nextRetryAt"),
-    @Index(name = "idx_outbox_correlation", columnList = "correlationId")
+    @Index(name = "idx_outbox_status_retry", columnList = "status, next_retry_at"),
+    @Index(name = "idx_outbox_correlation", columnList = "correlation_id")
 })
 @Getter
 @Setter

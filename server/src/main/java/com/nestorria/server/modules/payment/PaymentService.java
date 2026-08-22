@@ -4,11 +4,11 @@ import java.time.Instant;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.function.Consumer;
 
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -91,6 +91,19 @@ public class PaymentService {
 
         com.stripe.model.PaymentIntent paymentIntent = stripeClient.createPaymentIntent(
             invoice.getAmountDue(), invoice.getCurrency(), metadata);
+
+        // Evitar transacciones duplicadas en doble-click
+        Optional<PaymentTransaction> existing = paymentTransactionRepository
+            .findByGatewayReference(paymentIntent.getId());
+        if (existing.isPresent()) {
+            log.info("Transacción ya existe para PaymentIntent {}: {}", paymentIntent.getId(), existing.get().getId());
+            return new PaymentIntentResponse(
+                invoice.getId(),
+                paymentIntent.getClientSecret(),
+                invoice.getAmountDue(),
+                invoice.getCurrency()
+            );
+        }
 
         PaymentTransaction transaction = new PaymentTransaction(
             invoice,

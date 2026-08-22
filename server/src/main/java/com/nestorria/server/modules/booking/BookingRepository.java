@@ -31,7 +31,7 @@ public interface BookingRepository extends JpaRepository<Booking, String> {
         @Param("excludedStatus") BookingStatus excludedStatus
     );
 
-    @Query("SELECT b FROM Booking b WHERE b.user.id = :userId ORDER BY b.createdAt DESC")
+    @Query("SELECT b FROM Booking b JOIN FETCH b.property JOIN FETCH b.agency WHERE b.user.id = :userId ORDER BY b.createdAt DESC")
     List<Booking> findByUserId(@Param("userId") String userId);
 
     @Query("SELECT b FROM Booking b JOIN FETCH b.property JOIN FETCH b.agency WHERE b.agency.id = :agencyId ORDER BY b.createdAt DESC")
