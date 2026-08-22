@@ -18,7 +18,8 @@ public interface FavoriteRepository extends JpaRepository<Favorite, String> {
     Optional<Favorite> findByUserIdAndPropertyId(String userId, String propertyId);
 
     @ReadFromReplica
-    List<Favorite> findByUserIdOrderByCreatedAtDesc(String userId);
+    @Query("SELECT f FROM Favorite f JOIN FETCH f.property WHERE f.user.id = :userId ORDER BY f.createdAt DESC")
+    List<Favorite> findByUserIdOrderByCreatedAtDesc(@Param("userId") String userId);
 
     void deleteByUserIdAndPropertyId(String userId, String propertyId);
 

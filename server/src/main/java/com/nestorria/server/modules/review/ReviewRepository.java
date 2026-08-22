@@ -11,6 +11,12 @@ import com.nestorria.server.common.datasource.ReadFromReplica;
 
 public interface ReviewRepository extends JpaRepository<Review, String> {
 
+    @Query("SELECT r FROM Review r JOIN FETCH r.user WHERE r.property.id = :propertyId")
+    List<Review> findByPropertyId(@Param("propertyId") String propertyId);
+
+    @Query("SELECT r FROM Review r JOIN FETCH r.property WHERE r.user.id = :userId")
+    List<Review> findByUserId(@Param("userId") String userId);
+
     @ReadFromReplica
     List<Review> findByPropertyIdOrderByCreatedAtDesc(String propertyId);
 
