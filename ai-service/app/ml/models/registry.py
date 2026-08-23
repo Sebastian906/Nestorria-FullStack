@@ -28,11 +28,19 @@ class ModelRegistry:
 
     def _validate_name(self, name: str) -> None:
         """Validate model name to prevent path traversal."""
+        if not name or not name.strip():
+            raise ValueError("Model name must not be empty")
+        if name.startswith(".") or name.endswith("."):
+            raise ValueError(f"Invalid model name: {name}")
         if ".." in name or "/" in name or "\\" in name:
             raise ValueError(f"Invalid model name: {name}")
 
     def _validate_version(self, version: str) -> None:
         """Validate model version to prevent path traversal."""
+        if not version or not version.strip():
+            raise ValueError("Model version must not be empty")
+        if version.startswith(".") or version.endswith("."):
+            raise ValueError(f"Invalid model version: {version}")
         if ".." in version or "/" in version or "\\" in version:
             raise ValueError(f"Invalid model version: {version}")
 
@@ -60,19 +68,21 @@ class ModelRegistry:
         model_path = model_dir / "model.joblib"
         metadata_path = model_dir / "metadata.json"
 
-        # Save model
-        joblib.dump(model, model_path)
-
-        # Save metadata
+        # Build and validate metadata before persisting anything
         metadata = {
             "name": name,
             "version": version,
             "metrics": metrics,
             "date": datetime.now(timezone.utc).isoformat(),
             "features": features or [],
-            "model_path": str(model_path),
         }
-        metadata_path.write_text(json.dumps(metadata, indent=2), encoding="utf-8")
+        metadata_json = json.dumps(metadata, indent=2)
+        # Validate round-trip
+        json.loads(metadata_json)
+
+        # Persist model first, then metadata
+        joblib.dump(model, model_path)
+        metadata_path.write_text(metadata_json, encoding="utf-8")
 
         logger.info(
             "model_saved",

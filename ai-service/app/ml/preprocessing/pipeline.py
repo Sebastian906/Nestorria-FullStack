@@ -117,16 +117,16 @@ class MLPipeline:
 
             transformer = preprocessor.named_transformers_[name]
 
-            if hasattr(transformer, "get_feature_names_out"):
-                names = transformer.get_feature_names_out(columns)
-                feature_names.extend(list(names))
-            elif name == "date":
-                # DateFeatureExtractor produces: year, month, day, dayofweek per column
+            # Date branch: always use manual naming (4 components per column)
+            if name == "date":
                 for col in columns:
                     feature_names.extend([
                         f"{col}_year", f"{col}_month",
                         f"{col}_day", f"{col}_dayofweek",
                     ])
+            elif hasattr(transformer, "get_feature_names_out"):
+                names = transformer.get_feature_names_out(columns)
+                feature_names.extend(list(names))
             else:
                 feature_names.extend(columns)
 

@@ -7,6 +7,7 @@ import numpy as np
 import pandas as pd
 from sklearn.model_selection import train_test_split
 
+
 def train_test_split_custom(
     X: pd.DataFrame,
     y: pd.Series | np.ndarray,
@@ -30,7 +31,13 @@ def train_test_split_custom(
     if len(X) == 0:
         raise ValueError("Cannot split empty DataFrame")
 
+    if len(X) != len(y):
+        raise ValueError(
+            f"X and y must have the same length, got {len(X)} and {len(y)}"
+        )
+
     return train_test_split(X, y, test_size=test_size, random_state=random_state)
+
 
 def temporal_split(
     X: pd.DataFrame,
@@ -58,7 +65,17 @@ def temporal_split(
     if len(X) == 0:
         raise ValueError("Cannot split empty DataFrame")
 
-    timestamps = pd.Series(timestamps)
+    if len(X) != len(y) or len(X) != len(timestamps):
+        raise ValueError(
+            f"X, y, and timestamps must have the same length, "
+            f"got {len(X)}, {len(y)}, and {len(timestamps)}"
+        )
+
+    # Normalize timestamps to datetime
+    timestamps = pd.to_datetime(pd.Series(timestamps), errors="coerce")
+    if timestamps.isna().any():
+        raise ValueError("timestamps contain invalid or missing date values")
+
     X = X.copy()
     y = np.asarray(y)
 
@@ -69,6 +86,16 @@ def temporal_split(
 
     # Split point
     split_idx = int(len(X_sorted) * (1 - test_ratio))
+
+    # Reject empty partitions
+    if split_idx <= 0:
+        raise ValueError(
+            f"test_ratio ({test_ratio}) too large: would produce empty training set"
+        )
+    if split_idx >= len(X_sorted):
+        raise ValueError(
+            f"test_ratio ({test_ratio}) too small: would produce empty test set"
+        )
 
     X_train = X_sorted.iloc[:split_idx]
     X_test = X_sorted.iloc[split_idx:]

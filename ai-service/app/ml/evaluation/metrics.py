@@ -76,6 +76,12 @@ def ranking_metrics(y_true, y_pred, k: int = 10) -> dict:
     if len(y_true) == 0 or k <= 0:
         return {"precision_at_k": 0.0, "recall_at_k": 0.0, "ndcg_at_k": 0.0}
 
+    if len(y_true) != len(y_pred):
+        raise ValueError(
+            f"y_true and y_pred must have the same length, "
+            f"got {len(y_true)} and {len(y_pred)}"
+        )
+
     k = min(k, len(y_true))
 
     # Sort by predicted score (descending)

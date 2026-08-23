@@ -6,6 +6,7 @@ Detects temporal leakage where future data appears in training sets.
 import pandas as pd
 import numpy as np
 
+
 def validate_no_leakage(
     train_timestamps: pd.Series | np.ndarray,
     test_timestamps: pd.Series | np.ndarray,
@@ -19,8 +20,8 @@ def validate_no_leakage(
     Returns:
         True if no leakage detected, False otherwise.
     """
-    train_ts = pd.Series(train_timestamps)
-    test_ts = pd.Series(test_timestamps)
+    train_ts = pd.to_datetime(pd.Series(train_timestamps), errors="coerce")
+    test_ts = pd.to_datetime(pd.Series(test_timestamps), errors="coerce")
 
     if len(train_ts) == 0 or len(test_ts) == 0:
         return True

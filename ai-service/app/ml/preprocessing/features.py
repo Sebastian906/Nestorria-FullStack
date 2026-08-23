@@ -34,6 +34,18 @@ class DateFeatureExtractor(BaseEstimator, TransformerMixin):
 
         return np.hstack(result_parts) if result_parts else np.empty((len(X), 0))
 
+    def get_feature_names_out(self, input_features=None):
+        """Return feature names: 4 components per input column."""
+        if input_features is None:
+            input_features = []
+        names = []
+        for col in input_features:
+            names.extend([
+                f"{col}_year", f"{col}_month",
+                f"{col}_day", f"{col}_dayofweek",
+            ])
+        return np.array(names)
+
 def get_feature_count(df: pd.DataFrame) -> int:
     """Return the number of columns in a DataFrame."""
     return len(df.columns)
