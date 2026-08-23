@@ -31,6 +31,12 @@ class Settings(BaseSettings):
     database_url: str | None = None
     api_key: str | None = None
 
+    # ML Configuration (AI-002)
+    artifacts_path: str = "artifacts"
+    test_size: float = 0.2
+    validation_size: float = 0.1
+    random_state: int = 42
+
 @lru_cache
 def get_settings() -> Settings:
     """Singleton settings instance. Cached after first call."""
