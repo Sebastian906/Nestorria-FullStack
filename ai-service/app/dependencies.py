@@ -1,0 +1,23 @@
+"""Dependency injection for FastAPI.
+
+Add shared dependencies here as the service grows:
+- Database connections
+- ML model clients
+- Vector store clients
+- External API clients
+
+Example (future):
+    async def get_db():
+        ...
+
+    async def get_model_client():
+        ...
+"""
+
+from typing import Any
+
+from app.config import get_settings
+
+async def get_config() -> Any:
+    """Return application settings as a dependency."""
+    return get_settings()
