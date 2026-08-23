@@ -1,6 +1,7 @@
 """Centralized configuration using Pydantic Settings."""
 
 from functools import lru_cache
+from typing import Literal
 
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
@@ -21,7 +22,7 @@ class Settings(BaseSettings):
     # Service identity
     service_name: str = "ai-service"
     version: str = "0.1.0"
-    environment: str = "development"
+    environment: Literal["development", "staging", "production"] = "development"
 
     # Logging
     log_level: str = "INFO"
