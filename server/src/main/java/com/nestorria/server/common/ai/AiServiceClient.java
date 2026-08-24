@@ -3,6 +3,7 @@ package com.nestorria.server.common.ai;
 import java.time.Duration;
 import java.util.List;
 
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
@@ -28,7 +29,11 @@ import lombok.extern.slf4j.Slf4j;
  * - Circuit Breaker: abre después de 5 fallos en ventana de 10 requests
  * - Retry: 3 intentos con exponential backoff (500ms, 1s, 2s)
  * - Timeout: connect 3s, read 5s
- * - Fallback: delega a AiFallbackHandler
+ * - Fallback: delega a AiFallbackHandler (solo en @Retry, no en @CircuitBreaker)
+ *
+ * Aspect ordering: @Retry (outer) → @CircuitBreaker (inner).
+ * - Transport failures → retried by @Retry → fallback on exhaustion
+ * - Open circuit → CallNotPermittedException → ignored by retry → fallback
  * @see AiServiceProperties
  * @see AiFallbackHandler
  */
@@ -40,12 +45,24 @@ public class AiServiceClient {
     private final AiServiceProperties properties;
     private final AiFallbackHandler fallbackHandler;
 
+    @Autowired
     public AiServiceClient(
             AiServiceProperties properties,
             AiFallbackHandler fallbackHandler) {
+        this(properties, fallbackHandler, buildRestClient(properties));
+    }
+
+    // Package-private: allows tests to inject a RestClient with a mock transport
+    AiServiceClient(
+            AiServiceProperties properties,
+            AiFallbackHandler fallbackHandler,
+            RestClient restClient) {
         this.properties = properties;
         this.fallbackHandler = fallbackHandler;
+        this.restClient = restClient;
+    }
 
+    private static RestClient buildRestClient(AiServiceProperties properties) {
         SimpleClientHttpRequestFactory factory = new SimpleClientHttpRequestFactory();
         factory.setConnectTimeout(Duration.ofMillis(properties.connectTimeout()));
         factory.setReadTimeout(Duration.ofMillis(properties.readTimeout()));
@@ -57,7 +74,7 @@ public class AiServiceClient {
             return execution.execute(request, body);
         };
 
-        this.restClient = RestClient.builder()
+        return RestClient.builder()
             .baseUrl(properties.baseUrl())
             .requestFactory(factory)
             .requestInterceptor(apiKeyInterceptor)
@@ -66,7 +83,7 @@ public class AiServiceClient {
     }
 
     // Health Check
-    @CircuitBreaker(name = "ai-service", fallbackMethod = "healthCheckFallback")
+    @CircuitBreaker(name = "ai-service")
     @Retry(name = "ai-service", fallbackMethod = "healthCheckFallback")
     public AiHealthResponse healthCheck() {
         log.debug("ai-service health check");
@@ -82,7 +99,7 @@ public class AiServiceClient {
     }
 
     // Predict Price
-    @CircuitBreaker(name = "ai-service", fallbackMethod = "predictPriceFallback")
+    @CircuitBreaker(name = "ai-service")
     @Retry(name = "ai-service", fallbackMethod = "predictPriceFallback")
     public AiPredictionResponse predictPrice(AiPredictionRequest request) {
         log.debug("ai-service predict price: propertyId={}", request.propertyId());
@@ -100,7 +117,7 @@ public class AiServiceClient {
     }
 
     // Predict Cancellation
-    @CircuitBreaker(name = "ai-service", fallbackMethod = "predictCancellationFallback")
+    @CircuitBreaker(name = "ai-service")
     @Retry(name = "ai-service", fallbackMethod = "predictCancellationFallback")
     public AiPredictionResponse predictCancellation(AiPredictionRequest request) {
         log.debug("ai-service predict cancellation: bookingId={}", request.bookingId());
@@ -118,7 +135,7 @@ public class AiServiceClient {
     }
 
     // Chat
-    @CircuitBreaker(name = "ai-service", fallbackMethod = "chatFallback")
+    @CircuitBreaker(name = "ai-service")
     @Retry(name = "ai-service", fallbackMethod = "chatFallback")
     public AiChatResponse chat(AiChatRequest request) {
         log.debug("ai-service chat: userId={}", request.userId());
@@ -136,7 +153,7 @@ public class AiServiceClient {
     }
 
     // Recommendations
-    @CircuitBreaker(name = "ai-service", fallbackMethod = "recommendationsFallback")
+    @CircuitBreaker(name = "ai-service")
     @Retry(name = "ai-service", fallbackMethod = "recommendationsFallback")
     public List<PropertySummaryResponse> getAiRecommendations(String userId, int limit) {
         log.debug("ai-service recommendations: userId={}, limit={}", userId, limit);
