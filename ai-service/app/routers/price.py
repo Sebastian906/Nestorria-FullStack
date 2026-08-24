@@ -17,6 +17,7 @@ router = APIRouter(prefix="/ml/price", tags=["price"])
 # Singleton predictor — loaded once at startup
 _predictor: PricePredictor | None = None
 
+
 def get_predictor() -> PricePredictor:
     """Get or initialize the price predictor singleton."""
     global _predictor
@@ -25,9 +26,11 @@ def get_predictor() -> PricePredictor:
         _predictor.load_model()
     return _predictor
 
+
 @router.post("/predict", response_model=PricePredictionResponse)
 async def predict_price(
-    request: PricePredictionRequest,
+    body: PricePredictionRequest,
+    http_request: Request,
     predictor: PricePredictor = Depends(get_predictor),
 ):
     """Predict property price.
@@ -35,8 +38,8 @@ async def predict_price(
     Requires authenticated request (API key from Spring Boot).
     """
     # API key validation (if configured)
-    config = get_config()
-    api_key = request.headers.get("X-API-Key") if hasattr(request, "headers") else None
+    config = await get_config()
+    api_key = http_request.headers.get("X-API-Key")
     if config.api_key and api_key != config.api_key:
         raise HTTPException(status_code=401, detail="Invalid API key")
 
@@ -46,7 +49,7 @@ async def predict_price(
             detail="Price model not available",
         )
 
-    result = predictor.predict(request.model_dump())
+    result = predictor.predict(body.model_dump())
     if result is None:
         raise HTTPException(
             status_code=500,

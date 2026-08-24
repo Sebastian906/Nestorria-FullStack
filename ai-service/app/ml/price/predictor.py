@@ -4,9 +4,14 @@ Loads persisted model and serves predictions.
 Falls back gracefully when model is unavailable.
 """
 
+import json
+from pathlib import Path
+
 import numpy as np
+import pandas as pd
 import structlog
 from sklearn.ensemble import RandomForestRegressor
+from sklearn.pipeline import Pipeline
 
 from app.config import get_settings
 from app.ml.models.registry import ModelRegistry
@@ -14,17 +19,20 @@ from app.ml.price.features import PropertyFeatureExtractor
 
 logger = structlog.get_logger("ai-service.ml.price")
 
+
 class PricePredictor:
     """Load model and predict property prices.
 
-    Thread-safe: model is loaded once and reused.
+    Loads the complete fitted artifact: MLPipeline (preprocessing) + RandomForestRegressor.
+    Applies scaling and encoding to raw features before forest prediction.
     """
 
     def __init__(self):
         self.settings = get_settings()
         self.registry = ModelRegistry(artifacts_path=self.settings.artifacts_path)
         self.extractor = PropertyFeatureExtractor()
-        self._model: RandomForestRegressor | None = None
+        self._pipeline: Pipeline | None = None
+        self._rf_model: RandomForestRegressor | None = None
         self._feature_names: list[str] | None = None
         self._model_name: str | None = None
         self._model_version: str | None = None
@@ -47,13 +55,21 @@ class PricePredictor:
                     return False
                 version = latest["version"]
 
-            self._model = self.registry.load_model(name, version)
+            artifact = self.registry.load_model(name, version)
             self._model_name = name
             self._model_version = version
 
-            # Load feature names from metadata
-            metadata = self.registry.get_latest(name)
-            if metadata:
+            if isinstance(artifact, Pipeline):
+                self._pipeline = artifact
+                self._rf_model = artifact.named_steps["model"]
+            else:
+                self._rf_model = artifact
+
+            # Read metadata for the SPECIFIC loaded version, not latest
+            model_dir = self.registry._model_dir(name, version)
+            metadata_path = model_dir / "metadata.json"
+            if metadata_path.exists():
+                metadata = json.loads(metadata_path.read_text(encoding="utf-8"))
                 self._feature_names = metadata.get("features", [])
 
             logger.info(
@@ -77,26 +93,31 @@ class PricePredictor:
         Returns:
             dict with predicted_price, confidence, model info, or None if unavailable
         """
-        if self._model is None:
+        if self._rf_model is None:
             logger.warning("price_predict_no_model")
             return None
 
         try:
-            # Extract features
+            # Extract raw features
             features = self.extractor.extract(property_data)
             df = pd.DataFrame([features])
 
-            # Ensure column order matches training
-            if self._feature_names:
-                # Add missing columns with defaults
+            # Apply preprocessing if pipeline is available
+            if self._pipeline is not None:
+                preprocessor = self._pipeline.named_steps["preprocessor"]
+                X = preprocessor.transform(df)
+            elif self._feature_names:
                 for col in self._feature_names:
                     if col not in df.columns:
                         df[col] = 0
-                df = df[self._feature_names]
+                X = df[self._feature_names].values
+            else:
+                X = df.values
 
             # Predict with confidence
-            X = df.values
-            tree_preds = np.array([tree.predict(X) for tree in self._model.estimators_])
+            tree_preds = np.array(
+                [tree.predict(X) for tree in self._rf_model.estimators_]
+            )
             prediction = float(tree_preds.mean())
             std = float(tree_preds.std())
             mean_abs = abs(prediction)
@@ -117,7 +138,4 @@ class PricePredictor:
     @property
     def is_available(self) -> bool:
         """Check if model is loaded and ready."""
-        return self._model is not None
-
-# Need pd for DataFrame
-import pandas as pd
+        return self._rf_model is not None

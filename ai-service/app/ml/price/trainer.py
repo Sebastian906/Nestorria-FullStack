@@ -9,6 +9,7 @@ from pathlib import Path
 
 import pandas as pd
 import structlog
+from sklearn.pipeline import Pipeline
 
 from app.config import get_settings
 from app.ml.evaluation.metrics import regression_metrics
@@ -19,6 +20,7 @@ from app.ml.preprocessing.pipeline import MLPipeline
 from app.ml.training.splitter import train_test_split_custom
 
 logger = structlog.get_logger("ai-service.ml.price")
+
 
 class PriceTrainer:
     """End-to-end training pipeline for property price prediction.
@@ -60,11 +62,15 @@ class PriceTrainer:
         features_list = self.extractor.extract_batch(properties)
         df = pd.DataFrame(features_list)
 
-        # 2. Preprocessing
+        # 2. Preprocessing — include numeric, categorical, and binary has_* columns
+        numeric_cols = self.extractor.get_numeric_columns()
+        binary_cols = [c for c in df.columns if c.startswith("has_")]
+        all_numeric = numeric_cols + binary_cols
+
         pipeline = MLPipeline(
-            numeric_columns=self.extractor.get_numeric_columns(),
+            numeric_columns=all_numeric,
             categorical_columns=self.extractor.get_categorical_columns(),
-            scaler="standard",  # Will be removed from final pipeline
+            scaler="standard",
         )
         X = pipeline.fit_transform(df)
         y = pd.Series(prices, name="price")
@@ -88,9 +94,13 @@ class PriceTrainer:
         y_pred = model.predict(X_test.values)
         metrics = regression_metrics(y_test.values, y_pred)
 
-        # 6. Persist
+        # 6. Persist — save the complete fitted pipeline (preprocessing + model)
+        combined = Pipeline([
+            ("preprocessor", pipeline._pipeline.named_steps["preprocessor"]),
+            ("model", model.model),
+        ])
         self.registry.save_model(
-            model=model.model,  # Save the raw sklearn model
+            model=combined,
             name=model_name,
             version=model_version,
             metrics=metrics,
