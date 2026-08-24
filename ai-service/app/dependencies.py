@@ -21,3 +21,10 @@ from app.config import get_settings
 async def get_config() -> Any:
     """Return application settings as a dependency."""
     return get_settings()
+
+async def get_price_predictor():
+    """Get the price predictor singleton."""
+    from app.ml.price.predictor import PricePredictor
+    predictor = PricePredictor()
+    predictor.load_model()
+    return predictor

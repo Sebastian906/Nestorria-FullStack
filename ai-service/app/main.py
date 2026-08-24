@@ -52,6 +52,10 @@ def create_app() -> FastAPI:
     # Routers
     application.include_router(health.router)
 
+    # Price prediction router
+    from app.routers import price
+    application.include_router(price.router)
+
     return application
 
 app = create_app()

@@ -1,0 +1,31 @@
+{
+  "name": "price_rf",
+  "version": "test",
+  "metrics": {
+    "mse": 6926262581.023129,
+    "rmse": 83224.1706538619,
+    "mae": 66874.01970000022,
+    "r2": 0.8016228557289111
+  },
+  "date": "2026-08-24T18:58:24.735298+00:00",
+  "features": [
+    "area",
+    "bedrooms",
+    "bathrooms",
+    "latitude",
+    "longitude",
+    "amenities_count",
+    "property_type_APARTMENT",
+    "property_type_HOUSE",
+    "property_type_PENTHOUSE",
+    "property_type_TOWNHOUSE",
+    "property_type_VILLA",
+    "city_Barcelona",
+    "city_Bilbao",
+    "city_Madrid",
+    "city_M\u00e1laga",
+    "city_Sevilla",
+    "city_Valencia",
+    "city_Zaragoza"
+  ]
+}
