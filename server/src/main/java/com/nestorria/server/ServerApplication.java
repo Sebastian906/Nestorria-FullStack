@@ -7,13 +7,14 @@ import org.springframework.cache.annotation.EnableCaching;
 import org.springframework.scheduling.annotation.EnableAsync;
 import org.springframework.scheduling.annotation.EnableScheduling;
 
+import com.nestorria.server.common.ai.AiServiceProperties;
 import com.nestorria.server.common.config.AppProperties;
 
 @SpringBootApplication
 @EnableAsync
 @EnableScheduling
 @EnableCaching
-@EnableConfigurationProperties(AppProperties.class)
+@EnableConfigurationProperties({AppProperties.class, AiServiceProperties.class})
 public class ServerApplication {
     public static void main(String[] args) {
         SpringApplication.run(ServerApplication.class, args);

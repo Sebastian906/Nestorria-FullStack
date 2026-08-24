@@ -5,7 +5,6 @@ import java.time.Duration;
 import java.util.concurrent.ConcurrentHashMap;
 
 import org.springframework.scheduling.annotation.Scheduled;
-
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.oauth2.jwt.Jwt;
@@ -134,6 +133,7 @@ public class RateLimitFilter extends OncePerRequestFilter {
         }
         if (uri.startsWith("/api/contracts")) return rateLimitProps.writePerMinute();
         if (uri.startsWith("/api/agencies")) return rateLimitProps.reviewPerMinute();
+        if (uri.startsWith("/api/ai")) return rateLimitProps.aiPerMinute();
         if (uri.equals("/api/properties/me")
             || uri.startsWith("/api/properties/nearby")
             || uri.startsWith("/api/properties/*/reviews")) {

@@ -59,6 +59,13 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(errorBody(HttpStatus.BAD_REQUEST, ex.getMessage()));
     }
 
+    @ExceptionHandler(com.nestorria.server.common.ai.AiServiceException.class)
+    public ResponseEntity<Map<String, Object>> handleAiServiceException(
+            com.nestorria.server.common.ai.AiServiceException ex) {
+        return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE)
+            .body(errorBody(HttpStatus.SERVICE_UNAVAILABLE, ex.getMessage()));
+    }
+
     @ExceptionHandler(MethodArgumentTypeMismatchException.class)
     public ResponseEntity<Map<String, Object>> handleTypeMismatch(MethodArgumentTypeMismatchException ex) {
         String message = String.format("El parámetro '%s' tiene un tipo inválido", ex.getName());
