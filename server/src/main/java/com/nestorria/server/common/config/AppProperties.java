@@ -4,13 +4,16 @@ import java.util.List;
 
 import org.springframework.boot.context.properties.ConfigurationProperties;
 
+import com.nestorria.server.common.ai.AiServiceProperties;
+
 @ConfigurationProperties(prefix = "app")
 public record AppProperties(
         MailProperties mail,
         String currency,
         InvoiceProperties invoice,
         StripeProperties stripe,
-        RateLimitProperties rateLimit) {
+        RateLimitProperties rateLimit,
+        AiServiceProperties aiService) {
     public record MailProperties(String sender) {
     }
 
@@ -47,6 +50,7 @@ public record AppProperties(
             int stripePerMinute,
             int publicReadPerMinute,
             int searchPerMinute,
+            int aiPerMinute,
             String trustedProxies) {
         public java.util.List<String> trustedProxiesAsList() {
             if (trustedProxies == null || trustedProxies.isBlank()) {
