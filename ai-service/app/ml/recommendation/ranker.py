@@ -56,8 +56,19 @@ class HybridRanker:
         content_weight: float = 0.3,
         collab_weight: float = 0.3,
     ):
-        # Validate weights sum to ~1.0
+        # Validate weights are non-negative
+        if graph_weight < 0 or content_weight < 0 or collab_weight < 0:
+            raise ValueError(
+                f"Weights must be non-negative, got graph={graph_weight}, "
+                f"content={content_weight}, collab={collab_weight}"
+            )
+
+        # Validate weights sum to ~1.0, normalize if needed
         total = graph_weight + content_weight + collab_weight
+        if total <= 0:
+            raise ValueError(
+                f"Sum of weights must be positive, got {total}"
+            )
         if abs(total - 1.0) > 0.01:
             logger.warning(
                 "ranker_weights_not_normalized",

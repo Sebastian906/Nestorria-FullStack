@@ -15,7 +15,7 @@ def precision_at_k(recommended: list[str], relevant: set[str], k: int) -> float:
     """Fraction of top-K recommendations that are relevant.
     
     Args:
-        recommended: ordered list of recommended property IDs
+        recommended: ordered list of recommended property IDs (duplicates removed)
         relevant: set of property IDs the user actually interacted with
         k: number of top recommendations to consider
         
@@ -24,9 +24,19 @@ def precision_at_k(recommended: list[str], relevant: set[str], k: int) -> float:
     """
     if k <= 0 or not recommended:
         return 0.0
-    top_k = recommended[:k]
+    # Deduplicate while preserving order
+    seen: set[str] = set()
+    unique = []
+    for pid in recommended:
+        if pid not in seen:
+            seen.add(pid)
+            unique.append(pid)
+    effective_k = min(k, len(unique))
+    if effective_k <= 0:
+        return 0.0
+    top_k = unique[:effective_k]
     hits = sum(1 for pid in top_k if pid in relevant)
-    return hits / k
+    return hits / effective_k
 
 def recall_at_k(recommended: list[str], relevant: set[str], k: int) -> float:
     """Fraction of relevant items found in top-K recommendations.
@@ -36,7 +46,17 @@ def recall_at_k(recommended: list[str], relevant: set[str], k: int) -> float:
     """
     if k <= 0 or not relevant or not recommended:
         return 0.0
-    top_k = recommended[:k]
+    # Deduplicate while preserving order
+    seen: set[str] = set()
+    unique = []
+    for pid in recommended:
+        if pid not in seen:
+            seen.add(pid)
+            unique.append(pid)
+    effective_k = min(k, len(unique))
+    if effective_k <= 0:
+        return 0.0
+    top_k = unique[:effective_k]
     hits = sum(1 for pid in top_k if pid in relevant)
     return hits / len(relevant)
 
@@ -51,7 +71,18 @@ def ndcg_at_k(recommended: list[str], relevant: set[str], k: int) -> float:
     if k <= 0 or not recommended or not relevant:
         return 0.0
 
-    top_k = recommended[:k]
+    # Deduplicate while preserving order
+    seen: set[str] = set()
+    unique = []
+    for pid in recommended:
+        if pid not in seen:
+            seen.add(pid)
+            unique.append(pid)
+    effective_k = min(k, len(unique))
+    if effective_k <= 0:
+        return 0.0
+
+    top_k = unique[:effective_k]
 
     # DCG: discounted cumulative gain
     dcg = 0.0
@@ -60,7 +91,7 @@ def ndcg_at_k(recommended: list[str], relevant: set[str], k: int) -> float:
             dcg += 1.0 / np.log2(i + 2)  # i+2 because log2(1) = 0
 
     # Ideal DCG: all relevant items at the top
-    ideal_hits = min(len(relevant), k)
+    ideal_hits = min(len(relevant), effective_k)
     idcg = sum(1.0 / np.log2(i + 2) for i in range(ideal_hits))
 
     return dcg / idcg if idcg > 0 else 0.0
@@ -111,20 +142,30 @@ class RecommendationEvaluator:
         Returns:
             dict with averaged metrics and user count
         """
-        if not user_recommendations:
-            return {"user_count": 0, **{f"precision_at_{k}": 0.0 for k in self.k_values}}
+        if not user_relevant:
+            return {
+                "user_count": 0,
+                **{f"precision_at_{k}": 0.0 for k in self.k_values},
+                **{f"recall_at_{k}": 0.0 for k in self.k_values},
+                **{f"ndcg_at_{k}": 0.0 for k in self.k_values},
+            }
 
         all_metrics: list[dict[str, float]] = []
 
-        for user_id, recommended in user_recommendations.items():
-            relevant = user_relevant.get(user_id, set())
+        for user_id, relevant in user_relevant.items():
             if not relevant:
                 continue
+            recommended = user_recommendations.get(user_id, [])
             metrics = self.evaluate_user(user_id, recommended, relevant)
             all_metrics.append(metrics)
 
         if not all_metrics:
-            return {"user_count": 0, **{f"precision_at_{k}": 0.0 for k in self.k_values}}
+            return {
+                "user_count": 0,
+                **{f"precision_at_{k}": 0.0 for k in self.k_values},
+                **{f"recall_at_{k}": 0.0 for k in self.k_values},
+                **{f"ndcg_at_{k}": 0.0 for k in self.k_values},
+            }
 
         # Average across users
         averaged = {}

@@ -75,7 +75,7 @@ class RecommendationService:
 
         # 3. Compute collaborative scores
         collab_scores = self._compute_collab_scores(
-            user_id, candidate_ids, user_history
+            user_id, candidate_ids, user_history, property_map
         )
 
         # 4. Rank by hybrid score
@@ -230,6 +230,7 @@ class RecommendationService:
         user_id: str,
         candidate_ids: list[str],
         user_history: dict,
+        property_map: dict[str, dict],
     ) -> dict[str, float] | None:
         """Compute collaborative filtering scores.
         
@@ -253,7 +254,7 @@ class RecommendationService:
         # Simple heuristic: properties that share attributes with booked ones score higher
         scores = {}
         for pid in candidate_ids:
-            p = property_map_global.get(pid) if hasattr(self, '_property_map') else None
+            p = property_map.get(pid)
             if p is None:
                 scores[pid] = 0.0
                 continue
@@ -261,7 +262,7 @@ class RecommendationService:
             # Count how many booked properties share city/type
             overlap = 0
             for booked_id in user_property_ids:
-                booked_p = self._property_cache.get(booked_id)
+                booked_p = property_map.get(booked_id)
                 if booked_p and self._pairwise_similarity(p, booked_p) > 3.0:
                     overlap += 1
 

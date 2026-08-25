@@ -44,10 +44,8 @@ async def score_recommendations(
     """Score and rank candidate properties for a user.
     
     Requires authenticated request (API key from Spring Boot).
-    
-    The request includes candidatePropertyIds. In a full implementation,
-    the service would fetch property data and user history from Spring Boot.
-    For now, this endpoint expects the caller to provide sufficient context.
+    Requires property data and user history in the request body.
+    Returns HTTP 503 when required data is unavailable.
     """
     # API key validation
     config = await get_config()
@@ -58,8 +56,6 @@ async def score_recommendations(
     # Assign A/B variant
     variant = HybridRanker.assign_variant(body.userId)
 
-    # TODO: In full implementation, fetch properties and user history here
-    # For now, return a placeholder that demonstrates the contract
     logger.info(
         "recommendation_score_request",
         user_id=body.userId,
@@ -67,17 +63,42 @@ async def score_recommendations(
         variant=variant,
     )
 
-    # Placeholder: return equal scores for all candidates
-    # The real implementation would call RecommendationService.score()
-    rankings = []
-    n = len(body.candidatePropertyIds)
-    for i, pid in enumerate(body.candidatePropertyIds):
-        score = round(1.0 - (i / max(n, 1)), 4)  # placeholder ordering
-        rankings.append(PropertyRanking(
-            propertyId=pid,
-            score=score,
-            breakdown=ScoreBreakdown(graph=score, content=score, collab=score),
-        ))
+    # Validate required data is present
+    if not body.properties:
+        raise HTTPException(
+            status_code=503,
+            detail="Property data unavailable for scoring",
+        )
+
+    # Use RecommendationService for actual scoring
+    from app.ml.recommendation.service import RecommendationService
+    service = RecommendationService()
+
+    # Ensure embedder is fitted with available property texts
+    if not service.embedder.is_fitted and len(body.properties) >= 2:
+        from app.ml.recommendation.features import RecommendationFeatureBuilder
+        builder = RecommendationFeatureBuilder()
+        texts = [builder.build_property_text(p.model_dump()) for p in body.properties]
+        service.embedder.fit_transform(texts)
+
+    # Score properties
+    results = service.score(
+        user_id=body.userId,
+        candidate_ids=body.candidatePropertyIds,
+        properties=[p.model_dump() for p in body.properties],
+        user_history=body.userHistory.model_dump(),
+        context=body.context.model_dump() if body.context else None,
+    )
+
+    # Map results to response schema
+    rankings = [
+        PropertyRanking(
+            propertyId=r["propertyId"],
+            score=r["score"],
+            breakdown=ScoreBreakdown(**r["breakdown"]),
+        )
+        for r in results
+    ]
 
     return RecommendationResponse(
         rankings=rankings,

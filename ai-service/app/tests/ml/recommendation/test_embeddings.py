@@ -50,12 +50,10 @@ class TestContentEmbedder:
         assert new_embeddings.shape == (1, 2)
 
     def test_transform_before_fit_raises(self):
+        import pytest
         embedder = ContentEmbedder(n_components=2)
-        try:
+        with pytest.raises(RuntimeError):
             embedder.transform(["test"])
-            assert False, "Should have raised RuntimeError"
-        except RuntimeError:
-            pass
 
     def test_compute_similarity(self):
         # Longer texts ensure non-degenerate embeddings

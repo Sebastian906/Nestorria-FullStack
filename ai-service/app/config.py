@@ -50,7 +50,8 @@ class Settings(BaseSettings):
 
     @model_validator(mode="after")
     def _validate_ml_sizes(self) -> "Settings":
-        """Validate ML split sizes are strictly between 0 and 1."""
+        """Validate ML split sizes and recommendation weights."""
+        # ML split sizes
         for field in ("test_size", "validation_size"):
             value = getattr(self, field)
             if not (0.0 < value < 1.0):
@@ -60,6 +61,24 @@ class Settings(BaseSettings):
                 f"test_size ({self.test_size}) + validation_size ({self.validation_size}) "
                 "must be less than 1.0"
             )
+
+        # Recommendation weights
+        rec_weights = (
+            self.recommendation_graph_weight,
+            self.recommendation_content_weight,
+            self.recommendation_collab_weight,
+        )
+        for field, value in zip(
+            ("recommendation_graph_weight", "recommendation_content_weight", "recommendation_collab_weight"),
+            rec_weights,
+        ):
+            if value < 0:
+                raise ValueError(f"{field} must be non-negative, got {value}")
+        if sum(rec_weights) <= 0:
+            raise ValueError(
+                f"Sum of recommendation weights must be positive, got {sum(rec_weights)}"
+            )
+
         return self
 
 @lru_cache

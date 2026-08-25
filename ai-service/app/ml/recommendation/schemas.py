@@ -2,10 +2,35 @@
 
 from pydantic import BaseModel, Field
 
+
 class RecommendationContext(BaseModel):
     """Optional context for recommendation scoring."""
     checkInDate: str | None = None
     guests: int | None = Field(None, ge=1)
+
+
+class PropertyData(BaseModel):
+    """Property data for scoring."""
+    id: str = Field(..., min_length=1)
+    title: str = Field(default="")
+    description: str = Field(default="")
+    price: int | None = None
+    area: int | None = None
+    bedrooms: int | None = None
+    bathrooms: int | None = None
+    propertyType: str | None = None
+    city: str | None = None
+    latitude: float | None = None
+    longitude: float | None = None
+    amenities: list[str] = Field(default_factory=list)
+
+
+class UserHistory(BaseModel):
+    """User interaction history for collaborative filtering."""
+    bookings: list[dict] = Field(default_factory=list)
+    favorites: list[dict] = Field(default_factory=list)
+    reviews: list[dict] = Field(default_factory=list)
+
 
 class RecommendationRequest(BaseModel):
     """Request schema for hybrid recommendation scoring.
@@ -14,7 +39,10 @@ class RecommendationRequest(BaseModel):
     """
     userId: str = Field(..., min_length=1)
     candidatePropertyIds: list[str] = Field(..., min_length=1)
+    properties: list[PropertyData] = Field(default_factory=list)
+    userHistory: UserHistory = Field(default_factory=UserHistory)
     context: RecommendationContext = Field(default_factory=RecommendationContext)
+
 
 class ScoreBreakdown(BaseModel):
     """Individual score components for a property."""
@@ -22,11 +50,13 @@ class ScoreBreakdown(BaseModel):
     content: float = Field(..., ge=0.0, le=1.0)
     collab: float = Field(..., ge=0.0, le=1.0)
 
+
 class PropertyRanking(BaseModel):
     """Ranked property with score breakdown."""
     propertyId: str
     score: float = Field(..., ge=0.0, le=1.0)
     breakdown: ScoreBreakdown
+
 
 class RecommendationResponse(BaseModel):
     """Response schema for recommendation scoring."""
