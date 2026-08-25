@@ -1,7 +1,9 @@
 """Training pipeline for cancellation prediction.
 
-Orchestrates: data loading → feature extraction → preprocessing →
-train/test split → training → evaluation → persistence.
+Orchestrates: data loading -> feature extraction -> preprocessing ->
+train/test split -> training -> evaluation -> persistence.
+
+Preprocessing is fitted only on training partitions to prevent holdout leakage.
 """
 
 import time
@@ -12,18 +14,15 @@ import structlog
 from sklearn.metrics import (
     classification_report,
     confusion_matrix,
-    precision_recall_curve,
-    roc_auc_score,
-    average_precision_score,
 )
 from sklearn.model_selection import StratifiedKFold
+from sklearn.pipeline import Pipeline as SkPipeline
 
 from app.config import get_settings
 from app.ml.evaluation.metrics import classification_metrics
 from app.ml.models.registry import ModelRegistry
 from app.ml.cancellation.features import BookingFeatureExtractor
 from app.ml.cancellation.model import CancellationModelWrapper
-from app.ml.cancellation.synthetic import generate_synthetic_cancellations
 from app.ml.preprocessing.pipeline import MLPipeline
 from app.ml.training.splitter import train_test_split_custom
 
@@ -31,6 +30,7 @@ logger = structlog.get_logger("ai-service.ml.cancellation")
 
 # Minimum samples of minority class required for SMOTE
 MIN_SMOTE_SAMPLES = 6
+
 
 class CancellationTrainer:
     """End-to-end training pipeline for booking cancellation prediction.
@@ -47,6 +47,10 @@ class CancellationTrainer:
         self.extractor = BookingFeatureExtractor()
         self.registry = ModelRegistry(artifacts_path=self.settings.artifacts_path)
 
+    @staticmethod
+    def _numeric_and_binary_cols() -> list[str]:
+        return BookingFeatureExtractor.get_numeric_columns() + ["is_weekend_checkin"]
+
     def train(
         self,
         bookings: list[dict],
@@ -56,6 +60,8 @@ class CancellationTrainer:
         use_smote: bool | None = None,
     ) -> dict:
         """Train cancellation model and persist artifacts.
+
+        Preprocessing is fitted ONLY on training data to prevent leakage.
 
         Args:
             bookings: list of booking dicts (from Spring Boot API)
@@ -69,52 +75,52 @@ class CancellationTrainer:
         """
         start = time.time()
 
-        # 1. Feature extraction
+        # 1. Feature extraction — raw features, no preprocessing yet
         logger.info("cancel_training_start", n_bookings=len(bookings))
         features_list = self.extractor.extract_batch(bookings)
         df = pd.DataFrame(features_list)
         y = pd.Series(labels, name="cancelled")
 
-        # 2. Class distribution
+        # 2. Class distribution (full dataset, for logging only)
         class_counts_raw = y.value_counts().to_dict()
         class_counts = {str(k): int(v) for k, v in class_counts_raw.items()}
-        n_cancelled = class_counts_raw.get(1, 0)
         logger.info("cancel_class_distribution", distribution=class_counts)
 
-        # 3. Decide on SMOTE
-        if use_smote is None:
-            use_smote = n_cancelled >= MIN_SMOTE_SAMPLES
-        if use_smote and n_cancelled < MIN_SMOTE_SAMPLES:
-            logger.warning(
-                "smote_skipped",
-                reason=f"Only {n_cancelled} cancelled samples, need {MIN_SMOTE_SAMPLES}",
-            )
-            use_smote = False
+        # 3. Train/test split on RAW features (before preprocessing)
+        df_train, df_test, y_train, y_test = train_test_split_custom(
+            df, y,
+            test_size=self.settings.test_size,
+            random_state=self.settings.random_state,
+        )
 
-        # 4. Preprocessing
-        numeric_cols = self.extractor.get_numeric_columns()
-        binary_cols = ["is_weekend_checkin"]
-        all_numeric = numeric_cols + binary_cols
-
+        # 4. Fit preprocessing ONLY on training data
+        all_numeric = self._numeric_and_binary_cols()
         pipeline = MLPipeline(
             numeric_columns=all_numeric,
             categorical_columns=self.extractor.get_categorical_columns(),
             scaler="standard",
         )
-        X = pipeline.fit_transform(df)
+        pipeline.fit(df_train)
+        X_train = pipeline.transform(df_train)
+        X_test = pipeline.transform(df_test)
 
-        # 5. Train/test split
-        X_train, X_test, y_train, y_test = train_test_split_custom(
-            X, y,
-            test_size=self.settings.test_size,
-            random_state=self.settings.random_state,
-        )
+        # 5. Decide on SMOTE using training minority count
+        n_cancelled_train = int(y_train.value_counts().get(1, 0))
+        if use_smote is None:
+            use_smote = n_cancelled_train >= MIN_SMOTE_SAMPLES
+        if use_smote and n_cancelled_train < MIN_SMOTE_SAMPLES:
+            logger.warning(
+                "smote_skipped",
+                reason=f"Only {n_cancelled_train} cancelled in training set, need {MIN_SMOTE_SAMPLES}",
+            )
+            use_smote = False
 
         # 6. Apply SMOTE if enabled
         if use_smote:
             try:
                 from imblearn.over_sampling import SMOTE
-                smote = SMOTE(random_state=self.settings.random_state, k_neighbors=min(5, n_cancelled - 1))
+                k = min(5, n_cancelled_train - 1)
+                smote = SMOTE(random_state=self.settings.random_state, k_neighbors=k)
                 X_train_arr, y_train_arr = smote.fit_resample(X_train.values, y_train.values)
                 X_train = pd.DataFrame(X_train_arr, columns=X_train.columns)
                 y_train = pd.Series(y_train_arr, name="cancelled")
@@ -152,22 +158,28 @@ class CancellationTrainer:
 
         # Feature importance
         importances = model.feature_importances
-        feature_names = list(X.columns)
+        feature_names = list(X_train.columns)
         feature_importance = dict(sorted(
             zip(feature_names, importances.tolist()),
             key=lambda x: x[1],
             reverse=True,
         ))
 
-        # 9. Cross-validation (only with sufficient data)
+        # 9. Cross-validation (only with sufficient data, raw features)
         cv_metrics = None
-        if len(y) >= 50 and n_cancelled >= 10:
-            cv_metrics = self._cross_validate(X.values, y.values)
+        if len(y) >= 50 and n_cancelled_train >= 10:
+            cv_metrics = self._cross_validate(df, y, use_smote=use_smote)
 
-        # 10. Persist
-        from sklearn.pipeline import Pipeline as SkPipeline
+        # 10. Persist — refit MLPipeline on ALL rows for final artifact
+        pipeline_full = MLPipeline(
+            numeric_columns=all_numeric,
+            categorical_columns=self.extractor.get_categorical_columns(),
+            scaler="standard",
+        )
+        pipeline_full.fit(df)
+
         combined = SkPipeline([
-            ("preprocessor", pipeline._pipeline.named_steps["preprocessor"]),
+            ("preprocessor", pipeline_full._pipeline.named_steps["preprocessor"]),
             ("model", model.model),
         ])
 
@@ -183,7 +195,7 @@ class CancellationTrainer:
             name=model_name,
             version=model_version,
             metrics=persist_metrics,
-            features=list(X.columns),
+            features=feature_names,
         )
 
         elapsed = time.time() - start
@@ -201,7 +213,7 @@ class CancellationTrainer:
             "cv_metrics": cv_metrics,
             "model_name": model_name,
             "model_version": model_version,
-            "features": list(X.columns),
+            "features": feature_names,
             "training_samples": len(X_train),
             "test_samples": len(X_test),
             "class_distribution": class_counts,
@@ -210,26 +222,63 @@ class CancellationTrainer:
             "elapsed_seconds": round(elapsed, 2),
         }
 
-    def _cross_validate(self, X: np.ndarray, y: np.ndarray, n_splits: int = 5) -> dict:
-        """Stratified K-Fold cross-validation."""
+    def _cross_validate(
+        self,
+        df: pd.DataFrame,
+        y: pd.Series,
+        n_splits: int = 5,
+        use_smote: bool = False,
+    ) -> dict:
+        """Stratified K-Fold cross-validation.
+
+        Fits a separate MLPipeline per fold to prevent holdout leakage.
+        """
         skf = StratifiedKFold(n_splits=n_splits, shuffle=True, random_state=self.settings.random_state)
         fold_metrics = []
+        all_numeric = self._numeric_and_binary_cols()
+        cat_cols = self.extractor.get_categorical_columns()
 
-        for fold, (train_idx, val_idx) in enumerate(skf.split(X, y)):
-            X_fold_train, X_fold_val = X[train_idx], X[val_idx]
-            y_fold_train, y_fold_val = y[train_idx], y[val_idx]
+        for fold, (train_idx, val_idx) in enumerate(skf.split(df, y)):
+            df_fold_train = df.iloc[train_idx]
+            df_fold_val = df.iloc[val_idx]
+            y_fold_train = y.iloc[train_idx]
+            y_fold_val = y.iloc[val_idx]
+
+            # Fit preprocessing on this fold's training data only
+            fold_pipeline = MLPipeline(
+                numeric_columns=all_numeric,
+                categorical_columns=cat_cols,
+                scaler="standard",
+            )
+            fold_pipeline.fit(df_fold_train)
+            X_fold_train = fold_pipeline.transform(df_fold_train)
+            X_fold_val = fold_pipeline.transform(df_fold_val)
+
+            # Apply SMOTE within this fold if enabled
+            if use_smote:
+                try:
+                    from imblearn.over_sampling import SMOTE
+                    train_minority = int(y_fold_train.value_counts().get(1, 0))
+                    if train_minority >= MIN_SMOTE_SAMPLES:
+                        k = min(5, train_minority - 1)
+                        smote = SMOTE(random_state=self.settings.random_state, k_neighbors=k)
+                        X_arr, y_arr = smote.fit_resample(X_fold_train.values, y_fold_train.values)
+                        X_fold_train = pd.DataFrame(X_arr, columns=X_fold_train.columns)
+                        y_fold_train = pd.Series(y_arr, name="cancelled")
+                except Exception:
+                    pass
 
             model = CancellationModelWrapper(
                 n_estimators=50,
                 max_depth=8,
-                class_weight="balanced",
+                class_weight=None if use_smote else "balanced",
                 random_state=self.settings.random_state,
             )
-            model.fit(X_fold_train, y_fold_train)
-            y_pred = model.predict(X_fold_val)
-            y_prob = model.predict_proba(X_fold_val)[:, 1]
+            model.fit(X_fold_train.values, y_fold_train.values)
+            y_pred = model.predict(X_fold_val.values)
+            y_prob = model.predict_proba(X_fold_val.values)[:, 1]
 
-            fold_m = classification_metrics(y_fold_val, y_pred, y_prob)
+            fold_m = classification_metrics(y_fold_val.values, y_pred, y_prob)
             fold_metrics.append(fold_m)
             logger.info(f"fold_{fold}_metrics", metrics=fold_m)
 
@@ -244,5 +293,6 @@ class CancellationTrainer:
 
     def train_with_synthetic(self, n_samples: int = 200) -> dict:
         """Train with synthetic data for development/testing."""
+        from app.ml.cancellation.synthetic import generate_synthetic_cancellations
         bookings, labels = generate_synthetic_cancellations(n=n_samples)
         return self.train(bookings, labels, model_version="synthetic-v1")

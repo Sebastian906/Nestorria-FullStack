@@ -28,7 +28,8 @@ class BookingFeatureExtractor:
         """Extract features from a single booking dict.
 
         Accepts either the raw features map or the full Spring Boot request
-        (with "features" key).
+        (with "features" key). If "createdAt" is present in the booking,
+        days_until_checkin is computed from that timestamp instead of today.
         """
         # Support both raw features map and wrapped request
         features = booking_data.get("features", booking_data)
@@ -37,12 +38,13 @@ class BookingFeatureExtractor:
         check_out = features.get("checkOutDate")
         total_price = features.get("totalPrice", 0)
         guests = features.get("guests", 1)
+        created_at = booking_data.get("createdAt") or features.get("createdAt")
 
         stay_duration = self._stay_duration(check_in, check_out)
         price_per_night = total_price / max(stay_duration, 1)
 
         return {
-            "days_until_checkin": self._days_until(check_in),
+            "days_until_checkin": self._days_until(check_in, created_at),
             "stay_duration": stay_duration,
             "guests": guests,
             "total_price": total_price,
@@ -57,13 +59,21 @@ class BookingFeatureExtractor:
         return [self.extract(b) for b in bookings]
 
     @staticmethod
-    def _days_until(check_in_date: str | None) -> int:
-        """Days from today until check-in."""
+    def _days_until(check_in_date: str | None, created_at: str | None = None) -> int:
+        """Days from reference date until check-in.
+
+        Uses created_at as reference if provided (training path),
+        falls back to date.today() for inference without createdAt.
+        """
         if not check_in_date:
             return 0
         try:
             target = date.fromisoformat(check_in_date)
-            delta = (target - date.today()).days
+            if created_at:
+                ref = date.fromisoformat(created_at[:10])
+            else:
+                ref = date.today()
+            delta = (target - ref).days
             return max(delta, 0)
         except (ValueError, TypeError):
             return 0

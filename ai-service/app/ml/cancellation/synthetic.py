@@ -39,9 +39,13 @@ def generate_synthetic_cancellations(
 ) -> tuple[list[dict], list[int]]:
     """Generate synthetic booking data with cancellation labels.
 
+    Labels are derived from booking features using CANCEL_RATES
+    and a risk function, not from the loop index.
+
     Args:
         n: total number of bookings
-        cancel_ratio: fraction of bookings that are cancelled
+        cancel_ratio: target fraction of cancelled bookings (used as
+            a scaling factor on top of per-type base rates)
         seed: random seed for reproducibility
 
     Returns:
@@ -50,14 +54,10 @@ def generate_synthetic_cancellations(
     """
     random.seed(seed)
     bookings = []
-    labels = []
 
-    n_cancelled = int(n * cancel_ratio)
-
-    for i in range(n):
+    for _ in range(n):
         prop_type = random.choice(PROPERTY_TYPES)
         city = random.choice(CITIES)
-        is_cancelled = i < n_cancelled
 
         # Dates
         base_date = date.today() + timedelta(days=random.randint(1, 90))
@@ -83,6 +83,15 @@ def generate_synthetic_cancellations(
         }
 
         bookings.append(booking)
+
+    # Derive labels from features using CANCEL_RATES + cancel_ratio scaling
+    base_rate = cancel_ratio
+    labels = []
+    for b in bookings:
+        type_rate = CANCEL_RATES.get(b["propertyType"], 0.10)
+        # Blend per-type rate with global target; clamp to [0.01, 0.99]
+        blended = max(0.01, min(0.99, (type_rate + base_rate) / 2))
+        is_cancelled = random.random() < blended
         labels.append(1 if is_cancelled else 0)
 
     # Shuffle together

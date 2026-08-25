@@ -61,6 +61,8 @@ class CancellationPredictor:
                 self._pipeline = artifact
                 self._rf_model = artifact.named_steps["model"]
             else:
+                self._pipeline = None
+                self._feature_names = None
                 self._rf_model = artifact
 
             # Read metadata for the SPECIFIC loaded version
