@@ -56,6 +56,10 @@ def create_app() -> FastAPI:
     from app.routers import price
     application.include_router(price.router)
 
+    # Cancellation prediction router
+    from app.routers import cancellation
+    application.include_router(cancellation.router)
+
     return application
 
 app = create_app()

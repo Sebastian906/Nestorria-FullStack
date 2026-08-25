@@ -28,3 +28,10 @@ async def get_price_predictor():
     predictor = PricePredictor()
     predictor.load_model()
     return predictor
+
+async def get_cancellation_predictor():
+    """Get the cancellation predictor singleton."""
+    from app.ml.cancellation.predictor import CancellationPredictor
+    predictor = CancellationPredictor()
+    predictor.load_model()
+    return predictor

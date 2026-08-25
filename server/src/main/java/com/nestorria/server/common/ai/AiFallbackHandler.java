@@ -45,10 +45,13 @@ public class AiFallbackHandler {
     }
 
     public AiPredictionResponse cancellationPredictionFallback(AiPredictionRequest request) {
-        // No hay heurística existente para predicción de cancelación.
-        throw new AiServiceException(
-            "Servicio de predicción de cancelación no disponible. "
-            + "Intente nuevamente más tarde.");
+        log.warn("cancellation prediction fallback: model unavailable, returning unknown");
+        return new AiPredictionResponse(
+            null,
+            null,
+            "fallback",
+            "unknown"
+        );
     }
 
     public AiChatResponse chatFallback(AiChatRequest request) {
