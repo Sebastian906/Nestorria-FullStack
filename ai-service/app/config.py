@@ -38,9 +38,20 @@ class Settings(BaseSettings):
     validation_size: float = 0.1
     random_state: int = 42
 
+    # Recommendation weights (configurable)
+    recommendation_graph_weight: float = 0.4
+    recommendation_content_weight: float = 0.3
+    recommendation_collab_weight: float = 0.3
+
+    # Recommendation ML
+    recommendation_svd_components: int = 8  # safe for small datasets
+    recommendation_tfidf_max_features: int = 500
+    recommendation_min_properties: int = 5  # fallback threshold
+
     @model_validator(mode="after")
     def _validate_ml_sizes(self) -> "Settings":
-        """Validate ML split sizes are strictly between 0 and 1."""
+        """Validate ML split sizes and recommendation weights."""
+        # ML split sizes
         for field in ("test_size", "validation_size"):
             value = getattr(self, field)
             if not (0.0 < value < 1.0):
@@ -50,6 +61,24 @@ class Settings(BaseSettings):
                 f"test_size ({self.test_size}) + validation_size ({self.validation_size}) "
                 "must be less than 1.0"
             )
+
+        # Recommendation weights
+        rec_weights = (
+            self.recommendation_graph_weight,
+            self.recommendation_content_weight,
+            self.recommendation_collab_weight,
+        )
+        for field, value in zip(
+            ("recommendation_graph_weight", "recommendation_content_weight", "recommendation_collab_weight"),
+            rec_weights,
+        ):
+            if value < 0:
+                raise ValueError(f"{field} must be non-negative, got {value}")
+        if sum(rec_weights) <= 0:
+            raise ValueError(
+                f"Sum of recommendation weights must be positive, got {sum(rec_weights)}"
+            )
+
         return self
 
 @lru_cache
