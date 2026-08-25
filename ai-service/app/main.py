@@ -60,6 +60,10 @@ def create_app() -> FastAPI:
     from app.routers import cancellation
     application.include_router(cancellation.router)
 
+    # Recommendation scoring router (AI-006)
+    from app.routers import recommendation
+    application.include_router(recommendation.router)
+
     return application
 
 app = create_app()

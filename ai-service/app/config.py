@@ -38,6 +38,16 @@ class Settings(BaseSettings):
     validation_size: float = 0.1
     random_state: int = 42
 
+    # Recommendation weights (configurable)
+    recommendation_graph_weight: float = 0.4
+    recommendation_content_weight: float = 0.3
+    recommendation_collab_weight: float = 0.3
+
+    # Recommendation ML
+    recommendation_svd_components: int = 8  # safe for small datasets
+    recommendation_tfidf_max_features: int = 500
+    recommendation_min_properties: int = 5  # fallback threshold
+
     @model_validator(mode="after")
     def _validate_ml_sizes(self) -> "Settings":
         """Validate ML split sizes are strictly between 0 and 1."""
