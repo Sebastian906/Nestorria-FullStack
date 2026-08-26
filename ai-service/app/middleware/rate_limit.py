@@ -7,9 +7,9 @@ For distributed deployments, swap to Redis-backed limiter.
 import time
 from collections import defaultdict
 
-from fastapi import HTTPException, Request
+from fastapi import Request
 from starlette.middleware.base import BaseHTTPMiddleware, RequestResponseEndpoint
-from starlette.responses import Response
+from starlette.responses import JSONResponse, Response
 
 # ponytail: dict[ip, list[timestamp]]. Fine for single-process.
 # Upgrade to Redis if you need multi-process or distributed limiting.
@@ -42,9 +42,9 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
 
         if len(_buckets[client_ip]) >= self.max_requests:
             retry_after = int(_buckets[client_ip][0] - cutoff) + 1
-            raise HTTPException(
+            return JSONResponse(
                 status_code=429,
-                detail="Rate limit exceeded. Try again later.",
+                content={"detail": "Rate limit exceeded. Try again later."},
                 headers={"Retry-After": str(retry_after)},
             )
 

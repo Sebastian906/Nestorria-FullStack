@@ -34,14 +34,13 @@ class ImagePreprocessor:
     def preprocess(self, image: Image.Image) -> torch.Tensor:
         """Convert PIL Image to preprocessed tensor.
 
+        Non-RGB images are automatically converted to RGB.
+
         Args:
-            image: PIL Image in RGB mode.
+            image: PIL Image (any mode).
 
         Returns:
             Tensor of shape (1, 3, 224, 224) with batch dimension.
-
-        Raises:
-            ValueError: If image is not in RGB mode.
         """
         if image.mode != "RGB":
             logger.info("converting_image_mode", from_mode=image.mode, to_mode="RGB")

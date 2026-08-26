@@ -4,8 +4,13 @@ GET  /dl/visual/similar/{propertyId} — find visually similar properties
 POST /dl/visual/search               — search by uploaded image
 """
 
+import asyncio
+import io
+import secrets
+
 import structlog
 from fastapi import APIRouter, Depends, File, HTTPException, Query, Request, UploadFile
+from PIL import Image
 
 from app.dependencies import get_config
 from app.dl.image.schemas import (
@@ -19,16 +24,36 @@ logger = structlog.get_logger("ai-service.routers.visual")
 
 router = APIRouter(prefix="/dl/visual", tags=["visual-search"])
 
-# Singleton engine — loaded once at startup
+# ponytail: lazy singleton with lock — prevents double-init under concurrency.
+# Loaded once on first request, not at startup (avoids importing torch at boot).
 _engine = None
+_engine_lock = asyncio.Lock()
 
-def get_engine():
+
+async def get_engine():
     """Get or initialize the visual similarity engine."""
     global _engine
     if _engine is None:
-        from app.dl.image.similarity import VisualSimilarityEngine
-        _engine = VisualSimilarityEngine()
+        async with _engine_lock:
+            if _engine is None:
+                from app.dl.image.similarity import VisualSimilarityEngine
+                _engine = VisualSimilarityEngine()
     return _engine
+
+
+async def _require_api_key(request: Request):
+    """Validate API key. Rejects if not configured or mismatched."""
+    config = await get_config()
+    if not config.api_key:
+        raise HTTPException(status_code=401, detail="API key not configured")
+
+    provided = request.headers.get("X-API-Key", "")
+    if not secrets.compare_digest(provided, config.api_key):
+        raise HTTPException(status_code=401, detail="Invalid API key")
+
+    if not config.visual_search_enabled:
+        raise HTTPException(status_code=503, detail="Visual search is disabled")
+
 
 @router.get("/similar/{property_id}", response_model=VisualSimilarResponse)
 async def find_similar(
@@ -37,19 +62,13 @@ async def find_similar(
     http_request: Request = None,
     engine=Depends(get_engine),
 ):
-    """Find properties visually similar to a given property.
+    """Find properties visually similar to a given property."""
+    await _require_api_key(http_request)
 
-    Requires authentication (API key).
-    """
-    config = await get_config()
-    api_key = http_request.headers.get("X-API-Key")
-    if config.api_key and api_key != config.api_key:
-        raise HTTPException(status_code=401, detail="Invalid API key")
-
-    if not config.visual_search_enabled:
-        raise HTTPException(status_code=503, detail="Visual search is disabled")
-
-    results = engine.find_similar(property_id, limit=limit)
+    loop = asyncio.get_event_loop()
+    results = await loop.run_in_executor(
+        None, engine.find_similar, property_id, limit
+    )
 
     return VisualSimilarResponse(
         propertyId=property_id,
@@ -60,6 +79,7 @@ async def find_similar(
         model="resnet50",
     )
 
+
 @router.post("/search", response_model=VisualSearchResponse)
 async def search_by_image(
     image: UploadFile = File(...),
@@ -67,18 +87,8 @@ async def search_by_image(
     http_request: Request = None,
     engine=Depends(get_engine),
 ):
-    """Search for properties visually similar to an uploaded image.
-
-    Requires authentication (API key).
-    Accepts JPEG, PNG images.
-    """
-    config = await get_config()
-    api_key = http_request.headers.get("X-API-Key")
-    if config.api_key and api_key != config.api_key:
-        raise HTTPException(status_code=401, detail="Invalid API key")
-
-    if not config.visual_search_enabled:
-        raise HTTPException(status_code=503, detail="Visual search is disabled")
+    """Search for properties visually similar to an uploaded image."""
+    await _require_api_key(http_request)
 
     # Validate file type
     if image.content_type not in ("image/jpeg", "image/png"):
@@ -87,20 +97,31 @@ async def search_by_image(
             detail="Only JPEG and PNG images are supported",
         )
 
-    # Read and process image
-    from PIL import Image
-    import io
+    # Check size before reading — UploadFile.size may be None for some clients
+    if image.size is not None and image.size > 10 * 1024 * 1024:
+        raise HTTPException(status_code=422, detail="Image too large (max 10MB)")
 
     image_data = await image.read()
-    if len(image_data) > 10 * 1024 * 1024:  # 10MB limit
+
+    if len(image_data) > 10 * 1024 * 1024:
         raise HTTPException(status_code=422, detail="Image too large (max 10MB)")
 
     try:
         pil_image = Image.open(io.BytesIO(image_data))
-    except Exception:
-        raise HTTPException(status_code=422, detail="Invalid image file")
+        pil_image.load()
+    except Exception as e:
+        raise HTTPException(status_code=422, detail="Invalid image file") from e
 
-    results = engine.search_by_image(pil_image, limit=limit)
+    if pil_image.format not in ("JPEG", "PNG"):
+        raise HTTPException(
+            status_code=422,
+            detail="Only JPEG and PNG images are supported",
+        )
+
+    loop = asyncio.get_event_loop()
+    results = await loop.run_in_executor(
+        None, engine.search_by_image, pil_image, limit
+    )
 
     return VisualSearchResponse(
         results=[

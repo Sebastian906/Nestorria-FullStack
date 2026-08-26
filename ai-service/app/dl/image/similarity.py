@@ -9,9 +9,10 @@ When scale demands it (1K+ images), upgrade pgvector to 0.8.0+
 and add HNSW index (requires >2000 dimension support).
 """
 
-import io
+import math
 import time
 import urllib.request
+import io
 
 import numpy as np
 import psycopg2
@@ -58,6 +59,13 @@ SQL_COUNT_EMBEDDINGS = """
 """
 
 
+def _normalize_similarity(value: float) -> float:
+    """Clamp similarity to [0.0, 1.0], convert non-finite to 0.0."""
+    if not math.isfinite(value):
+        return 0.0
+    return max(0.0, min(1.0, value))
+
+
 class VisualSimilarityEngine:
     """Manages embedding storage and similarity search via pgvector.
 
@@ -86,6 +94,9 @@ class VisualSimilarityEngine:
     def index_property(self, property_id: str, image_urls: list[str]) -> int:
         """Download images, extract embeddings, and store in pgvector.
 
+        Extracts all embeddings first, then replaces existing data.
+        If no embeddings are extracted, existing data is preserved.
+
         Args:
             property_id: The property UUID.
             image_urls: List of Cloudinary URLs for this property.
@@ -95,40 +106,50 @@ class VisualSimilarityEngine:
         """
         conn = self._get_connection()
         stored = 0
+        embeddings = []
+
+        for url in image_urls:
+            try:
+                t0 = time.perf_counter()
+                embedding = self._extract_from_url(url)
+                elapsed_ms = (time.perf_counter() - t0) * 1000
+
+                embeddings.append((url, embedding))
+                stored += 1
+
+                logger.info(
+                    "embedding_extracted",
+                    property_id=property_id,
+                    url=url,
+                    elapsed_ms=round(elapsed_ms, 1),
+                    dimension=EMBEDDING_DIMENSION,
+                )
+            except Exception as e:
+                logger.warning(
+                    "embedding_extraction_failed",
+                    property_id=property_id,
+                    url=url,
+                    error=str(e),
+                )
+                continue
+
+        if not embeddings:
+            logger.warning(
+                "no_embeddings_extracted",
+                property_id=property_id,
+                images_total=len(image_urls),
+            )
+            return 0
 
         try:
-            # Clear existing embeddings for this property
             with conn.cursor() as cur:
                 cur.execute(SQL_DELETE_PROPERTY_EMBEDDINGS, (property_id,))
 
-            for url in image_urls:
-                try:
-                    t0 = time.perf_counter()
-                    embedding = self._extract_from_url(url)
-                    elapsed_ms = (time.perf_counter() - t0) * 1000
-
-                    with conn.cursor() as cur:
-                        cur.execute(
-                            SQL_INSERT_EMBEDDING,
-                            (property_id, url, embedding.tolist()),
-                        )
-                    stored += 1
-
-                    logger.info(
-                        "embedding_extracted",
-                        property_id=property_id,
-                        url=url,
-                        elapsed_ms=round(elapsed_ms, 1),
-                        dimension=EMBEDDING_DIMENSION,
+                for url, embedding in embeddings:
+                    cur.execute(
+                        SQL_INSERT_EMBEDDING,
+                        (property_id, url, embedding.tolist()),
                     )
-                except Exception as e:
-                    logger.warning(
-                        "embedding_extraction_failed",
-                        property_id=property_id,
-                        url=url,
-                        error=str(e),
-                    )
-                    continue
 
             conn.commit()
             logger.info(
@@ -171,10 +192,11 @@ class VisualSimilarityEngine:
         """
         conn = self._get_connection()
 
-        # Get one embedding from the target property to compare against
+        # Get one embedding from the target property (deterministic via id ordering)
         with conn.cursor() as cur:
             cur.execute(
-                "SELECT embedding FROM property_image_embeddings WHERE property_id = %s LIMIT 1",
+                "SELECT embedding FROM property_image_embeddings "
+                "WHERE property_id = %s ORDER BY id LIMIT 1",
                 (property_id,),
             )
             row = cur.fetchone()
@@ -188,7 +210,7 @@ class VisualSimilarityEngine:
         with conn.cursor() as cur:
             cur.execute(SQL_FIND_SIMILAR, (query_embedding, property_id, limit))
             results = [
-                {"property_id": r[0], "similarity": float(r[1])}
+                {"property_id": r[0], "similarity": _normalize_similarity(float(r[1]))}
                 for r in cur.fetchall()
             ]
         elapsed_ms = (time.perf_counter() - t0) * 1000
@@ -223,7 +245,7 @@ class VisualSimilarityEngine:
         with conn.cursor() as cur:
             cur.execute(SQL_SEARCH_BY_IMAGE, (query_embedding.tolist(), limit))
             results = [
-                {"property_id": r[0], "similarity": float(r[1])}
+                {"property_id": r[0], "similarity": _normalize_similarity(float(r[1]))}
                 for r in cur.fetchall()
             ]
         query_ms = (time.perf_counter() - t1) * 1000

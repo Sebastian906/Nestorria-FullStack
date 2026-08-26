@@ -63,6 +63,7 @@ class ImageEmbeddingExtractor:
         embedding = self.model(tensor)
         return embedding.flatten().cpu().numpy()
 
+    @torch.no_grad()
     def extract_batch(self, tensors: torch.Tensor) -> np.ndarray:
         """Extract embeddings from a batch of tensors.
 
