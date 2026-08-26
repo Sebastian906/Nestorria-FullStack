@@ -48,6 +48,13 @@ class Settings(BaseSettings):
     recommendation_tfidf_max_features: int = 500
     recommendation_min_properties: int = 5  # fallback threshold
 
+    # Visual Search — experimental
+    visual_search_enabled: bool = False
+    visual_search_embedding_dim: int = 2048
+    visual_search_model: str = "resnet50"
+    visual_search_rate_limit: int = 10  # max requests per minute per IP
+    visual_search_rate_window: int = 60  # window in seconds
+
     @model_validator(mode="after")
     def _validate_ml_sizes(self) -> "Settings":
         """Validate ML split sizes and recommendation weights."""

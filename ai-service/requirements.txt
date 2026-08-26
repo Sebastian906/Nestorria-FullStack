@@ -1,4 +1,5 @@
 fastapi>=0.115.0,<1.0.0
+python-multipart>=0.0.9
 uvicorn[standard]>=0.30.0,<1.0.0
 pydantic-settings>=2.0.0,<3.0.0
 structlog>=24.0.0,<26.1.0
@@ -9,6 +10,14 @@ imbalanced-learn>=0.12.0,<1.0.0
 pandas>=2.2.0,<3.0.5
 numpy>=2.0.0,<3.0.0
 scipy>=1.11.0,<2.0.0
+
+# Deep Learning — CPU-only
+torch>=2.0.0,<3.0.0
+torchvision>=0.15.0,<1.0.0
+Pillow>=10.0.0,<12.3.0
+
+# Database (pgvector)
+psycopg2-binary>=2.9.0,<3.0.0
 
 # Testing
 pytest>=8.0.0,<9.1.1

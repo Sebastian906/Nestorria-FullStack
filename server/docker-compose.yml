@@ -18,6 +18,7 @@ services:
       - "5432:5432"
     volumes:
       - primary_data:/var/lib/postgresql/data
+      - ./postgresql-init:/docker-entrypoint-initdb.d  # pgvector init
 
   ai-service:
     build:
