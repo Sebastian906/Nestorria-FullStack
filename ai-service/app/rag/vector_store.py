@@ -29,9 +29,20 @@ class SearchResult:
     source: str
     version: str
     metadata: dict
+    user_id: str
 
 def _normalize_similarity(value: float) -> float:
-    """Clamp similarity to [0.0, 1.0], convert non-finite to 0.0."""
+    """Clamp similarity to [0.0, 1.0], convert non-finite to 0.0.
+
+    Ensures similarity scores are valid floats in the expected range.
+    Handles edge cases like NaN or Inf from distance calculations.
+
+    Args:
+        value: Raw similarity score.
+
+    Returns:
+        Normalized similarity score in [0.0, 1.0].
+    """
     if not math.isfinite(value):
         return 0.0
     return max(0.0, min(1.0, value))
@@ -50,9 +61,9 @@ class PgVectorStore:
         self._max_conn = max_conn
         logger.info("vector_store_initialized", table=table_name)
 
-    def _get_pool(self):
-        """Get or create the connection pool (lazy init)."""
-        if self._pool is None:
+    def _get_connection(self):
+        """Get or create database connection."""
+        if self._conn is None or self._conn.closed:
             settings = get_settings()
             if not settings.database_url:
                 raise RuntimeError("DATABASE_URL not configured for RAG")
@@ -70,55 +81,34 @@ class PgVectorStore:
 
         Must be called once before first insert/search.
         """
-        pool = self._get_pool()
-        conn = pool.getconn()
-        try:
-            with conn.cursor() as cur:
-                cur.execute("CREATE EXTENSION IF NOT EXISTS vector")
-                cur.execute(f"""
-                    CREATE TABLE IF NOT EXISTS {self.table_name} (
-                        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-                        content TEXT NOT NULL,
-                        embedding vector({embedding_dim}) NOT NULL,
-                        metadata JSONB DEFAULT '{{}}'::jsonb,
-                        source TEXT NOT NULL,
-                        version INTEGER DEFAULT 1,
-                        created_at TIMESTAMP DEFAULT NOW()
-                    )
-                """)
-                cur.execute(f"SELECT COUNT(*) FROM {self.table_name}")
-                count = cur.fetchone()[0]
-                if count == 0:
-                    logger.info("rag_table_empty_skipping_index", table=self.table_name)
-            conn.commit()
-        finally:
-            pool.putconn(conn)
-        logger.info("rag_schema_initialized", table=self.table_name)
+        conn = self._get_connection()
+        with conn.cursor() as cur:
+            # Ensure pgvector extension
+            cur.execute("CREATE EXTENSION IF NOT EXISTS vector")
 
-    def delete_source(self, source: str, version: str) -> int:
-        """Delete all chunks for a given source and version.
-
-        Returns:
-            Number of rows deleted.
-        """
-        pool = self._get_pool()
-        conn = pool.getconn()
-        try:
-            with conn.cursor() as cur:
-                cur.execute(
-                    f"DELETE FROM {self.table_name} WHERE source = %s AND version = %s",
-                    (source, version),
+            # Create RAG documents table
+            cur.execute(f"""
+                CREATE TABLE IF NOT EXISTS {self.table_name} (
+                    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+                    content TEXT NOT NULL,
+                    embedding vector({embedding_dim}) NOT NULL,
+                    metadata JSONB DEFAULT '{{}}'::jsonb,
+                    source TEXT NOT NULL,
+                    version INTEGER DEFAULT 1,
+                    created_at TIMESTAMP DEFAULT NOW()
                 )
-                deleted = cur.rowcount
-            conn.commit()
-            if deleted > 0:
-                logger.info("stale_chunks_deleted", source=source, version=version, count=deleted)
-            return deleted
-        except Exception:
-            conn.rollback()
-            raise
-        finally:
-            pool.putconn(conn)
+            """)
+
+            # Create index only if table was just created (no rows)
+            cur.execute(f"SELECT COUNT(*) FROM {self.table_name}")
+            count = cur.fetchone()[0]
+            if count == 0:
+                # ponytail: IVFFlat requires at least 100 rows for lists>1.
+                # Skip index for small datasets — sequential scan is faster.
+                logger.info("rag_table_empty_skipping_index", table=self.table_name)
+
+        conn.commit()
+        logger.info("rag_schema_initialized", table=self.table_name)
 
     def insert(self, chunks: list[Chunk], embeddings: np.ndarray, source: str, version: str = "1") -> int:
         """Insert chunks with embeddings into pgvector.
@@ -130,6 +120,7 @@ class PgVectorStore:
             embeddings: numpy array of shape (N, embedding_dim).
             source: Document source identifier.
             version: Document version.
+            user_id: User ID owning the document.
 
         Returns:
             Number of chunks inserted.
@@ -137,15 +128,23 @@ class PgVectorStore:
         if len(chunks) != len(embeddings):
             raise ValueError(f"chunks ({len(chunks)}) and embeddings ({len(embeddings)}) length mismatch")
 
-        pool = self._get_pool()
-        conn = pool.getconn()
+        conn = self._get_connection()
+
         try:
+            # Delete existing chunks for this source+version
+            with conn.cursor() as cur:
+                cur.execute(
+                    f"DELETE FROM {self.table_name} WHERE source = %s AND version = %s",
+                    (source, version),
+                )
+
+            # Insert new chunks
             with conn.cursor() as cur:
                 for chunk, embedding in zip(chunks, embeddings):
                     cur.execute(
                         f"""
-                        INSERT INTO {self.table_name} (id, content, embedding, metadata, source, version)
-                        VALUES (%s, %s, %s::vector, %s, %s, %s)
+                        INSERT INTO {self.table_name} (id, content, embedding, metadata, source, version, user_id)
+                        VALUES (%s, %s, %s::vector, %s, %s, %s, %s)
                         """,
                         (
                             str(uuid.uuid4()),
@@ -153,7 +152,7 @@ class PgVectorStore:
                             embedding.tolist(),
                             psycopg2.extras.Json(chunk.metadata),
                             source,
-                            int(version),
+                            int(version) if version.isdigit() else 1,
                         ),
                     )
             conn.commit()
@@ -182,46 +181,47 @@ class PgVectorStore:
         Args:
             query_embedding: Query vector of shape (embedding_dim,).
             top_k: Maximum results to return.
-            filters: Optional dict with 'source' key for filtering.
+            filters: Optional dict with 'source' and/or 'user_id' keys for filtering.
 
         Returns:
             List of SearchResult objects ordered by similarity descending.
         """
-        conn = self._get_pool().getconn()
-        try:
-            where_clause = ""
-            params = [query_embedding.tolist(), top_k]
+        conn = self._get_connection()
 
-            if filters and filters.get("source"):
-                where_clause = "WHERE source = %s"
-                params.insert(1, filters["source"])
+        # Build query dynamically based on filters
+        where_clause = ""
+        params = [query_embedding.tolist(), top_k]
 
-            query = f"""
-                SELECT id, content, source, version, metadata,
-                       1 - (embedding <=> %s::vector) AS similarity
-                FROM {self.table_name}
-                {where_clause}
-                ORDER BY embedding <=> %s::vector
-                LIMIT %s
-            """
+        if filters and filters.get("source"):
+            where_clause = "WHERE source = %s"
+            params.insert(1, filters["source"])
+
+        query = f"""
+            SELECT id, content, source, version, metadata,
+                   1 - (embedding <=> %s::vector) AS similarity
+            FROM {self.table_name}
+            {where_clause}
+            ORDER BY embedding <=> %s::vector
+            LIMIT %s
+        """
 
             params.insert(1, query_embedding.tolist())
 
-            t0 = time.perf_counter()
-            with conn.cursor() as cur:
-                cur.execute(query, params)
-                results = [
-                    SearchResult(
-                        id=str(r[0]),
-                        content=r[1],
-                        score=_normalize_similarity(float(r[5])),
-                        source=r[2],
-                        version=str(r[3]),
-                        metadata=r[4] or {},
-                    )
-                    for r in cur.fetchall()
-                ]
-            elapsed_ms = (time.perf_counter() - t0) * 1000
+        t0 = time.perf_counter()
+        with conn.cursor() as cur:
+            cur.execute(query, params)
+            results = [
+                SearchResult(
+                    id=str(r[0]),
+                    content=r[1],
+                    score=_normalize_similarity(float(r[5])),
+                    source=r[2],
+                    version=str(r[3]),
+                    metadata=r[4] or {},
+                )
+                for r in cur.fetchall()
+            ]
+        elapsed_ms = (time.perf_counter() - t0) * 1000
 
             logger.info(
                 "search_completed",
@@ -248,7 +248,7 @@ class PgVectorStore:
             self._get_pool().putconn(conn)
 
     def close(self):
-        """Close the connection pool."""
-        if self._pool is not None:
-            self._pool.closeall()
-            logger.info("rag_pool_closed")
+        """Close database connection."""
+        if self._conn and not self._conn.closed:
+            self._conn.close()
+            logger.info("rag_connection_closed")

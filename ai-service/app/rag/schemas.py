@@ -22,6 +22,7 @@ class RetrieveRequest(BaseModel):
     query: str = Field(..., min_length=1, description="Search query")
     top_k: int = Field(default=5, ge=1, le=50, description="Maximum results")
     source_filter: str | None = Field(default=None, description="Filter by source")
+    user_id: str = Field(..., min_length=1, description="User ID for access control")
 
 class RetrievalResult(BaseModel):
     """A single retrieval result."""

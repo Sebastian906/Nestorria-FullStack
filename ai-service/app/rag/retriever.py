@@ -31,6 +31,7 @@ class DocumentRetriever:
         query: str,
         top_k: int = 5,
         source_filter: str | None = None,
+        user_id: str | None = None,
     ) -> list[dict]:
         """Retrieve relevant chunks for a query.
 
@@ -38,6 +39,7 @@ class DocumentRetriever:
             query: Search query text.
             top_k: Maximum results.
             source_filter: Optional source filter.
+            user_id: User ID for access control (only returns user's documents).
 
         Returns:
             List of dicts with content, score, source, metadata.
@@ -45,11 +47,18 @@ class DocumentRetriever:
         # Embed query
         query_embedding = self.embedder.embed([query])[0]
 
+        # Build filters with user_id for access control
+        filters = {}
+        if source_filter:
+            filters["source"] = source_filter
+        if user_id:
+            filters["user_id"] = user_id
+
         # Search
         results = self.store.search(
             query_embedding=query_embedding,
             top_k=top_k,
-            filters={"source": source_filter} if source_filter else None,
+            filters=filters if filters else None,
         )
 
         # Apply similarity threshold
