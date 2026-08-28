@@ -8,7 +8,7 @@ version: '3.8'
 
 services:
   postgres-primary:
-    image: postgis/postgis:16-3.4
+    image: pgvector/pgvector:pg16
     container_name: nestorria-primary
     environment:
       POSTGRES_DB: nestorria
@@ -18,7 +18,6 @@ services:
       - "5432:5432"
     volumes:
       - primary_data:/var/lib/postgresql/data
-      - ./postgresql-init:/docker-entrypoint-initdb.d  # pgvector init
 
   ai-service:
     build:
