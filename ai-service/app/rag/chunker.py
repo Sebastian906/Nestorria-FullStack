@@ -107,7 +107,18 @@ class DocumentChunker:
         return chunks
 
     def _split_long_text(self, text: str, metadata: dict) -> list[Chunk]:
-        """Split text that exceeds chunk_size by characters."""
+        """Split text that exceeds chunk_size by characters.
+
+        Used when a single sentence or paragraph is longer than the configured
+        chunk size. Applies overlap between consecutive chunks.
+
+        Args:
+            text: Text to split.
+            metadata: Metadata to attach to each chunk.
+
+        Returns:
+            List of Chunk objects.
+        """
         chunks = []
         start = 0
         while start < len(text):
@@ -121,7 +132,17 @@ class DocumentChunker:
         return chunks
 
     def _apply_overlap(self, chunks: list[Chunk]) -> list[Chunk]:
-        """Add overlapping content from previous chunk to current."""
+        """Add overlapping content from previous chunk to current.
+
+        Prepends the last N characters (configured overlap) from the previous
+        chunk to the current chunk, prefixed with "..." for context continuity.
+
+        Args:
+            chunks: List of chunks to process.
+
+        Returns:
+            List of chunks with overlap applied.
+        """
         if len(chunks) <= 1:
             return chunks
 

@@ -28,9 +28,20 @@ class SearchResult:
     source: str
     version: str
     metadata: dict
+    user_id: str
 
 def _normalize_similarity(value: float) -> float:
-    """Clamp similarity to [0.0, 1.0], convert non-finite to 0.0."""
+    """Clamp similarity to [0.0, 1.0], convert non-finite to 0.0.
+
+    Ensures similarity scores are valid floats in the expected range.
+    Handles edge cases like NaN or Inf from distance calculations.
+
+    Args:
+        value: Raw similarity score.
+
+    Returns:
+        Normalized similarity score in [0.0, 1.0].
+    """
     if not math.isfinite(value):
         return 0.0
     return max(0.0, min(1.0, value))
@@ -48,7 +59,17 @@ class PgVectorStore:
         logger.info("vector_store_initialized", table=table_name)
 
     def _get_connection(self):
-        """Get or create database connection."""
+        """Get or create database connection.
+
+        Establishes a new connection if none exists or if the previous connection
+        was closed. Converts JDBC-style URLs to psycopg2 format if needed.
+
+        Returns:
+            psycopg2 connection object.
+
+        Raises:
+            RuntimeError: If DATABASE_URL is not configured.
+        """
         if self._conn is None or self._conn.closed:
             settings = get_settings()
             if not settings.database_url:
@@ -80,6 +101,7 @@ class PgVectorStore:
                     metadata JSONB DEFAULT '{{}}'::jsonb,
                     source TEXT NOT NULL,
                     version INTEGER DEFAULT 1,
+                    user_id TEXT NOT NULL,
                     created_at TIMESTAMP DEFAULT NOW()
                 )
             """)
@@ -95,7 +117,7 @@ class PgVectorStore:
         conn.commit()
         logger.info("rag_schema_initialized", table=self.table_name)
 
-    def insert(self, chunks: list[Chunk], embeddings: np.ndarray, source: str, version: str = "1") -> int:
+    def insert(self, chunks: list[Chunk], embeddings: np.ndarray, source: str, version: str = "1", user_id: str | None = None) -> int:
         """Insert chunks with embeddings into pgvector.
 
         Replaces existing chunks for the same source (upsert by source+version).
@@ -105,6 +127,7 @@ class PgVectorStore:
             embeddings: numpy array of shape (N, embedding_dim).
             source: Document source identifier.
             version: Document version.
+            user_id: User ID owning the document.
 
         Returns:
             Number of chunks inserted.
@@ -115,11 +138,11 @@ class PgVectorStore:
         conn = self._get_connection()
 
         try:
-            # Delete existing chunks for this source+version
+            # Delete existing chunks for this source+version+user_id
             with conn.cursor() as cur:
                 cur.execute(
-                    f"DELETE FROM {self.table_name} WHERE source = %s AND version = %s",
-                    (source, version),
+                    f"DELETE FROM {self.table_name} WHERE source = %s AND version = %s AND user_id = %s",
+                    (source, version, user_id),
                 )
 
             # Insert new chunks
@@ -127,8 +150,8 @@ class PgVectorStore:
                 for chunk, embedding in zip(chunks, embeddings):
                     cur.execute(
                         f"""
-                        INSERT INTO {self.table_name} (id, content, embedding, metadata, source, version)
-                        VALUES (%s, %s, %s::vector, %s, %s, %s)
+                        INSERT INTO {self.table_name} (id, content, embedding, metadata, source, version, user_id)
+                        VALUES (%s, %s, %s::vector, %s, %s, %s, %s)
                         """,
                         (
                             str(uuid.uuid4()),
@@ -137,6 +160,7 @@ class PgVectorStore:
                             psycopg2.extras.Json(chunk.metadata),
                             source,
                             int(version) if version.isdigit() else 1,
+                            user_id,
                         ),
                     )
 
@@ -169,7 +193,7 @@ class PgVectorStore:
         Args:
             query_embedding: Query vector of shape (embedding_dim,).
             top_k: Maximum results to return.
-            filters: Optional dict with 'source' key for filtering.
+            filters: Optional dict with 'source' and/or 'user_id' keys for filtering.
 
         Returns:
             List of SearchResult objects ordered by similarity descending.
@@ -177,15 +201,21 @@ class PgVectorStore:
         conn = self._get_connection()
 
         # Build query dynamically based on filters
-        where_clause = ""
+        where_clauses = []
         params = [query_embedding.tolist(), top_k]
 
-        if filters and filters.get("source"):
-            where_clause = "WHERE source = %s"
-            params.insert(1, filters["source"])
+        if filters:
+            if filters.get("source"):
+                where_clauses.append("source = %s")
+                params.insert(1, filters["source"])
+            if filters.get("user_id"):
+                where_clauses.append("user_id = %s")
+                params.insert(1, filters["user_id"])
+
+        where_clause = "WHERE " + " AND ".join(where_clauses) if where_clauses else ""
 
         query = f"""
-            SELECT id, content, source, version, metadata,
+            SELECT id, content, source, version, metadata, user_id,
                    1 - (embedding <=> %s::vector) AS similarity
             FROM {self.table_name}
             {where_clause}
@@ -203,10 +233,11 @@ class PgVectorStore:
                 SearchResult(
                     id=str(r[0]),
                     content=r[1],
-                    score=_normalize_similarity(float(r[5])),
+                    score=_normalize_similarity(float(r[6])),
                     source=r[2],
                     version=str(r[3]),
                     metadata=r[4] or {},
+                    user_id=r[5],
                 )
                 for r in cur.fetchall()
             ]

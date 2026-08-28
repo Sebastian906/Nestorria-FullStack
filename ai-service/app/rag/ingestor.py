@@ -38,6 +38,7 @@ class DocumentIngestor:
         content: str,
         metadata: dict | None = None,
         version: str = "1",
+        user_id: str | None = None,
     ) -> dict:
         """Ingest a document into the vector store.
 
@@ -46,6 +47,7 @@ class DocumentIngestor:
             content: Document text content.
             metadata: Additional metadata to attach to chunks.
             version: Document version.
+            user_id: User ID owning the document.
 
         Returns:
             Dict with chunks_created, source, version.
@@ -74,7 +76,7 @@ class DocumentIngestor:
 
         # Store
         t2 = time.perf_counter()
-        inserted = self.store.insert(chunks, embeddings, source, version)
+        inserted = self.store.insert(chunks, embeddings, source, version, user_id)
         store_ms = (time.perf_counter() - t2) * 1000
 
         total_ms = (time.perf_counter() - t0) * 1000

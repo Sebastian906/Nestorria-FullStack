@@ -15,7 +15,17 @@ _model = None
 _model_name = None
 
 def _get_model(model_name: str):
-    """Get or load the sentence-transformer model (singleton)."""
+    """Get or load the sentence-transformer model (singleton).
+
+    Lazily loads the model on first call and caches it for subsequent requests.
+    Reloads if a different model name is requested.
+
+    Args:
+        model_name: HuggingFace model identifier.
+
+    Returns:
+        Loaded SentenceTransformer model instance.
+    """
     global _model, _model_name
     if _model is None or _model_name != model_name:
         from sentence_transformers import SentenceTransformer

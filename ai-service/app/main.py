@@ -64,9 +64,15 @@ def create_app() -> FastAPI:
     from app.routers import recommendation
     application.include_router(recommendation.router)
 
-    # RAG router
+    # RAG router with rate limiting
     from app.routers import rag
     application.include_router(rag.router)
+    from app.middleware.rate_limit import RateLimitMiddleware
+    application.add_middleware(
+        RateLimitMiddleware,
+        max_requests=settings.rag_rate_limit,
+        window_seconds=settings.rag_rate_window,
+    )
 
     # Visual search router — experimental
     if settings.visual_search_enabled:

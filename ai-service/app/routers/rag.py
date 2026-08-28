@@ -97,6 +97,7 @@ async def ingest_document(
         body.content,
         body.metadata,
         body.metadata.get("version", "1"),
+        body.user_id,
     )
     elapsed_ms = (time.perf_counter() - t0) * 1000
 
@@ -127,6 +128,7 @@ async def retrieve_documents(
         body.query,
         body.top_k,
         body.source_filter,
+        body.user_id,
     )
     elapsed_ms = (time.perf_counter() - t0) * 1000
 
