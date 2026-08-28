@@ -9,6 +9,7 @@ class IngestRequest(BaseModel):
     source: str = Field(..., min_length=1, max_length=500, description="Document source identifier")
     content: str = Field(..., min_length=1, description="Document content to ingest")
     metadata: dict[str, Any] = Field(default_factory=dict, description="Additional metadata")
+    version: str = Field(default="1", pattern=r"^\d+$", description="Document version (numeric string)")
 
 class IngestResponse(BaseModel):
     """Response for POST /rag/ingest."""

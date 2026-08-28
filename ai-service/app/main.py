@@ -68,17 +68,26 @@ def create_app() -> FastAPI:
     from app.routers import rag
     application.include_router(rag.router)
 
+    # Rate limiting for RAG ingestion
+    from app.middleware.rate_limit import RateLimitMiddleware
+    application.add_middleware(
+        RateLimitMiddleware,
+        max_requests=settings.rag_rate_limit,
+        window_seconds=settings.rag_rate_window,
+        prefix="/rag/",
+    )
+
     # Visual search router — experimental
     if settings.visual_search_enabled:
         from app.routers import visual
         application.include_router(visual.router)
 
         # Rate limiting for visual search endpoints
-        from app.middleware.rate_limit import RateLimitMiddleware
         application.add_middleware(
             RateLimitMiddleware,
             max_requests=settings.visual_search_rate_limit,
             window_seconds=settings.visual_search_rate_window,
+            prefix="/dl/",
         )
 
     return application

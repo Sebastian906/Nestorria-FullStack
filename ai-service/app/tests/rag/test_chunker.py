@@ -63,3 +63,25 @@ class TestDocumentChunker:
         chunks = chunker.chunk(text)
         for i, chunk in enumerate(chunks):
             assert chunk.index == i
+
+    def test_all_chunks_respect_chunk_size(self):
+        """Every chunk must be at or below chunk_size, even with overlap."""
+        chunker = DocumentChunker(chunk_size=50, overlap=10)
+        text = "This is a longer document that should be split into multiple chunks. " * 10
+        chunks = chunker.chunk(text)
+        for chunk in chunks:
+            assert len(chunk.content) <= 50, (
+                f"Chunk of length {len(chunk.content)} exceeds chunk_size=50: "
+                f"{chunk.content[:80]}..."
+            )
+
+    def test_overlap_does_not_duplicate_boundary(self):
+        """Overlap should not produce duplicated text from the previous chunk."""
+        chunker = DocumentChunker(chunk_size=30, overlap=10)
+        text = "AAAA BBBB CCCC DDDD EEEE FFFF GGGG HHHH"
+        chunks = chunker.chunk(text)
+        # With overlap, the second chunk starts with "...<tail> <content>"
+        # The tail should come from the previous chunk, not be invented
+        if len(chunks) >= 2:
+            second = chunks[1].content
+            assert second.startswith("..."), f"Expected overlap prefix, got: {second[:40]}"

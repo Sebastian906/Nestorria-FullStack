@@ -107,7 +107,11 @@ class DocumentChunker:
         return chunks
 
     def _split_long_text(self, text: str, metadata: dict) -> list[Chunk]:
-        """Split text that exceeds chunk_size by characters."""
+        """Split text that exceeds chunk_size by characters.
+
+        Produces clean character splits without overlap.
+        Overlap is applied uniformly by _apply_overlap after all chunks exist.
+        """
         chunks = []
         start = 0
         while start < len(text):
@@ -117,11 +121,14 @@ class DocumentChunker:
                 metadata=metadata.copy(),
                 index=len(chunks),
             ))
-            start += self.chunk_size - self.overlap
+            start += self.chunk_size
         return chunks
 
     def _apply_overlap(self, chunks: list[Chunk]) -> list[Chunk]:
-        """Add overlapping content from previous chunk to current."""
+        """Prepend tail of previous chunk as overlap prefix.
+
+        Resulting chunk is truncated to chunk_size so the limit is never exceeded.
+        """
         if len(chunks) <= 1:
             return chunks
 
@@ -130,6 +137,8 @@ class DocumentChunker:
             prev_content = chunks[i - 1].content
             overlap_text = prev_content[-self.overlap:] if len(prev_content) > self.overlap else prev_content
             new_content = f"...{overlap_text} {chunks[i].content}"
+            # Truncate to chunk_size — overlap must not push past the limit
+            new_content = new_content[:self.chunk_size]
             overlapped.append(Chunk(
                 content=new_content,
                 metadata=chunks[i].metadata,

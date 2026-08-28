@@ -20,12 +20,12 @@ def mock_conn():
 
 @pytest.fixture
 def store(mock_conn):
-    """Create PgVectorStore with mocked connection."""
+    """Create PgVectorStore with mocked connection pool."""
     conn, cursor = mock_conn
-    with patch("app.rag.vector_store.get_settings") as mock_settings:
-        mock_settings.return_value.database_url = "postgresql://test:test@localhost/test"
-        s = PgVectorStore()
-        s._conn = conn
+    mock_pool = MagicMock()
+    mock_pool.getconn.return_value = conn
+    s = PgVectorStore()
+    s._pool = mock_pool
     return s, conn, cursor
 
 class TestPgVectorStore:
@@ -42,8 +42,8 @@ class TestPgVectorStore:
         result = s.insert(chunks, embeddings, source="test.md", version="1")
 
         assert result == 2
-        # DELETE + 2 INSERTs
-        assert cursor.execute.call_count >= 3
+        # 2 INSERTs (no DELETE — ingestor handles cleanup via delete_source)
+        assert cursor.execute.call_count == 2
 
     def test_insert_rollback_on_error(self, store):
         s, conn, cursor = store
@@ -90,7 +90,7 @@ class TestPgVectorStore:
     def test_close_connection(self, store):
         s, conn, cursor = store
         s.close()
-        conn.close.assert_called_once()
+        s._pool.closeall.assert_called_once()
 
     def test_insert_length_mismatch_raises(self, store):
         s, conn, cursor = store

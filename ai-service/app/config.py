@@ -63,6 +63,8 @@ class Settings(BaseSettings):
     rag_top_k: int = 5
     rag_similarity_threshold: float = 0.7
     rag_table_name: str = "rag_documents"
+    rag_rate_limit: int = 10  # max ingestion requests per window per IP
+    rag_rate_window: int = 60  # window in seconds
 
     @model_validator(mode="after")
     def _validate_ml_sizes(self) -> "Settings":

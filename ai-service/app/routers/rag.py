@@ -96,7 +96,7 @@ async def ingest_document(
         body.source,
         body.content,
         body.metadata,
-        body.metadata.get("version", "1"),
+        body.version,
     )
     elapsed_ms = (time.perf_counter() - t0) * 1000
 

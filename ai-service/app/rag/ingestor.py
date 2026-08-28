@@ -58,10 +58,14 @@ class DocumentIngestor:
         # Merge source and version into metadata
         chunk_metadata = {**metadata, "source": source, "version": version}
 
+        # Delete stale chunks before chunking — ensures empty content
+        # still removes obsolete data for this source+version.
+        self.store.delete_source(source, version)
+
         # Chunk
         chunks = self.chunker.chunk(content, chunk_metadata)
         if not chunks:
-            logger.warning("no_chunks_created", source=source)
+            logger.info("no_chunks_created", source=source, version=version)
             return {"chunks_created": 0, "source": source, "version": version}
 
         chunk_ms = (time.perf_counter() - t0) * 1000

@@ -22,16 +22,21 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
     Args:
         max_requests: Maximum requests per window.
         window_seconds: Window size in seconds.
+        prefix: If set, only apply to routes starting with this path prefix.
     """
 
-    def __init__(self, app, max_requests: int = 10, window_seconds: int = 60):
+    def __init__(self, app, max_requests: int = 10, window_seconds: int = 60, prefix: str = ""):
         super().__init__(app)
         self.max_requests = max_requests
         self.window_seconds = window_seconds
+        self.prefix = prefix
 
     async def dispatch(
         self, request: Request, call_next: RequestResponseEndpoint
     ) -> Response:
+        # Skip if prefix is set and route doesn't match
+        if self.prefix and not request.url.path.startswith(self.prefix):
+            return await call_next(request)
         client_ip = request.client.host if request.client else "unknown"
         now = time.monotonic()
         cutoff = now - self.window_seconds
