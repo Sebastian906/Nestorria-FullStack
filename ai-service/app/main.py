@@ -64,6 +64,10 @@ def create_app() -> FastAPI:
     from app.routers import recommendation
     application.include_router(recommendation.router)
 
+    # RAG router
+    from app.routers import rag
+    application.include_router(rag.router)
+
     # Visual search router — experimental
     if settings.visual_search_enabled:
         from app.routers import visual

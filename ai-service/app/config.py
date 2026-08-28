@@ -55,6 +55,15 @@ class Settings(BaseSettings):
     visual_search_rate_limit: int = 10  # max requests per minute per IP
     visual_search_rate_window: int = 60  # window in seconds
 
+    # RAG Configuration
+    rag_embedding_model: str = "all-MiniLM-L6-v2"
+    rag_embedding_dim: int = 384
+    rag_chunk_size: int = 500  # characters
+    rag_chunk_overlap: int = 50  # characters
+    rag_top_k: int = 5
+    rag_similarity_threshold: float = 0.7
+    rag_table_name: str = "rag_documents"
+
     @model_validator(mode="after")
     def _validate_ml_sizes(self) -> "Settings":
         """Validate ML split sizes and recommendation weights."""

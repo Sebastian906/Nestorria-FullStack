@@ -1,0 +1,1 @@
+# RAG module: document ingestion, chunking, embedding, and retrieval
