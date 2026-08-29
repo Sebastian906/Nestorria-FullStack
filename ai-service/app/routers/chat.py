@@ -29,16 +29,33 @@ async def _get_generator():
                 from app.rag.generator import RAGGenerator
                 from app.rag.guardrails import Guardrails
                 from app.rag.llm import LLMClient
+                from app.rag.tools import ToolExecutor, ToolRegistry, SpringBootClient
+                from app.rag.tools.property_tools import GetPropertyCount, GetAveragePrice, SearchProperties
+                from app.rag.tools.booking_tools import GetBookingStats
+                from app.rag.tools.review_tools import GetReviewAverage
 
                 _, _, _, retriever = await _get_components()
                 llm = LLMClient()
                 conversation_manager = ConversationManager()
                 guardrails = Guardrails()
+
+                # Build tool system
+                registry = ToolRegistry()
+                registry.register(GetPropertyCount())
+                registry.register(GetAveragePrice())
+                registry.register(SearchProperties())
+                registry.register(GetBookingStats())
+                registry.register(GetReviewAverage())
+
+                spring_client = SpringBootClient()
+                tool_executor = ToolExecutor(registry=registry, client=spring_client)
+
                 _generator = RAGGenerator(
                     retriever=retriever,
                     llm=llm,
                     conversation_manager=conversation_manager,
                     guardrails=guardrails,
+                    tool_executor=tool_executor,
                 )
                 _conversation_manager = conversation_manager
     return _generator, _conversation_manager

@@ -133,6 +133,7 @@ public class RateLimitFilter extends OncePerRequestFilter {
         }
         if (uri.startsWith("/api/contracts")) return rateLimitProps.writePerMinute();
         if (uri.startsWith("/api/agencies")) return rateLimitProps.reviewPerMinute();
+        if (uri.startsWith("/api/ai/tools")) return rateLimitProps.aiToolsPerMinute();
         if (uri.startsWith("/api/ai")) return rateLimitProps.aiPerMinute();
         if (uri.equals("/api/properties/me")
             || uri.startsWith("/api/properties/nearby")
