@@ -10,10 +10,13 @@ from app.config import get_settings
 
 logger = structlog.get_logger("ai-service.rag.llm")
 
+
 class LLMClient:
     """Async LLM client wrapping Groq SDK.
 
     Supports generate() for single response and stream() for SSE.
+    Tool calling is handled at the prompt level (prompt-based),
+    not via native function calling (Groq models don't support it).
     """
 
     def __init__(self):
@@ -25,7 +28,11 @@ class LLMClient:
         self.timeout = settings.llm_timeout
 
     async def generate(self, messages: list[dict]) -> str:
-        """Generate a single completion (non-streaming)."""
+        """Generate a single completion (non-streaming).
+
+        Returns:
+            Response text string.
+        """
         t0 = time.perf_counter()
         try:
             response = await self.client.chat.completions.create(
@@ -60,7 +67,10 @@ class LLMClient:
             raise
 
     async def stream(self, messages: list[dict]) -> AsyncIterator[str]:
-        """Stream tokens one by one (for SSE)."""
+        """Stream tokens one by one (for SSE).
+
+        Yields raw token strings.
+        """
         t0 = time.perf_counter()
         try:
             response = await self.client.chat.completions.create(

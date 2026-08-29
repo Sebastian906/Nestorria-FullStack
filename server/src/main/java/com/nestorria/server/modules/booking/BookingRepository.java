@@ -10,6 +10,7 @@ import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
+import com.nestorria.server.common.datasource.ReadFromReplica;
 import com.nestorria.server.modules.properties.Property;
 
 import jakarta.persistence.LockModeType;
@@ -57,4 +58,12 @@ public interface BookingRepository extends JpaRepository<Booking, String> {
         @Param("startDate") Instant startDate,
         @Param("endDate") Instant endDate
     );
+
+    @ReadFromReplica
+    @Query("SELECT COUNT(b) FROM Booking b WHERE b.status = :status")
+    long countByStatus(@Param("status") BookingStatus status);
+
+    @ReadFromReplica
+    @Query("SELECT COALESCE(SUM(b.totalPrice), 0) FROM Booking b WHERE b.isPaid = true AND b.status = 'CONFIRMED'")
+    long sumRevenueByPaidConfirmed();
 }

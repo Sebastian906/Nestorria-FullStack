@@ -100,4 +100,80 @@ public interface PropertySearchRepository extends JpaRepository<Property, String
             @Param("minPrice") Integer minPrice,
             @Param("maxPrice") Integer maxPrice,
             @Param("categoryIds") Set<Long> categoryIds);
+
+    // ── Tool aggregates (avoid materializing all results in memory) ─────
+
+    @Query(value = """
+        SELECT COUNT(*) FROM properties p
+        WHERE p.is_available = true
+          AND (:categoryIds IS NULL OR p.category_id IN (:categoryIds))
+          AND (:city IS NULL OR unaccent(LOWER(p.city)) LIKE '%' || unaccent(LOWER(:city)) || '%')
+          AND (:propertyType IS NULL OR p.property_type = CAST(:propertyType AS text))
+          AND (:minPrice IS NULL
+               OR (p.price_sale IS NOT NULL AND p.price_sale >= :minPrice)
+               OR (p.price_rent IS NOT NULL AND p.price_rent >= :minPrice))
+          AND (:maxPrice IS NULL
+               OR (p.price_sale IS NOT NULL AND p.price_sale <= :maxPrice)
+               OR (p.price_rent IS NOT NULL AND p.price_rent <= :maxPrice))
+        """, nativeQuery = true)
+    @ReadFromReplica
+    long countByFilters(
+            @Param("city") String city,
+            @Param("propertyType") String propertyType,
+            @Param("minPrice") Integer minPrice,
+            @Param("maxPrice") Integer maxPrice,
+            @Param("categoryIds") Set<Long> categoryIds);
+
+    @Query(value = """
+        SELECT
+          COALESCE(ROUND(AVG(sub.price)), 0)::bigint AS avg_price,
+          COUNT(sub.price) AS cnt
+        FROM (
+          SELECT CASE
+            WHEN p.price_sale IS NOT NULL THEN p.price_sale
+            WHEN p.price_rent IS NOT NULL THEN p.price_rent
+          END AS price
+          FROM properties p
+          WHERE p.is_available = true
+            AND (:categoryIds IS NULL OR p.category_id IN (:categoryIds))
+            AND (:city IS NULL OR unaccent(LOWER(p.city)) LIKE '%' || unaccent(LOWER(:city)) || '%')
+            AND (:propertyType IS NULL OR p.property_type = CAST(:propertyType AS text))
+            AND (:minPrice IS NULL
+                 OR (p.price_sale IS NOT NULL AND p.price_sale >= :minPrice)
+                 OR (p.price_rent IS NOT NULL AND p.price_rent >= :minPrice))
+            AND (:maxPrice IS NULL
+                 OR (p.price_sale IS NOT NULL AND p.price_sale <= :maxPrice)
+                 OR (p.price_rent IS NOT NULL AND p.price_rent <= :maxPrice))
+        ) sub WHERE sub.price IS NOT NULL
+        """, nativeQuery = true)
+    @ReadFromReplica
+    Object[] avgAndCountByFilters(
+            @Param("city") String city,
+            @Param("propertyType") String propertyType,
+            @Param("minPrice") Integer minPrice,
+            @Param("maxPrice") Integer maxPrice,
+            @Param("categoryIds") Set<Long> categoryIds);
+
+    @Query(value = """
+        SELECT p.* FROM properties p
+        WHERE p.is_available = true
+          AND (:categoryIds IS NULL OR p.category_id IN (:categoryIds))
+          AND (:city IS NULL OR unaccent(LOWER(p.city)) LIKE '%' || unaccent(LOWER(:city)) || '%')
+          AND (:propertyType IS NULL OR p.property_type = CAST(:propertyType AS text))
+          AND (:minPrice IS NULL
+               OR (p.price_sale IS NOT NULL AND p.price_sale >= :minPrice)
+               OR (p.price_rent IS NOT NULL AND p.price_rent >= :minPrice))
+          AND (:maxPrice IS NULL
+               OR (p.price_sale IS NOT NULL AND p.price_sale <= :maxPrice)
+               OR (p.price_rent IS NOT NULL AND p.price_rent <= :maxPrice))
+        LIMIT :limit
+        """, nativeQuery = true)
+    @ReadFromReplica
+    List<Property> findByFiltersWithLimit(
+            @Param("city") String city,
+            @Param("propertyType") String propertyType,
+            @Param("minPrice") Integer minPrice,
+            @Param("maxPrice") Integer maxPrice,
+            @Param("categoryIds") Set<Long> categoryIds,
+            @Param("limit") int limit);
 }

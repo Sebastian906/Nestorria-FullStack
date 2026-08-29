@@ -77,6 +77,11 @@ class Settings(BaseSettings):
     llm_chat_rate_window: int = 3600    # 1 hour
     conversation_ttl: int = 1800        # 30 min in-memory
     conversation_max_messages: int = 10
+    # Spring Boot Client (for tool execution)
+    spring_boot_base_url: str = "http://localhost:4000"
+    spring_boot_api_key: str = ""
+    tools_rate_limit: int = 30       # max tool calls per minute per IP
+    tools_rate_window: int = 60      # window in seconds
 
     @model_validator(mode="after")
     def _validate_ml_sizes(self) -> "Settings":

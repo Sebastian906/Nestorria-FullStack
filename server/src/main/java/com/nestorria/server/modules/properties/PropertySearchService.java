@@ -44,4 +44,33 @@ public class PropertySearchService {
         return propertySearchRepository.findByFilters(city, propertyType, minPrice, maxPrice, categoryIds)
             .stream().map(PropertySummaryResponse::fromEntity).toList();
     }
+
+    // ── Tool-specific aggregate methods (avoid materializing all results) ──
+
+    private Set<Long> resolveCategoryIds(Long categoryId) {
+        if (categoryId != null) {
+            return categoryService.getDescendantIds(categoryId);
+        }
+        return null;
+    }
+
+    @Transactional(readOnly = true)
+    public long countByFilters(String city, String propertyType, Integer minPrice, Integer maxPrice) {
+        return propertySearchRepository.countByFilters(city, propertyType, minPrice, maxPrice, null);
+    }
+
+    /**
+     * Returns [avgPrice, count] from the database. Both are 0 when no valid prices exist.
+     */
+    @Transactional(readOnly = true)
+    public Object[] avgAndCountByFilters(String city, String propertyType, Integer minPrice, Integer maxPrice) {
+        return propertySearchRepository.avgAndCountByFilters(city, propertyType, minPrice, maxPrice, null);
+    }
+
+    @Transactional(readOnly = true)
+    public List<PropertySummaryResponse> findByFiltersWithLimit(
+            String city, String propertyType, Integer minPrice, Integer maxPrice, int limit) {
+        return propertySearchRepository.findByFiltersWithLimit(city, propertyType, minPrice, maxPrice, null, limit)
+            .stream().map(PropertySummaryResponse::fromEntity).toList();
+    }
 }

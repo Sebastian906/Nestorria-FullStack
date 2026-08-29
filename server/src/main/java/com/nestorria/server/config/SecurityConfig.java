@@ -14,17 +14,24 @@ import org.springframework.security.oauth2.server.resource.web.authentication.Be
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.web.cors.CorsConfigurationSource;
 
+import com.nestorria.server.common.ai.ToolEndpointAuthFilter;
 import com.nestorria.server.modules.user.UserProvisioningFilter;
 
 @Configuration
 @EnableWebSecurity
 public class SecurityConfig {
 
+    private final ToolEndpointAuthFilter toolEndpointAuthFilter;
+
     @Value("${clerk.jwk-set-uri}")
     private String jwkSetUri;
 
     @Value("${clerk.issuer-uri}")
     private String issuerUri;
+
+    SecurityConfig(ToolEndpointAuthFilter toolEndpointAuthFilter) {
+        this.toolEndpointAuthFilter = toolEndpointAuthFilter;
+    }
 
     @Bean
     public JwtDecoder jwtDecoder() {
@@ -57,6 +64,8 @@ public class SecurityConfig {
                 .anyRequest().authenticated()
             )
             .oauth2ResourceServer(oauth2 -> oauth2.jwt(Customizer.withDefaults()))
+            // Tool endpoint auth filter runs BEFORE JWT filter
+            .addFilterBefore(toolEndpointAuthFilter, BearerTokenAuthenticationFilter.class)
             .addFilterAfter(provisioningFilter, BearerTokenAuthenticationFilter.class);
         http
             .exceptionHandling(exceptions -> exceptions
