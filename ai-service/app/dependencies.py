@@ -22,6 +22,16 @@ async def get_config() -> Any:
     """Return application settings as a dependency."""
     return get_settings()
 
+async def get_llm_client():
+    """Get LLM client singleton."""
+    from app.rag.llm import LLMClient
+    return LLMClient()
+
+async def get_conversation_manager():
+    """Get conversation manager singleton."""
+    from app.rag.conversation import ConversationManager
+    return ConversationManager()
+
 async def get_price_predictor():
     """Get the price predictor singleton."""
     from app.ml.price.predictor import PricePredictor

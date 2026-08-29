@@ -66,6 +66,18 @@ class Settings(BaseSettings):
     rag_rate_limit: int = 10  # max ingestion requests per window per IP
     rag_rate_window: int = 60  # window in seconds
 
+    # LLM Configuration (AI-009)
+    llm_provider: Literal["groq"] = "groq"
+    llm_api_key: str = ""
+    llm_model: str = "llama-3.3-70b-versatile"
+    llm_max_tokens: int = 1024
+    llm_temperature: float = 0.7
+    llm_timeout: int = 30
+    llm_chat_rate_limit: int = 20       # messages per user per hour
+    llm_chat_rate_window: int = 3600    # 1 hour
+    conversation_ttl: int = 1800        # 30 min in-memory
+    conversation_max_messages: int = 10
+
     @model_validator(mode="after")
     def _validate_ml_sizes(self) -> "Settings":
         """Validate ML split sizes and recommendation weights."""
@@ -95,6 +107,14 @@ class Settings(BaseSettings):
         if sum(rec_weights) <= 0:
             raise ValueError(
                 f"Sum of recommendation weights must be positive, got {sum(rec_weights)}"
+            )
+
+        # Conversation settings must be positive
+        if self.conversation_ttl <= 0:
+            raise ValueError(f"conversation_ttl must be positive, got {self.conversation_ttl}")
+        if self.conversation_max_messages <= 0:
+            raise ValueError(
+                f"conversation_max_messages must be positive, got {self.conversation_max_messages}"
             )
 
         return self

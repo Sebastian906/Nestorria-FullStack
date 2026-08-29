@@ -13,7 +13,6 @@ from app.middleware.request_id import RequestIdMiddleware
 from app.routers import health
 from app.utils.logging import setup_logging
 
-
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Application lifespan: startup and shutdown events."""
@@ -31,6 +30,7 @@ async def lifespan(app: FastAPI):
 def create_app() -> FastAPI:
     """Create and configure the FastAPI application."""
     settings = get_settings()
+    from app.middleware.rate_limit import RateLimitMiddleware
 
     setup_logging(log_level=settings.log_level)
 
@@ -67,20 +67,37 @@ def create_app() -> FastAPI:
     # RAG router with rate limiting
     from app.routers import rag
     application.include_router(rag.router)
-    from app.middleware.rate_limit import RateLimitMiddleware
+
+    # Chat router
+    from app.routers import chat
+    application.include_router(chat.router)
+
+    # Rate limiting per user for chat — 20 msgs/user/hour
+    def _chat_user_key(request):
+        return request.headers.get("X-User-ID", request.client.host if request.client else "unknown")
+
+    application.add_middleware(
+        RateLimitMiddleware,
+        max_requests=settings.llm_chat_rate_limit,
+        window_seconds=settings.llm_chat_rate_window,
+        prefix="/rag/chat",
+        key_func=_chat_user_key,
+    )
+
     application.add_middleware(
         RateLimitMiddleware,
         max_requests=settings.rag_rate_limit,
         window_seconds=settings.rag_rate_window,
+        exclude_prefixes=["/rag/chat"],
     )
 
     # Rate limiting for RAG ingestion
-    from app.middleware.rate_limit import RateLimitMiddleware
     application.add_middleware(
         RateLimitMiddleware,
         max_requests=settings.rag_rate_limit,
         window_seconds=settings.rag_rate_window,
         prefix="/rag/",
+        exclude_prefixes=["/rag/chat"],
     )
 
     # Visual search router — experimental

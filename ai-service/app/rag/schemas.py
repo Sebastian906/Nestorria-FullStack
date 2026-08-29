@@ -1,6 +1,6 @@
 """Pydantic schemas for RAG API requests and responses."""
 
-from typing import Any
+from typing import Any, Literal
 
 from pydantic import BaseModel, Field
 
@@ -34,3 +34,26 @@ class RetrievalResult(BaseModel):
 class RetrieveResponse(BaseModel):
     """Response for POST /rag/retrieve."""
     results: list[RetrievalResult]
+
+class ChatRequest(BaseModel):
+    """Request body for POST /rag/chat."""
+    message: str = Field(..., min_length=1, max_length=2000, description="User message")
+    conversation_id: str | None = Field(default=None, description="Existing conversation ID")
+
+class ChatEvent(BaseModel):
+    """SSE event for chat stream."""
+    type: Literal["start", "token", "end", "error"]
+    content: str | None = None
+    conversation_id: str | None = None
+    sources: list[str] | None = None
+    error: str | None = None
+
+class ConversationMessage(BaseModel):
+    """A single message in conversation history."""
+    role: Literal["user", "assistant"]
+    content: str
+
+class ConversationResponse(BaseModel):
+    """Response for GET /rag/conversations/{id}."""
+    conversation_id: str
+    messages: list[ConversationMessage]
