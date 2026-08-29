@@ -11,8 +11,6 @@ from fastapi import Request
 from starlette.middleware.base import BaseHTTPMiddleware, RequestResponseEndpoint
 from starlette.responses import JSONResponse, Response
 
-# ponytail: dict[ip, list[timestamp]]. Fine for single-process.
-# Upgrade to Redis if you need multi-process or distributed limiting.
 _buckets: dict[str, list[float]] = defaultdict(list)
 
 class RateLimitMiddleware(BaseHTTPMiddleware):
@@ -34,6 +32,8 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
         self.prefix = prefix
         self.key_func = key_func
         self.exclude_prefixes = exclude_prefixes or []
+        # Instance-scoped bucket so limiter configs don't consume each other's quota
+        self._buckets: dict[str, list[float]] = defaultdict(list)
 
     async def dispatch(
         self, request: Request, call_next: RequestResponseEndpoint
@@ -52,16 +52,16 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
         cutoff = now - self.window_seconds
 
         # Clean old entries and count current window
-        timestamps = _buckets[key]
-        _buckets[key] = [t for t in timestamps if t > cutoff]
+        timestamps = self._buckets[key]
+        self._buckets[key] = [t for t in timestamps if t > cutoff]
 
-        if len(_buckets[key]) >= self.max_requests:
-            retry_after = int(_buckets[key][0] - cutoff) + 1
+        if len(self._buckets[key]) >= self.max_requests:
+            retry_after = int(self._buckets[key][0] - cutoff) + 1
             return JSONResponse(
                 status_code=429,
                 content={"detail": "Rate limit exceeded. Try again later."},
                 headers={"Retry-After": str(retry_after)},
             )
 
-        _buckets[key].append(now)
+        self._buckets[key].append(now)
         return await call_next(request)

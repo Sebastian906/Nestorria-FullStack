@@ -67,7 +67,7 @@ class Settings(BaseSettings):
     rag_rate_window: int = 60  # window in seconds
 
     # LLM Configuration (AI-009)
-    llm_provider: str = "groq"
+    llm_provider: Literal["groq"] = "groq"
     llm_api_key: str = ""
     llm_model: str = "llama-3.3-70b-versatile"
     llm_max_tokens: int = 1024
@@ -107,6 +107,14 @@ class Settings(BaseSettings):
         if sum(rec_weights) <= 0:
             raise ValueError(
                 f"Sum of recommendation weights must be positive, got {sum(rec_weights)}"
+            )
+
+        # Conversation settings must be positive
+        if self.conversation_ttl <= 0:
+            raise ValueError(f"conversation_ttl must be positive, got {self.conversation_ttl}")
+        if self.conversation_max_messages <= 0:
+            raise ValueError(
+                f"conversation_max_messages must be positive, got {self.conversation_max_messages}"
             )
 
         return self

@@ -1,5 +1,6 @@
 """Tests for RAG generator (mocked retriever, LLM, conversation, guardrails)."""
 
+from asyncio import events
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
@@ -75,8 +76,9 @@ class TestRAGGeneratorStream:
     async def test_stream_emits_start_tokens_end(self, generator):
         events = [e async for e in generator.generate_stream("question", "user1")]
         types = [e["type"] for e in events]
-        assert types == ["start", "token", "token", "token", "end"]
-        # end has sources
+        assert types == ["start", "content", "end"]
+        assert events[1]["type"] == "content"
+        assert events[1]["content"]  # sanitized full response
         assert events[-1]["type"] == "end"
         assert "contract_template_v1" in (events[-1]["sources"] or [])
 

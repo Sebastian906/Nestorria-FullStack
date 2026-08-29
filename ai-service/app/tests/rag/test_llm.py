@@ -31,5 +31,6 @@ class TestLLMClient:
         mock_groq.chat.completions.create = AsyncMock(side_effect=Exception("API error"))
 
         client = LLMClient()
-        with pytest.raises(Exception):
+        with pytest.raises(Exception, match="API error"):
             asyncio.run(client.generate([{"role": "user", "content": "Hi"}]))
+        mock_groq.chat.completions.create.assert_awaited_once()

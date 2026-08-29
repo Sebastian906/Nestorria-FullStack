@@ -34,3 +34,14 @@ def extract_sources(response: str, valid_sources: list[str]) -> list[str]:
 def strip_citations(response: str) -> str:
     """Remove citation markers from response text."""
     return re.sub(_CITATION_PATTERN, "", response).strip()
+
+def sanitize_citations(response: str, valid_sources: list[str]) -> str:
+    """Remove citation markers that reference unverified sources.
+
+    Keeps markers whose source name is in valid_sources (actually retrieved),
+    and strips the rest so unverified citations are not persisted or returned.
+    """
+    def _repl(match: re.Match) -> str:
+        name = match.group(1).strip()
+        return match.group(0) if name in valid_sources else ""
+    return re.sub(_CITATION_PATTERN, _repl, response)

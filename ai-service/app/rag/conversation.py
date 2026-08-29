@@ -88,11 +88,13 @@ class ConversationManager:
 
     def get_history(self, conversation_id: str) -> list[dict]:
         """Get conversation history."""
+        self._evict_expired()
         conv = self._conversations.get(conversation_id)
         return conv.messages if conv else []
 
     def get_conversation(self, conversation_id: str, user_id: str) -> Conversation | None:
         """Get conversation if it belongs to user."""
+        self._evict_expired()
         conv = self._conversations.get(conversation_id)
         if conv and conv.user_id == user_id:
             return conv

@@ -7,7 +7,7 @@ from app.rag.guardrails import Guardrails
 from app.rag.llm import LLMClient
 from app.rag.prompt import build_rag_prompt, format_context
 from app.rag.retriever import DocumentRetriever
-from app.rag.sources import extract_sources
+from app.rag.sources import extract_sources, sanitize_citations
 
 logger = structlog.get_logger("ai-service.rag.generator")
 
@@ -60,13 +60,24 @@ class RAGGenerator:
         messages = build_rag_prompt(context, history, query)
 
         # 5. LLM generate
-        response_text = await self.llm.generate(messages)
+        try:
+            response_text = await self.llm.generate(messages)
+        except Exception as e:
+            logger.error("llm_generate_error", error=str(e))
+            return {
+                "content": "Service temporarily unavailable. Please try again later.",
+                "sources": [],
+                "conversation_id": conv.id,
+                "blocked": True,
+            }
 
         # 6. Output guardrails
         response_text = self.guardrails.check_output(response_text)
 
         # 7. Source validation
         sources = extract_sources(response_text, valid_sources)
+        # Remove markers that reference unverified sources from persisted/returned text
+        response_text = sanitize_citations(response_text, valid_sources)
 
         # 8. Save to conversation
         self.conversation_manager.add_message(conv.id, "user", query)
@@ -110,26 +121,27 @@ class RAGGenerator:
         history = self.conversation_manager.get_history(conv.id)
         messages = build_rag_prompt(context, history, query)
 
-        # 6. Stream LLM
+        # 6. Stream LLM (buffer full text for non-streaming-safe validation)
         full_response = ""
         try:
             async for token in self.llm.stream(messages):
                 full_response += token
-                yield {"type": "token", "content": token}
         except Exception as e:
             logger.error("llm_stream_error", error=str(e))
             yield {"type": "error", "error": "Service temporarily unavailable. Please try again."}
             return
 
-        # 7. Output guardrails
+        # 7. Output guardrails (on full text, before ANY token reaches client)
         full_response = self.guardrails.check_output(full_response)
 
         # 8. Source validation
         sources = extract_sources(full_response, valid_sources)
+        full_response = sanitize_citations(full_response, valid_sources)
 
         # 9. Save to conversation
         self.conversation_manager.add_message(conv.id, "user", query)
         self.conversation_manager.add_message(conv.id, "assistant", full_response)
-
-        # 10. End event
+        
+        # 10. End event (emit the full, validated content once)
+        yield {"type": "content", "content": full_response}
         yield {"type": "end", "sources": sources}

@@ -1,5 +1,6 @@
 """Chat endpoint with SSE streaming."""
 
+import asyncio
 import json
 
 import structlog
@@ -14,30 +15,32 @@ logger = structlog.get_logger("ai-service.routers.chat")
 
 router = APIRouter(prefix="/rag", tags=["chat"])
 
-_generator = None
-_conversation_manager = None
+_init_lock = asyncio.Lock()
 
 async def _get_generator():
     """Get or initialize RAG generator with all dependencies."""
     global _generator, _conversation_manager
     if _generator is None:
-        from app.config import get_settings
-        from app.rag.conversation import ConversationManager
-        from app.rag.generator import RAGGenerator
-        from app.rag.guardrails import Guardrails
-        from app.rag.llm import LLMClient
+        async with _init_lock:
+            # Recheck after acquiring lock (another coroutine may have built it)
+            if _generator is None:
+                from app.config import get_settings
+                from app.rag.conversation import ConversationManager
+                from app.rag.generator import RAGGenerator
+                from app.rag.guardrails import Guardrails
+                from app.rag.llm import LLMClient
 
-        _, _, _, retriever = await _get_components()
-        llm = LLMClient()
-        conversation_manager = ConversationManager()
-        guardrails = Guardrails()
-        _generator = RAGGenerator(
-            retriever=retriever,
-            llm=llm,
-            conversation_manager=conversation_manager,
-            guardrails=guardrails,
-        )
-        _conversation_manager = conversation_manager
+                _, _, _, retriever = await _get_components()
+                llm = LLMClient()
+                conversation_manager = ConversationManager()
+                guardrails = Guardrails()
+                _generator = RAGGenerator(
+                    retriever=retriever,
+                    llm=llm,
+                    conversation_manager=conversation_manager,
+                    guardrails=guardrails,
+                )
+                _conversation_manager = conversation_manager
     return _generator, _conversation_manager
 
 def _get_user_id(request: Request) -> str:

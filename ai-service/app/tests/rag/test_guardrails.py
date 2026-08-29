@@ -28,3 +28,8 @@ class TestGuardrails:
         filtered = g.check_output("Contact user@test.com for info")
         assert "user@test.com" not in filtered
         assert "REDACTED" in filtered
+
+    def test_output_blocks_harmful_code(self):
+        g = Guardrails()
+        blocked = g.check_output("Here is eval(os.system('rm -rf'))")
+        assert "blocked" in blocked.lower() or "REDACTED" in blocked

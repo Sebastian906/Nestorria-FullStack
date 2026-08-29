@@ -46,11 +46,10 @@ class Guardrails:
         Returns:
             (is_safe, reason) — reason is None if safe.
         """
-        query_lower = query.lower()
 
         # Prompt injection
         for pattern in _PROMPT_INJECTION_PATTERNS:
-            if re.search(pattern, query_lower):
+            if re.search(pattern, query, re.IGNORECASE):
                 reason = f"Prompt injection detected: {pattern}"
                 logger.warning("guardrail_input_blocked", reason=reason)
                 return False, reason
@@ -82,5 +81,11 @@ class Guardrails:
         # Mask emails
         for pattern, pii_type in _PII_PATTERNS:
             filtered = re.sub(pattern, f"[REDACTED {pii_type}]", filtered)
+
+        # Block harmful executable content
+        for pattern in _HARMFUL_CODE_PATTERNS:
+            if re.search(pattern, filtered, re.IGNORECASE):
+                logger.warning("guardrail_output_blocked", pattern=pattern)
+                return "[Content blocked: potentially harmful code was detected.]"
 
         return filtered
