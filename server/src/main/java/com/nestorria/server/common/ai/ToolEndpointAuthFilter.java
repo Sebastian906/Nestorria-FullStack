@@ -36,9 +36,11 @@ public class ToolEndpointAuthFilter extends OncePerRequestFilter {
             FilterChain filterChain) throws ServletException, IOException {
 
         String uri = request.getRequestURI();
+        // Normalize: strip context path for matching
+        String path = uri.substring(request.getContextPath().length());
 
         // Only apply to /api/ai/tools/** endpoints
-        if (!uri.startsWith("/api/ai/tools")) {
+        if (!path.startsWith("/api/ai/tools")) {
             filterChain.doFilter(request, response);
             return;
         }

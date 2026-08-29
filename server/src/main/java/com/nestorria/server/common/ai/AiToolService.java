@@ -45,56 +45,42 @@ public class AiToolService {
 
     @Transactional(readOnly = true)
     public ToolPropertyCountResponse getPropertyCount(String city, String propertyType) {
-        List<ToolPropertySummary> results = searchPropertiesRaw(city, propertyType, null, null);
+        long count = propertySearchService.countByFilters(city, propertyType, null, null);
 
         Map<String, String> filters = new LinkedHashMap<>();
         if (city != null && !city.isBlank()) filters.put("city", city);
         if (propertyType != null && !propertyType.isBlank()) filters.put("propertyType", propertyType);
 
-        log.info("tool_property_count: count={}, filters={}", results.size(), filters);
-        return new ToolPropertyCountResponse(results.size(), filters);
+        log.info("tool_property_count: count={}, filters={}", count, filters);
+        return new ToolPropertyCountResponse(count, filters);
     }
 
     @Transactional(readOnly = true)
     public ToolPropertyAvgPriceResponse getAveragePrice(String city, String propertyType) {
-        List<ToolPropertySummary> results = searchPropertiesRaw(city, propertyType, null, null);
+        Object[] result = propertySearchService.avgAndCountByFilters(city, propertyType, null, null);
+        long avgPrice = result[0] != null ? ((Number) result[0]).longValue() : 0;
+        long count = result[1] != null ? ((Number) result[1]).longValue() : 0;
 
-        if (results.isEmpty()) {
-            return new ToolPropertyAvgPriceResponse(0.0, 0);
-        }
-
-        double avg = results.stream()
-            .mapToInt(p -> p.salePrice() != null ? p.salePrice() : 0)
-            .filter(p -> p > 0)
-            .average()
-            .orElse(0.0);
-
-        log.info("tool_property_avg_price: avg={}, count={}", avg, results.size());
-        return new ToolPropertyAvgPriceResponse(Math.round(avg * 100.0) / 100.0, results.size());
+        log.info("tool_property_avg_price: avg={}, count={}", avgPrice, count);
+        return new ToolPropertyAvgPriceResponse((double) avgPrice, (int) count);
     }
 
     @Transactional(readOnly = true)
     public ToolPropertySearchResponse searchProperties(
             String city, String propertyType, Integer minPrice, Integer maxPrice) {
 
-        List<ToolPropertySummary> results = searchPropertiesRaw(city, propertyType, minPrice, maxPrice);
-
-        // Limit to 10 results for LLM consumption
-        List<ToolPropertySummary> limited = results.size() > 10
-            ? results.subList(0, 10)
-            : results;
+        // DB-level LIMIT 10 — no materialization of full result set
+        List<ToolPropertySummary> results = searchPropertiesRaw(city, propertyType, minPrice, maxPrice, 10);
 
         log.info("tool_property_search: city={}, type={}, minPrice={}, maxPrice={}, results={}",
-            city, propertyType, minPrice, maxPrice, limited.size());
-        return new ToolPropertySearchResponse(limited, limited.size());
+            city, propertyType, minPrice, maxPrice, results.size());
+        return new ToolPropertySearchResponse(results, results.size());
     }
 
     private List<ToolPropertySummary> searchPropertiesRaw(
-            String city, String propertyType, Integer minPrice, Integer maxPrice) {
+            String city, String propertyType, Integer minPrice, Integer maxPrice, int limit) {
 
-        return propertySearchService.findByFilters(
-                city, propertyType, minPrice, maxPrice,
-                null, null, null, null)
+        return propertySearchService.findByFiltersWithLimit(city, propertyType, minPrice, maxPrice, limit)
             .stream()
             .map(p -> new ToolPropertySummary(
                 p.id(),

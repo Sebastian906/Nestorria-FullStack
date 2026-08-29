@@ -68,10 +68,10 @@ def _find_inline_tool_call(text: str) -> dict | None:
         if isinstance(parsed, dict) and "tool_call" in parsed:
             tc = parsed["tool_call"]
             if isinstance(tc, dict) and "name" in tc:
-                return {
-                    "name": tc["name"],
-                    "args": tc.get("args", {}),
-                }
+                name = tc["name"]
+                args = tc.get("args", {})
+                if isinstance(name, str) and isinstance(args, dict):
+                    return {"name": name, "args": args}
     except json.JSONDecodeError:
         pass
     return None
@@ -95,10 +95,10 @@ def parse_tool_calls(text: str) -> list[dict]:
         try:
             parsed = json.loads(match.group(1).strip())
             if isinstance(parsed, dict) and "name" in parsed:
-                calls.append({
-                    "name": parsed["name"],
-                    "args": parsed.get("args", {}),
-                })
+                name = parsed["name"]
+                args = parsed.get("args", {})
+                if isinstance(name, str) and isinstance(args, dict):
+                    calls.append({"name": name, "args": args})
         except json.JSONDecodeError:
             continue
 

@@ -6,7 +6,10 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import static org.mockito.ArgumentMatchers.anyInt;
+import static org.mockito.ArgumentMatchers.anySet;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -44,11 +47,8 @@ class AiToolServiceTest {
 
     @Test
     void getPropertyCount_noFilters_returnsTotal() {
-        when(propertySearchService.findByFilters(
-            eq(null), eq(null), eq(null), eq(null), eq(null), eq(null), eq(null), eq(null)))
-            .thenReturn(List.of(
-                mockSummary("p1"), mockSummary("p2"), mockSummary("p3")
-            ));
+        when(propertySearchService.countByFilters(isNull(), isNull(), isNull(), isNull()))
+            .thenReturn(3L);
 
         ToolPropertyCountResponse result = toolService.getPropertyCount(null, null);
 
@@ -58,9 +58,8 @@ class AiToolServiceTest {
 
     @Test
     void getPropertyCount_withCity_returnsFiltered() {
-        when(propertySearchService.findByFilters(
-            eq("Madrid"), eq(null), eq(null), eq(null), eq(null), eq(null), eq(null), eq(null)))
-            .thenReturn(List.of(mockSummary("p1"), mockSummary("p2")));
+        when(propertySearchService.countByFilters(eq("Madrid"), isNull(), isNull(), isNull()))
+            .thenReturn(2L);
 
         ToolPropertyCountResponse result = toolService.getPropertyCount("Madrid", null);
 
@@ -72,11 +71,8 @@ class AiToolServiceTest {
 
     @Test
     void getAveragePrice_withResults_returnsCalculated() {
-        PropertySummaryResponse p1 = mockSummaryWithPrice("p1", 200000);
-        PropertySummaryResponse p2 = mockSummaryWithPrice("p2", 300000);
-        when(propertySearchService.findByFilters(
-            eq(null), eq(null), eq(null), eq(null), eq(null), eq(null), eq(null), eq(null)))
-            .thenReturn(List.of(p1, p2));
+        when(propertySearchService.avgAndCountByFilters(isNull(), isNull(), isNull(), isNull()))
+            .thenReturn(new Object[]{250000L, 2L});
 
         ToolPropertyAvgPriceResponse result = toolService.getAveragePrice(null, null);
 
@@ -86,9 +82,8 @@ class AiToolServiceTest {
 
     @Test
     void getAveragePrice_noResults_returnsZero() {
-        when(propertySearchService.findByFilters(
-            eq(null), eq(null), eq(null), eq(null), eq(null), eq(null), eq(null), eq(null)))
-            .thenReturn(List.of());
+        when(propertySearchService.avgAndCountByFilters(isNull(), isNull(), isNull(), isNull()))
+            .thenReturn(new Object[]{null, null});
 
         ToolPropertyAvgPriceResponse result = toolService.getAveragePrice(null, null);
 
@@ -100,13 +95,13 @@ class AiToolServiceTest {
 
     @Test
     void searchProperties_returnsLimitedResults() {
-        List<PropertySummaryResponse> many = new java.util.ArrayList<>();
-        for (int i = 0; i < 15; i++) {
-            many.add(mockSummary("p" + i));
+        List<PropertySummaryResponse> ten = new java.util.ArrayList<>();
+        for (int i = 0; i < 10; i++) {
+            ten.add(mockSummary("p" + i));
         }
-        when(propertySearchService.findByFilters(
-            eq("Madrid"), eq(null), eq(null), eq(null), eq(null), eq(null), eq(null), eq(null)))
-            .thenReturn(many);
+        when(propertySearchService.findByFiltersWithLimit(
+            eq("Madrid"), isNull(), isNull(), isNull(), eq(10)))
+            .thenReturn(ten);
 
         ToolPropertySearchResponse result = toolService.searchProperties("Madrid", null, null, null);
 
@@ -168,17 +163,6 @@ class AiToolServiceTest {
         return new PropertySummaryResponse(
             id, "Title " + id, "Desc " + id, "Madrid", "Spain",
             "Address " + id, 100, PropertyType.HOUSE, EMPTY_PRICE,
-            EMPTY_FACILITIES, List.of(), List.of(), true,
-            EMPTY_LOCATION, null, null, 0, null
-        );
-    }
-
-    private PropertySummaryResponse mockSummaryWithPrice(String id, int salePrice) {
-        PriceDetails price = new PriceDetails();
-        price.setSale(salePrice);
-        return new PropertySummaryResponse(
-            id, "Title " + id, "Desc " + id, "Madrid", "Spain",
-            "Address " + id, 100, PropertyType.HOUSE, price,
             EMPTY_FACILITIES, List.of(), List.of(), true,
             EMPTY_LOCATION, null, null, 0, null
         );

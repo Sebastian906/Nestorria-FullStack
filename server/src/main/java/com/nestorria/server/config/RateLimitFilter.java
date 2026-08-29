@@ -57,15 +57,17 @@ public class RateLimitFilter extends OncePerRequestFilter {
         }
 
         String uri = request.getRequestURI();
+        // Normalize: strip context path for matching
+        String path = uri.substring(request.getContextPath().length());
 
         // Exclude health check and Stripe webhook (validated by Stripe signature)
-        if (isExcluded(uri)) {
+        if (isExcluded(path)) {
             filterChain.doFilter(request, response);
             return;
         }
 
         String key = resolveKey(request);
-        int limit = resolveLimit(uri);
+        int limit = resolveLimit(path);
         String bucketKey = key + ":" + limit;
         TimedBucket tb = buckets.computeIfAbsent(bucketKey, k -> new TimedBucket(createBucket(limit)));
         tb.lastAccessNanos = System.nanoTime();

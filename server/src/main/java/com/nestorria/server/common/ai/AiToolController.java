@@ -1,10 +1,12 @@
 package com.nestorria.server.common.ai;
 
+import org.springframework.http.HttpStatus;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.server.ResponseStatusException;
 
 import com.nestorria.server.common.ai.dto.ToolBookingStatsResponse;
 import com.nestorria.server.common.ai.dto.ToolPropertyAvgPriceResponse;
@@ -14,6 +16,8 @@ import com.nestorria.server.common.ai.dto.ToolReviewAverageResponse;
 
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.constraints.Min;
+import jakarta.validation.constraints.NotBlank;
 
 /**
  * Endpoints internos para herramientas del LLM.
@@ -54,8 +58,12 @@ public class AiToolController {
     public ToolPropertySearchResponse searchProperties(
             @RequestParam(required = false) String city,
             @RequestParam(required = false) String propertyType,
-            @RequestParam(required = false) Integer minPrice,
-            @RequestParam(required = false) Integer maxPrice) {
+            @RequestParam(required = false) @Min(0) Integer minPrice,
+            @RequestParam(required = false) @Min(0) Integer maxPrice) {
+        if (minPrice != null && maxPrice != null && minPrice > maxPrice) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                "minPrice (" + minPrice + ") cannot exceed maxPrice (" + maxPrice + ")");
+        }
         return toolService.searchProperties(city, propertyType, minPrice, maxPrice);
     }
 
@@ -68,7 +76,7 @@ public class AiToolController {
     @Operation(summary = "Rating promedio de reseñas de una propiedad")
     @GetMapping("/reviews/average")
     public ToolReviewAverageResponse getReviewAverage(
-            @RequestParam String propertyId) {
+            @RequestParam @NotBlank String propertyId) {
         return toolService.getReviewAverage(propertyId);
     }
 }

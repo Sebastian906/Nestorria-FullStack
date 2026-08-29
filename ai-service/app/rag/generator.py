@@ -139,7 +139,9 @@ class RAGGenerator:
                 response_text = "I encountered an error processing your request. Please try again."
                 break
         else:
-            if not response_text:
+            # After exhausting all rounds, check for unresolved tool calls
+            remaining = parse_tool_calls(response_text) if self.tool_executor else []
+            if remaining or not response_text:
                 response_text = "I was unable to complete the request after multiple attempts."
 
         # 7. Output guardrails (on full text)
@@ -194,6 +196,10 @@ class RAGGenerator:
         messages = build_rag_prompt(context, history, query, tool_descriptions=tool_descriptions)
 
         # 6. Stream LLM (no native tools — prompt-based)
+        # SECURITY: We buffer all tokens because output guardrails (step 8)
+        # must run on the COMPLETE response before any content reaches the client.
+        # Incremental emission would leak unvalidated content. If true streaming
+        # is needed, guardrails must be redesigned for incremental validation.
         full_response = ""
         try:
             async for token in self.llm.stream(messages):
@@ -223,7 +229,9 @@ class RAGGenerator:
                 full_response = "I encountered an error processing your request."
                 break
         else:
-            if not full_response:
+            # After exhausting all rounds, check for unresolved tool calls
+            remaining = parse_tool_calls(full_response) if self.tool_executor else []
+            if remaining or not full_response:
                 full_response = "I was unable to complete the request after multiple attempts."
 
         # 8. Output guardrails (on full text, before ANY token reaches client)
