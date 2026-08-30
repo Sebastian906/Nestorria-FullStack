@@ -178,7 +178,8 @@ public class AiServiceClient {
     public InputStream streamChat(AiChatRequest request) {
         log.debug("ai-service stream chat: userId={}", request.userId());
         return streamingRestClient.post()
-            .uri("/chat/stream")
+            .uri("/rag/chat")
+            .header("X-User-ID", request.userId())
             .body(request)
             .accept(MediaType.TEXT_EVENT_STREAM)
             .retrieve()
