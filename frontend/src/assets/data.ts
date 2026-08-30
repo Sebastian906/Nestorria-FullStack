@@ -33,6 +33,7 @@ import list from './list.svg';
 import dashboard from './dashboard.svg';
 import housePlus from './house-plus.svg';
 import signature from './signature.svg';
+import chat from './chat.svg';
 import userImg from './user.png';
 import user1 from './user1.png';
 import user2 from './user2.png';
@@ -270,6 +271,7 @@ export const assets: Record<string, string> = {
     housePlus,
     list,
     signature,
+    chat,
     userImg,
     user1,
     user2,

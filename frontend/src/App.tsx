@@ -17,6 +17,7 @@ import MyHistory from "./pages/MyHistory"
 import Agencies from "./pages/Agencies"
 import Guides from "./pages/Guides"
 import Compare from "./pages/Compare"
+import ChatWidget from "./components/chat/ChatWidget"
 
 const App = () => {
 
@@ -43,6 +44,7 @@ const App = () => {
         <Route path='/processing/:nextUrl' element={<Processing />} />
       </Routes>
       <Footer />
+      <ChatWidget />
     </main>
   )
 }
