@@ -3,9 +3,11 @@ import { vi, describe, it, expect, beforeEach } from 'vitest'
 import ChatWidget from './ChatWidget'
 
 // Mock the useChat hook
-const mockSendMessage = vi.fn()
-const mockClearMessages = vi.fn()
-const mockClearError = vi.fn()
+const { mockSendMessage, mockClearMessages, mockClearError } = vi.hoisted(() => ({
+    mockSendMessage: vi.fn(),
+    mockClearMessages: vi.fn(),
+    mockClearError: vi.fn(),
+}))
 
 vi.mock('../../hooks/useChat', () => ({
     useChat: () => ({

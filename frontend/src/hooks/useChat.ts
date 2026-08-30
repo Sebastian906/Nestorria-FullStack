@@ -66,9 +66,15 @@ export function useChat() {
     const [state, setState] = useState<ChatState>(loadState)
     const [rateLimit, setRateLimit] = useState(loadRateLimit)
     const abortRef = useRef<AbortController | null>(null)
+    const sendingRef = useRef(false)
+    const clearedRef = useRef(false)
 
     // Persist messages on change
     useEffect(() => {
+        if (clearedRef.current) {
+            clearedRef.current = false
+            return
+        }
         try {
             sessionStorage.setItem(STORAGE_KEY, JSON.stringify({
                 messages: state.messages,
@@ -80,137 +86,162 @@ export function useChat() {
     const remainingMessages = Math.max(0, RATE_LIMIT_MAX - rateLimit.count)
 
     const sendMessage = useCallback(async (content: string) => {
-        const token = await getToken()
-        if (!token) return
-
-        // Client-side rate limit check
-        if (rateLimit.count >= RATE_LIMIT_MAX) {
-            setState(prev => ({ ...prev, error: 'Message limit reached. Try again later.' }))
-            return
-        }
-
-        const userMessage: Message = {
-            id: crypto.randomUUID(),
-            role: 'user',
-            content,
-            timestamp: new Date(),
-        }
-
-        // Add user message + empty assistant placeholder
-        const assistantMessage: Message = {
-            id: crypto.randomUUID(),
-            role: 'assistant',
-            content: '',
-            timestamp: new Date(),
-        }
-
-        setState(prev => ({
-            ...prev,
-            messages: [...prev.messages, userMessage, assistantMessage],
-            isStreaming: true,
-            error: null,
-        }))
-
-        const controller = new AbortController()
-        abortRef.current = controller
+        if (sendingRef.current) return
+        sendingRef.current = true
 
         try {
-            const stream = streamChat(
-                {
-                    message: content,
-                    conversationId: state.conversationId ?? undefined,
-                },
-                token,
-                controller.signal
-            )
+            const token = await getToken()
+            if (!token) return
 
-            for await (const event of stream) {
-                if (controller.signal.aborted) break
-
-                switch (event.type) {
-                    case 'start':
-                        setState(prev => ({
-                            ...prev,
-                            conversationId: event.conversationId,
-                        }))
-                        break
-
-                    case 'token':
-                        setState(prev => {
-                            const msgs = [...prev.messages]
-                            const last = msgs[msgs.length - 1]
-                            if (last && last.role === 'assistant') {
-                                msgs[msgs.length - 1] = {
-                                    ...last,
-                                    content: last.content + (event.content ?? ''),
-                                }
-                            }
-                            return { ...prev, messages: msgs }
-                        })
-                        break
-
-                    case 'end':
-                        setState(prev => {
-                            const msgs = [...prev.messages]
-                            const last = msgs[msgs.length - 1]
-                            if (last && last.role === 'assistant') {
-                                msgs[msgs.length - 1] = {
-                                    ...last,
-                                    sources: event.sources ?? [],
-                                }
-                            }
-                            return {
-                                ...prev,
-                                messages: msgs,
-                                conversationId: event.conversationId ?? prev.conversationId,
-                                isStreaming: false,
-                            }
-                        })
-                        // Increment local rate limit
-                        setRateLimit(prev => {
-                            const newCount = prev.count + 1
-                            saveRateLimit(newCount, prev.windowStart)
-                            return { ...prev, count: newCount }
-                        })
-                        break
-
-                    case 'error':
-                        setState(prev => ({
-                            ...prev,
-                            error: event.content ?? 'AI service error',
-                            isStreaming: false,
-                            // Remove empty assistant message on error
-                            messages: prev.messages.filter(
-                                (m, i) => !(i === prev.messages.length - 1 && m.role === 'assistant' && m.content === '')
-                            ),
-                        }))
-                        break
+            // Refresh rate-limit window if expired
+            setRateLimit(prev => {
+                if (Date.now() - prev.windowStart > RATE_LIMIT_WINDOW_MS) {
+                    const fresh = { count: 0, windowStart: Date.now() }
+                    saveRateLimit(fresh.count, fresh.windowStart)
+                    return fresh
                 }
-            }
-        } catch (err: unknown) {
-            const error = err instanceof Error ? err : new Error(String(err))
-            if (error.name === 'AbortError') return
+                return prev
+            })
 
-            let errorMsg = 'Connection error'
-            if (error.message.includes('503') || error.message.includes('limit')) {
-                errorMsg = 'Message limit reached. Try again later.'
+            // Client-side rate limit check (reads latest via updater)
+            let blocked = false
+            setRateLimit(prev => {
+                if (prev.count >= RATE_LIMIT_MAX) {
+                    blocked = true
+                }
+                return prev
+            })
+            if (blocked) {
+                setState(prev => ({ ...prev, error: 'Message limit reached. Try again later.' }))
+                return
+            }
+
+            const userMessage: Message = {
+                id: crypto.randomUUID(),
+                role: 'user',
+                content,
+                timestamp: new Date(),
+            }
+
+            // Add user message + empty assistant placeholder
+            const assistantMessage: Message = {
+                id: crypto.randomUUID(),
+                role: 'assistant',
+                content: '',
+                timestamp: new Date(),
             }
 
             setState(prev => ({
                 ...prev,
-                error: errorMsg,
-                isStreaming: false,
-                messages: prev.messages.filter(
-                    (m, i) => !(i === prev.messages.length - 1 && m.role === 'assistant' && m.content === '')
-                ),
+                messages: [...prev.messages, userMessage, assistantMessage],
+                isStreaming: true,
+                error: null,
             }))
+
+            const controller = new AbortController()
+            abortRef.current = controller
+
+            try {
+                const stream = streamChat(
+                    {
+                        message: content,
+                        conversationId: state.conversationId ?? undefined,
+                    },
+                    token,
+                    controller.signal
+                )
+
+                for await (const event of stream) {
+                    if (controller.signal.aborted) break
+
+                    switch (event.type) {
+                        case 'start':
+                            setState(prev => ({
+                                ...prev,
+                                conversationId: event.conversationId,
+                            }))
+                            break
+
+                        case 'token':
+                            setState(prev => {
+                                const msgs = [...prev.messages]
+                                const last = msgs[msgs.length - 1]
+                                if (last && last.role === 'assistant') {
+                                    msgs[msgs.length - 1] = {
+                                        ...last,
+                                        content: last.content + (event.content ?? ''),
+                                    }
+                                }
+                                return { ...prev, messages: msgs }
+                            })
+                            break
+
+                        case 'end':
+                            setState(prev => {
+                                const msgs = [...prev.messages]
+                                const last = msgs[msgs.length - 1]
+                                if (last && last.role === 'assistant') {
+                                    msgs[msgs.length - 1] = {
+                                        ...last,
+                                        sources: event.sources ?? [],
+                                    }
+                                }
+                                return {
+                                    ...prev,
+                                    messages: msgs,
+                                    conversationId: event.conversationId ?? prev.conversationId,
+                                    isStreaming: false,
+                                }
+                            })
+                            // Increment local rate limit
+                            setRateLimit(prev => {
+                                const newCount = prev.count + 1
+                                saveRateLimit(newCount, prev.windowStart)
+                                return { ...prev, count: newCount }
+                            })
+                            break
+
+                        case 'error':
+                            setState(prev => ({
+                                ...prev,
+                                error: event.content ?? 'AI service error',
+                                isStreaming: false,
+                                // Remove empty assistant message on error
+                                messages: prev.messages.filter(
+                                    (m, i) => !(i === prev.messages.length - 1 && m.role === 'assistant' && m.content === '')
+                                ),
+                            }))
+                            break
+                    }
+                }
+            } catch (err: unknown) {
+                const error = err instanceof Error ? err : new Error(String(err))
+                if (error.name === 'AbortError') return
+
+                let errorMsg = 'Connection error'
+                if (error.message.includes('503') || error.message.includes('limit')) {
+                    errorMsg = 'Message limit reached. Try again later.'
+                }
+
+                setState(prev => ({
+                    ...prev,
+                    error: errorMsg,
+                    isStreaming: false,
+                    messages: prev.messages.filter(
+                        (m, i) => !(i === prev.messages.length - 1 && m.role === 'assistant' && m.content === '')
+                    ),
+                }))
+            } finally {
+                abortRef.current = null
+            }
         } finally {
-            abortRef.current = null
+            sendingRef.current = false
         }
-    }, [getToken, state.conversationId, rateLimit])
+    }, [getToken, state.conversationId, saveRateLimit])
 
     const clearMessages = useCallback(() => {
         abortRef.current?.abort()
+        clearedRef.current = true
         setState({ messages: [], isStreaming: false, error: null, conversationId: null })
         sessionStorage.removeItem(STORAGE_KEY)
     }, [])
