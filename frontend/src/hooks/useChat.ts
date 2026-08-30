@@ -163,13 +163,18 @@ export function useChat() {
                             break
 
                         case 'token':
+                        case 'content':
                             setState(prev => {
                                 const msgs = [...prev.messages]
                                 const last = msgs[msgs.length - 1]
                                 if (last && last.role === 'assistant') {
+                                    // 'token' = incremental append, 'content' = full replacement
+                                    const newContent = event.type === 'content'
+                                        ? (event.content ?? '')
+                                        : last.content + (event.content ?? '')
                                     msgs[msgs.length - 1] = {
                                         ...last,
-                                        content: last.content + (event.content ?? ''),
+                                        content: newContent,
                                     }
                                 }
                                 return { ...prev, messages: msgs }

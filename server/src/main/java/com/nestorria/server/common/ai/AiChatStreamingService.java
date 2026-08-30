@@ -151,7 +151,11 @@ public class AiChatStreamingService {
                 } catch (IOException ignored) {
                     // Client already disconnected
                 }
-                emitter.completeWithError(e);
+                // use complete() not completeWithError() — the error event
+                // is already sent via SSE, and completeWithError() triggers
+                // Spring's error dispatch which crashes on text/event-stream
+                // content type (GlobalExceptionHandler can't serialize JSON to SSE).
+                emitter.complete();
             } finally {
                 activeStreams.remove(conversationId);
                 closeQuietly(inputStream);

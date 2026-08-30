@@ -1,7 +1,7 @@
 const API_BASE = (import.meta.env.VITE_BACKEND_URL || 'http://127.0.0.1:4000').replace(/\/$/, '')
 
 export interface ChatStreamEvent {
-    type: 'start' | 'token' | 'end' | 'error'
+    type: 'start' | 'token' | 'content' | 'end' | 'error'
     content: string | null
     conversationId: string | null
     sources: string[] | null
@@ -90,7 +90,10 @@ function parseSSEBlock(block: string): ChatStreamEvent | null {
     try {
         const parsed = JSON.parse(data)
         return {
-            type: eventType || parsed.type || 'token',
+            // parsed.type takes precedence over SSE event name,
+            // because Spring Boot forwards all events as "event: message"
+            // but the JSON body carries the actual semantic type.
+            type: parsed.type || eventType || 'token',
             content: parsed.content ?? null,
             conversationId: parsed.conversationId ?? null,
             sources: parsed.sources ?? null,

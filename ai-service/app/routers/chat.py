@@ -16,6 +16,8 @@ logger = structlog.get_logger("ai-service.routers.chat")
 router = APIRouter(prefix="/rag", tags=["chat"])
 
 _init_lock = asyncio.Lock()
+_generator = None
+_conversation_manager = None
 
 async def _get_generator():
     """Get or initialize RAG generator with all dependencies."""

@@ -69,7 +69,7 @@ class Settings(BaseSettings):
     # LLM Configuration (AI-009)
     llm_provider: Literal["groq"] = "groq"
     llm_api_key: str = ""
-    llm_model: str = "llama-3.3-70b-versatile"
+    llm_model: str = "openai/gpt-oss-20b"
     llm_max_tokens: int = 1024
     llm_temperature: float = 0.7
     llm_timeout: int = 30

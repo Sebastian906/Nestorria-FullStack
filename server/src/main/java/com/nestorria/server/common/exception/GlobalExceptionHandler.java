@@ -12,6 +12,8 @@ import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 
+import jakarta.servlet.http.HttpServletResponse;
+
 import lombok.extern.slf4j.Slf4j;
 
 @RestControllerAdvice
@@ -61,7 +63,11 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(com.nestorria.server.common.ai.AiServiceException.class)
     public ResponseEntity<Map<String, Object>> handleAiServiceException(
-            com.nestorria.server.common.ai.AiServiceException ex) {
+            com.nestorria.server.common.ai.AiServiceException ex, HttpServletResponse response) {
+        if (response.isCommitted()) {
+            log.warn("AiServiceException (response already committed): {}", ex.getMessage());
+            return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE).build();
+        }
         return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE)
             .body(errorBody(HttpStatus.SERVICE_UNAVAILABLE, ex.getMessage()));
     }
@@ -73,7 +79,11 @@ public class GlobalExceptionHandler {
     }
 
     @ExceptionHandler(Exception.class)
-    public ResponseEntity<Map<String, Object>> handleGenericException(Exception ex) {
+    public ResponseEntity<Map<String, Object>> handleGenericException(Exception ex, HttpServletResponse response) {
+        if (response.isCommitted()) {
+            log.error("Unexpected error (response already committed): {}", ex.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+        }
         log.error("Unexpected error: {}", ex.getMessage(), ex);
         return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
             .body(errorBody(HttpStatus.INTERNAL_SERVER_ERROR, "Error interno del servidor"));
