@@ -38,7 +38,7 @@ class AiServiceClientStreamTest {
     @BeforeEach
     void setUp() {
         properties = new AiServiceProperties(
-            "http://localhost:8000", "test-api-key", 3000, 30000, 30);
+            "http://localhost:8000", "test-api-key", 3000, 5000, 30000, 10, 30);
         fallbackHandler = new AiFallbackHandler(
             org.mockito.Mockito.mock(PropertyRecommendationService.class));
     }

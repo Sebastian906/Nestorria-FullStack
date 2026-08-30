@@ -29,8 +29,13 @@ import lombok.extern.slf4j.Slf4j;
  * Resiliencia:
  * - Circuit Breaker: abre después de 5 fallos en ventana de 10 requests
  * - Retry: 3 intentos con exponential backoff (500ms, 1s, 2s)
- * - Timeout: connect 3s, read 5s (30s para streaming)
+ * - Timeout: connect 3s, read 5s (operaciones síncronas)
  * - Fallback: delega a AiFallbackHandler (solo en @Retry, no en @CircuitBreaker)
+ *
+ * Streaming:
+ * - Usa un RestClient separado con read timeout extendido (30s)
+ * - No aplica @CircuitBreaker/@Retry (el stream se lee de forma lazy)
+ *
  * Aspect ordering: @Retry (outer) → @CircuitBreaker (inner).
  * - Transport failures → retried by @Retry → fallback on exhaustion
  * - Open circuit → CallNotPermittedException → ignored by retry → fallback
@@ -42,6 +47,7 @@ import lombok.extern.slf4j.Slf4j;
 public class AiServiceClient {
 
     private final RestClient restClient;
+    private final RestClient streamingRestClient;
     private final AiServiceProperties properties;
     private final AiFallbackHandler fallbackHandler;
 
@@ -51,7 +57,8 @@ public class AiServiceClient {
             AiFallbackHandler fallbackHandler) {
         this.properties = properties;
         this.fallbackHandler = fallbackHandler;
-        this.restClient = buildRestClient(properties);
+        this.restClient = buildRestClient(properties, properties.readTimeout());
+        this.streamingRestClient = buildRestClient(properties, properties.chatStreamReadTimeout());
     }
 
     // Package-private: allows tests to inject a RestClient with a mock transport
@@ -62,12 +69,13 @@ public class AiServiceClient {
         this.properties = properties;
         this.fallbackHandler = fallbackHandler;
         this.restClient = restClient;
+        this.streamingRestClient = restClient; // tests don't need separate streaming client
     }
 
-    private static RestClient buildRestClient(AiServiceProperties properties) {
+    private static RestClient buildRestClient(AiServiceProperties properties, int readTimeoutMs) {
         SimpleClientHttpRequestFactory factory = new SimpleClientHttpRequestFactory();
         factory.setConnectTimeout(Duration.ofMillis(properties.connectTimeout()));
-        factory.setReadTimeout(Duration.ofMillis(properties.readTimeout()));
+        factory.setReadTimeout(Duration.ofMillis(readTimeoutMs));
 
         ClientHttpRequestInterceptor apiKeyInterceptor = (request, body, execution) -> {
             if (properties.hasApiKey()) {
@@ -154,20 +162,22 @@ public class AiServiceClient {
         return fallbackHandler.chatFallback(request);
     }
 
-    // Chat Streaming — blocking InputStream, read line-by-line by caller
+    // Chat Streaming — blocking InputStream, uses dedicated streaming RestClient
     /**
      * Consume SSE streaming de ai-service.
-     * Retorna un InputStream bloqueante que el caller debe leer línea a línea
-     * en un hilo separado (el hilo del servlet queda liberado).
+     * Usa un RestClient dedicado con read timeout extendido (30s)
+     * para no bloquear las operaciones síncronas (5s read timeout).
+     *
      * No se aplica @CircuitBreaker/@Retry porque RestClient es síncrono
      * y el stream se lee de forma lazy. El manejo de errores se hace
      * en el caller (AiChatStreamingService).
+     *
      * @param request chat request con message, userId, conversationId
      * @return InputStream con el contenido SSE (text/event-stream)
      */
     public InputStream streamChat(AiChatRequest request) {
         log.debug("ai-service stream chat: userId={}", request.userId());
-        return restClient.post()
+        return streamingRestClient.post()
             .uri("/chat/stream")
             .body(request)
             .accept(MediaType.TEXT_EVENT_STREAM)

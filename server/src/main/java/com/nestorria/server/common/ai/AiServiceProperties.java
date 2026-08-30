@@ -8,6 +8,8 @@ public record AiServiceProperties(
     String apiKey,
     int connectTimeout,
     int readTimeout,
+    int chatStreamReadTimeout,
+    int maxConcurrentStreams,
     int aiPerMinute
 ) {
     public AiServiceProperties {
