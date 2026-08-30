@@ -69,10 +69,12 @@ async def _get_components():
     return _store, _embedder, _ingestor, _retriever
 
 async def _require_api_key(request: Request):
-    """Validate API key. Same pattern as visual.py."""
+    """Validate API key if configured. Skip in dev; reject in prod if missing."""
     config = await get_config()
     if not config.api_key:
-        raise HTTPException(status_code=401, detail="API key not configured")
+        if config.environment == "production":
+            raise HTTPException(status_code=500, detail="API key not configured")
+        return  # no key configured → allow (development/staging)
 
     provided = request.headers.get("X-API-Key", "")
     if not secrets.compare_digest(provided, config.api_key):

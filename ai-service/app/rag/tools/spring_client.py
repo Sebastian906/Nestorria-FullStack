@@ -25,7 +25,7 @@ class SpringBootClient:
         self.api_key = settings.spring_boot_api_key
         self._client = httpx.AsyncClient(
             base_url=self.base_url,
-            timeout=httpx.Timeout(connect=3.0, read=5.0),
+            timeout=httpx.Timeout(connect=3.0, read=5.0, write=5.0, pool=5.0),
             headers=self._build_headers(),
         )
 
