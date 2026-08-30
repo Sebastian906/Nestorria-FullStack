@@ -4,7 +4,7 @@
 # PostgreSQL lc_messages=es_ES causes error messages to be sent in WIN1252/Latin1,
 # and psycopg2 C extension crashes trying to decode them as UTF-8.
 import os
-os.environ.setdefault("PGCLIENTENCODING", "UTF8")
+os.environ["PGCLIENTENCODING"] = "UTF8"
 
 from contextlib import asynccontextmanager
 from datetime import datetime, timezone

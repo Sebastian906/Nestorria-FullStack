@@ -42,10 +42,12 @@ async def get_engine():
 
 
 async def _require_api_key(request: Request):
-    """Validate API key if configured. Skip validation in dev (no key set)."""
+    """Validate API key if configured. Skip in dev; reject in prod if missing."""
     config = await get_config()
     if not config.api_key:
-        return  # no key configured → allow (development mode)
+        if config.environment == "production":
+            raise HTTPException(status_code=500, detail="API key not configured")
+        return  # no key configured → allow (development/staging)
 
     provided = request.headers.get("X-API-Key", "")
     if not secrets.compare_digest(provided, config.api_key):
