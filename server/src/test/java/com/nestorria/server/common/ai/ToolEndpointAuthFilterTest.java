@@ -30,7 +30,7 @@ class ToolEndpointAuthFilterTest {
     @BeforeEach
     void setUp() {
         properties = new AiServiceProperties(
-            "http://localhost:4000", "test-api-key-123", 3000, 5000, 30);
+            "http://localhost:4000", "test-api-key-123", 3000, 5000, 30000, 10, 30);
         filter = new ToolEndpointAuthFilter(properties);
         filterChain = mock(FilterChain.class);
         SecurityContextHolder.clearContext();
@@ -102,7 +102,7 @@ class ToolEndpointAuthFilterTest {
     @Test
     void toolEndpoint_noApiKeyConfigured_returns403() throws ServletException, IOException {
         AiServiceProperties noKeyProps = new AiServiceProperties(
-            "http://localhost:4000", "", 3000, 5000, 30);
+            "http://localhost:4000", "", 3000, 5000, 30000, 10, 30);
         ToolEndpointAuthFilter filterNoKey = new ToolEndpointAuthFilter(noKeyProps);
 
         MockHttpServletRequest request = new MockHttpServletRequest("GET", "/api/ai/tools/properties/count");

@@ -37,7 +37,7 @@ class AiServiceClientTest {
     @BeforeEach
     void setUp() {
         properties = new AiServiceProperties(
-            "http://localhost:8000", "test-api-key", 3000, 5000, 30);
+            "http://localhost:8000", "test-api-key", 3000, 5000, 30000, 10, 30);
         fallbackHandler = new AiFallbackHandler(mock(PropertyRecommendationService.class));
     }
 
@@ -71,7 +71,7 @@ class AiServiceClientTest {
     @Test
     void noApiKey_headerNotSent() {
         AiServiceProperties noKeyProps = new AiServiceProperties(
-            "http://localhost:8000", "", 3000, 5000, 30);
+            "http://localhost:8000", "", 3000, 5000, 30000, 10, 30);
         StubFactory stub = new StubFactory();
         stub.on("/health", 200, "{\"status\":\"healthy\",\"aiService\":\"up\"}");
         RestClient restClient = buildRestClient(noKeyProps, stub);
@@ -111,13 +111,13 @@ class AiServiceClientTest {
     @Test
     void constructor_nullBaseUrl_throws() {
         assertThrows(IllegalStateException.class,
-            () -> new AiServiceProperties(null, "key", 3000, 5000, 30));
+            () -> new AiServiceProperties(null, "key", 3000, 5000, 30000, 10, 30));
     }
 
     @Test
     void constructor_blankBaseUrl_throws() {
         assertThrows(IllegalStateException.class,
-            () -> new AiServiceProperties("  ", "key", 3000, 5000, 30));
+            () -> new AiServiceProperties("  ", "key", 3000, 5000, 30000, 10, 30));
     }
 
     // ── retry + fallback on repeated failures ──────────────────────

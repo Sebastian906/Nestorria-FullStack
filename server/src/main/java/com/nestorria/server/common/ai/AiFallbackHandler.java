@@ -63,6 +63,18 @@ public class AiFallbackHandler {
         );
     }
 
+    /**
+     * Fallback para streaming chat: retorna AiChatStreamEvent de error.
+     * Usado cuando ai-service no está disponible antes de iniciar el stream.
+     */
+    public AiChatStreamEvent streamChatFallback(AiChatRequest request, Throwable t) {
+        log.warn("ai-service stream chat fallback: userId={}, error={}",
+            request.userId(), t.getMessage());
+        return AiChatStreamEvent.error(
+            "El servicio de IA no está disponible temporalmente. "
+            + "Por favor, intente nuevamente en unos minutos.");
+    }
+
     public List<PropertySummaryResponse> recommendationsFallback(String userId, int limit) {
         log.info("recommendations fallback: delegando a PropertyRecommendationService");
         return recommendationService.getRecommendations(userId, limit);
