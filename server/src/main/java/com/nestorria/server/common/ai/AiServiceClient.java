@@ -1,5 +1,6 @@
 package com.nestorria.server.common.ai;
 
+import java.io.InputStream;
 import java.time.Duration;
 import java.util.List;
 
@@ -28,9 +29,8 @@ import lombok.extern.slf4j.Slf4j;
  * Resiliencia:
  * - Circuit Breaker: abre después de 5 fallos en ventana de 10 requests
  * - Retry: 3 intentos con exponential backoff (500ms, 1s, 2s)
- * - Timeout: connect 3s, read 5s
+ * - Timeout: connect 3s, read 5s (30s para streaming)
  * - Fallback: delega a AiFallbackHandler (solo en @Retry, no en @CircuitBreaker)
- *
  * Aspect ordering: @Retry (outer) → @CircuitBreaker (inner).
  * - Transport failures → retried by @Retry → fallback on exhaustion
  * - Open circuit → CallNotPermittedException → ignored by retry → fallback
@@ -49,7 +49,9 @@ public class AiServiceClient {
     public AiServiceClient(
             AiServiceProperties properties,
             AiFallbackHandler fallbackHandler) {
-        this(properties, fallbackHandler, buildRestClient(properties));
+        this.properties = properties;
+        this.fallbackHandler = fallbackHandler;
+        this.restClient = buildRestClient(properties);
     }
 
     // Package-private: allows tests to inject a RestClient with a mock transport
@@ -148,8 +150,29 @@ public class AiServiceClient {
 
     AiChatResponse chatFallback(AiChatRequest request, Throwable t) {
         log.warn("ai-service chat fallback: userId={}, error={}",
-            request.userId(), t.getMessage());
+                request.userId(), t.getMessage());
         return fallbackHandler.chatFallback(request);
+    }
+
+    // Chat Streaming — blocking InputStream, read line-by-line by caller
+    /**
+     * Consume SSE streaming de ai-service.
+     * Retorna un InputStream bloqueante que el caller debe leer línea a línea
+     * en un hilo separado (el hilo del servlet queda liberado).
+     * No se aplica @CircuitBreaker/@Retry porque RestClient es síncrono
+     * y el stream se lee de forma lazy. El manejo de errores se hace
+     * en el caller (AiChatStreamingService).
+     * @param request chat request con message, userId, conversationId
+     * @return InputStream con el contenido SSE (text/event-stream)
+     */
+    public InputStream streamChat(AiChatRequest request) {
+        log.debug("ai-service stream chat: userId={}", request.userId());
+        return restClient.post()
+            .uri("/chat/stream")
+            .body(request)
+            .accept(MediaType.TEXT_EVENT_STREAM)
+            .retrieve()
+            .body(InputStream.class);
     }
 
     // Recommendations
