@@ -6,6 +6,7 @@ import { aiService } from '../../services/aiService'
 const { getToken } = useAuth()
 const metrics = ref(null)
 const loading = ref(true)
+const error = ref(null)
 
 onMounted(async () => {
     try {
@@ -13,6 +14,7 @@ onMounted(async () => {
         metrics.value = await aiService.getChatMetrics(token)
     } catch (e) {
         console.error('Failed to load chat metrics', e)
+        error.value = 'Failed to load chat metrics'
     } finally {
         loading.value = false
     }
@@ -24,6 +26,7 @@ onMounted(async () => {
         <h3 class="font-semibold mb-3">Chat Metrics</h3>
 
         <div v-if="loading" class="text-gray-500">Loading...</div>
+        <div v-else-if="error" class="text-red-500 text-sm">{{ error }}</div>
         <div v-else-if="metrics" class="grid grid-cols-2 md:grid-cols-4 gap-4">
             <div class="text-center">
                 <p class="text-2xl font-bold">{{ metrics.totalMessages }}</p>

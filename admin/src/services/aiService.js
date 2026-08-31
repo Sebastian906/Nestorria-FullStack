@@ -32,6 +32,18 @@ export const aiService = {
         })
     },
 
+    async uploadDocument(file, token) {
+        const formData = new FormData()
+        formData.append('file', file)
+        const { data } = await api.post('/api/ai/admin/rag/documents', formData, {
+            headers: {
+                Authorization: `Bearer ${token}`,
+                'Content-Type': 'multipart/form-data'
+            }
+        })
+        return data
+    },
+
     async getChatMetrics(token) {
         const { data } = await api.get('/api/ai/admin/chat/metrics', {
             headers: { Authorization: `Bearer ${token}` }

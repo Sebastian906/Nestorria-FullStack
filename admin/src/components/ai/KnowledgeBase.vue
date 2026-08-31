@@ -7,6 +7,7 @@ const { getToken } = useAuth()
 const documents = ref([])
 const loading = ref(true)
 const uploading = ref(false)
+const error = ref(null)
 
 onMounted(async () => {
     await loadDocuments()
@@ -14,12 +15,14 @@ onMounted(async () => {
 
 async function loadDocuments() {
     loading.value = true
+    error.value = null
     try {
         const token = await getToken.value()
         const data = await aiService.getDocuments(token)
         documents.value = data.documents || []
     } catch (e) {
         console.error('Failed to load documents', e)
+        error.value = 'Failed to load documents'
     } finally {
         loading.value = false
     }
@@ -29,11 +32,14 @@ async function uploadDocument(event) {
     const file = event.target.files[0]
     if (!file) return
     uploading.value = true
+    error.value = null
     try {
         const token = await getToken.value()
-        console.log('Upload:', file.name)
+        await aiService.uploadDocument(file, token)
+        await loadDocuments()
     } catch (e) {
         console.error('Upload failed', e)
+        error.value = 'Upload failed'
     } finally {
         uploading.value = false
     }
@@ -56,6 +62,8 @@ async function deleteDoc(docId) {
         <h3 class="font-semibold mb-3">Knowledge Base</h3>
 
         <div v-if="loading" class="text-gray-500">Loading documents...</div>
+
+        <div v-else-if="error" class="text-red-500 text-sm">{{ error }}</div>
 
         <div v-else>
             <div v-if="documents.length === 0" class="text-gray-400 text-sm">

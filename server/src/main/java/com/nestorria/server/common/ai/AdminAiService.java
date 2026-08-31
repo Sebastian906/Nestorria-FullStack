@@ -45,16 +45,21 @@ public class AdminAiService {
                 .body(AdminModelsResponse.class);
         } catch (Exception e) {
             log.error("Failed to fetch models from ai-service", e);
-            return new AdminModelsResponse(List.of());
+            throw new AiServiceException("Failed to fetch models", e);
         }
     }
 
     public TrainingResponse triggerTraining(String modelName) {
         log.info("Triggering training for model: {}", modelName);
-        return restClient.post()
-            .uri("/ai/admin/models/{modelName}/train", modelName)
-            .retrieve()
-            .body(TrainingResponse.class);
+        try {
+            return restClient.post()
+                .uri("/ai/admin/models/{modelName}/train", modelName)
+                .retrieve()
+                .body(TrainingResponse.class);
+        } catch (Exception e) {
+            log.error("Failed to trigger training for model: {}", modelName, e);
+            throw new AiServiceException("Failed to trigger training", e);
+        }
     }
 
     public AdminRagDocumentsResponse getDocuments() {
@@ -65,15 +70,20 @@ public class AdminAiService {
                 .body(AdminRagDocumentsResponse.class);
         } catch (Exception e) {
             log.error("Failed to fetch RAG documents", e);
-            return new AdminRagDocumentsResponse(List.of());
+            throw new AiServiceException("Failed to fetch RAG documents", e);
         }
     }
 
     public void deleteDocument(String documentId) {
-        restClient.delete()
-            .uri("/ai/admin/rag/documents/{documentId}", documentId)
-            .retrieve()
-            .toBodilessEntity();
+        try {
+            restClient.delete()
+                .uri("/ai/admin/rag/documents/{documentId}", documentId)
+                .retrieve()
+                .toBodilessEntity();
+        } catch (Exception e) {
+            log.error("Failed to delete document: {}", documentId, e);
+            throw new AiServiceException("Failed to delete document", e);
+        }
     }
 
     public AdminChatMetricsResponse getChatMetrics() {
@@ -84,7 +94,7 @@ public class AdminAiService {
                 .body(AdminChatMetricsResponse.class);
         } catch (Exception e) {
             log.error("Failed to fetch chat metrics", e);
-            return AdminChatMetricsResponse.empty();
+            throw new AiServiceException("Failed to fetch chat metrics", e);
         }
     }
 

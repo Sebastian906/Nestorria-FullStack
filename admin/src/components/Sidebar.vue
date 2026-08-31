@@ -8,7 +8,7 @@ import NotificationBell from './NotificationBell.vue'
 
 const router = useRouter()
 const route = useRoute()
-const { isOwner, roleLoaded, user } = useAppContext()
+const { isOwner, isAdmin, roleLoaded, user } = useAppContext()
 
 const navItems = [
     {
@@ -39,13 +39,14 @@ const navItems = [
     {
         path: '/ai',
         label: 'AI Dashboard',
-        icon: assets.brain
+        icon: assets.brain,
+        adminOnly: true
     },
 ]
 
 const checkAuth = () => {
     if (!roleLoaded.value) return
-    if (!isOwner.value) {
+    if (!isAdmin.value) {
         if (route.path !== '/') {
             router.replace({ path: '/' })
         }
@@ -90,7 +91,7 @@ const userButtonAppearance = {
             </div>
 
             <div class="flex md:flex-col md:gap-x-5 gap-y-8 md:mt-4">
-                <RouterLink v-for="link in navItems" :key="link.label" :to="link.path" custom
+                <RouterLink v-for="link in navItems.filter(item => !item.adminOnly || isAdmin)" :key="link.label" :to="link.path" custom
                     v-slot="{ isActive, navigate }">
                     <div @click="navigate" :class="isActive
                         ? 'flexStart gap-x-2 p-5 lg:pl-12 bold-13 sm:text-sm! cursor-pointer h-10 bg-secondary/10 max-md:border-b-4 md:border-r-4 border-secondary'

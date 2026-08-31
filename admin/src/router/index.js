@@ -5,6 +5,7 @@ import ListProperty from '../pages/ListProperty.vue'
 import Reports from '../pages/Reports.vue'
 import Categories from '../pages/Categories.vue'
 import AiDashboard from '../pages/AiDashboard.vue'
+import { useAppContext } from '../composables/useAppContext'
 
 const routes = [
     { path: '/', component: Dashboard },
@@ -16,7 +17,24 @@ const routes = [
     { path: '/ai', component: AiDashboard, meta: { requiresAdmin: true } }
 ]
 
-export default createRouter({
+const router = createRouter({
     history: createWebHistory(),
     routes,
 })
+
+router.beforeEach((to, from, next) => {
+    if (to.meta.requiresAdmin) {
+        const { isAdmin, roleLoaded } = useAppContext()
+        if (!roleLoaded.value) {
+            next({ path: '/' })
+        } else if (!isAdmin.value) {
+            next({ path: '/' })
+        } else {
+            next()
+        }
+    } else {
+        next()
+    }
+})
+
+export default router
