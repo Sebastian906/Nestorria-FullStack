@@ -33,7 +33,7 @@ onMounted(async () => {
                 <p class="text-xs text-gray-500">Total Messages</p>
             </div>
             <div class="text-center">
-                <p class="text-2xl font-bold">{{ Object.keys(metrics.messagesByUser).length }}</p>
+                <p class="text-2xl font-bold">{{ metrics.messagesByUser ? Object.keys(metrics.messagesByUser).length : 0 }}</p>
                 <p class="text-xs text-gray-500">Active Users</p>
             </div>
             <div class="text-center">

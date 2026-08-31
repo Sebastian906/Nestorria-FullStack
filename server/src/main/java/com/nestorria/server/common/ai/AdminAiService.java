@@ -109,4 +109,68 @@ public class AdminAiService {
             return AdminAiStatusResponse.degraded();
         }
     }
+
+    public ModelVersionsResponse getModelVersions(String modelName) {
+        try {
+            return restClient.get()
+                .uri("/ai/admin/models/{modelName}/versions", modelName)
+                .retrieve()
+                .body(ModelVersionsResponse.class);
+        } catch (Exception e) {
+            log.error("Failed to fetch versions for model: {}", modelName, e);
+            throw new AiServiceException("Failed to fetch model versions", e);
+        }
+    }
+
+    public VersionInfoResponse getActiveVersion(String modelName) {
+        try {
+            return restClient.get()
+                .uri("/ai/admin/models/{modelName}/active", modelName)
+                .retrieve()
+                .body(VersionInfoResponse.class);
+        } catch (Exception e) {
+            log.error("Failed to fetch active version for model: {}", modelName, e);
+            throw new AiServiceException("Failed to fetch active version", e);
+        }
+    }
+
+    public PromoteRollbackResponse promoteModel(String modelName, String version) {
+        try {
+            return restClient.post()
+                .uri("/ai/admin/models/{modelName}/promote/{version}", modelName, version)
+                .retrieve()
+                .body(PromoteRollbackResponse.class);
+        } catch (Exception e) {
+            log.error("Failed to promote model {} to version {}", modelName, version, e);
+            throw new AiServiceException("Failed to promote model", e);
+        }
+    }
+
+    public PromoteRollbackResponse rollbackModel(String modelName, String version) {
+        try {
+            return restClient.post()
+                .uri("/ai/admin/models/{modelName}/rollback/{version}", modelName, version)
+                .retrieve()
+                .body(PromoteRollbackResponse.class);
+        } catch (Exception e) {
+            log.error("Failed to rollback model {} to version {}", modelName, version, e);
+            throw new AiServiceException("Failed to rollback model", e);
+        }
+    }
+
+    public CompareVersionsResponse compareVersions(String modelName, String v1, String v2) {
+        try {
+            return restClient.get()
+                .uri(uriBuilder -> uriBuilder
+                    .path("/ai/admin/models/{modelName}/compare")
+                    .queryParam("v1", v1)
+                    .queryParam("v2", v2)
+                    .build(modelName))
+                .retrieve()
+                .body(CompareVersionsResponse.class);
+        } catch (Exception e) {
+            log.error("Failed to compare versions {} and {} for model {}", v1, v2, modelName, e);
+            throw new AiServiceException("Failed to compare versions", e);
+        }
+    }
 }

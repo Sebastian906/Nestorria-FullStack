@@ -56,5 +56,41 @@ export const aiService = {
             headers: { Authorization: `Bearer ${token}` }
         })
         return data
+    },
+
+    async getModelVersions(modelName, token) {
+        const { data } = await api.get(`/api/ai/admin/models/${modelName}/versions`, {
+            headers: { Authorization: `Bearer ${token}` }
+        })
+        return data
+    },
+
+    async getActiveVersion(modelName, token) {
+        const { data } = await api.get(`/api/ai/admin/models/${modelName}/active`, {
+            headers: { Authorization: `Bearer ${token}` }
+        })
+        return data
+    },
+
+    async promoteModel(modelName, version, token) {
+        const { data } = await api.post(`/api/ai/admin/models/${modelName}/promote/${version}`, null, {
+            headers: { Authorization: `Bearer ${token}` }
+        })
+        return data
+    },
+
+    async rollbackModel(modelName, version, token) {
+        const { data } = await api.post(`/api/ai/admin/models/${modelName}/rollback/${version}`, null, {
+            headers: { Authorization: `Bearer ${token}` }
+        })
+        return data
+    },
+
+    async compareVersions(modelName, v1, v2, token) {
+        const { data } = await api.get(`/api/ai/admin/models/${modelName}/compare`, {
+            params: { v1, v2 },
+            headers: { Authorization: `Bearer ${token}` }
+        })
+        return data
     }
 }
