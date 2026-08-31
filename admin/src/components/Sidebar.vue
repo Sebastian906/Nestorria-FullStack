@@ -42,6 +42,12 @@ const navItems = [
         icon: assets.brain,
         adminOnly: true
     },
+    {
+        path: '/mlops',
+        label: 'MLOps',
+        icon: assets.brainCog,
+        adminOnly: true
+    },
 ]
 
 const checkAuth = () => {
