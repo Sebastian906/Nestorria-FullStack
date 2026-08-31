@@ -36,6 +36,30 @@ class ChatMetricsResponse(BaseModel):
     average_response_time: float
     error_rate: float
 
+class VersionInfo(BaseModel):
+    version: str
+    metrics: dict
+    date: Optional[str] = None
+    features: list[str] = []
+
+class CompareResponse(BaseModel):
+    model: str
+    version_1: str
+    version_2: str
+    date_1: Optional[str] = None
+    date_2: Optional[str] = None
+    metrics_comparison: dict
+
+class PromoteResponse(BaseModel):
+    name: str
+    previous_version: Optional[str]
+    new_version: str
+
+class RollbackResponse(BaseModel):
+    name: str
+    previous_version: Optional[str]
+    new_version: str
+
 # Endpoints
 @router.get("/models")
 async def list_models():
@@ -115,3 +139,73 @@ async def ai_service_status():
         "rag_enabled": settings.database_url is not None,
         "llm_enabled": bool(settings.llm_api_key),
     }
+
+@router.get("/models/{model_name}/versions")
+async def list_model_versions(model_name: str):
+    """List all versions of a specific model."""
+    settings = get_settings()
+    registry = ModelRegistry(artifacts_path=settings.artifacts_path)
+    versions = registry.list_versions(model_name)
+    if not versions:
+        raise HTTPException(status_code=404, detail=f"Model '{model_name}' not found")
+    return {
+        "model": model_name,
+        "versions": [
+            VersionInfo(
+                version=v.get("version", ""),
+                metrics=v.get("metrics", {}),
+                date=v.get("date"),
+                features=v.get("features", []),
+            ).model_dump()
+            for v in versions
+        ],
+    }
+
+@router.get("/models/{model_name}/active")
+async def get_active_version(model_name: str):
+    """Get the active (production) version of a model."""
+    settings = get_settings()
+    registry = ModelRegistry(artifacts_path=settings.artifacts_path)
+    active = registry.get_active(model_name)
+    if not active:
+        raise HTTPException(status_code=404, detail=f"Model '{model_name}' not found")
+    return active
+
+@router.post("/models/{model_name}/promote/{version}")
+async def promote_model(model_name: str, version: str):
+    """Promote a model version to production."""
+    settings = get_settings()
+    registry = ModelRegistry(artifacts_path=settings.artifacts_path)
+    try:
+        result = registry.promote(model_name, version)
+        return PromoteResponse(**result).model_dump()
+    except FileNotFoundError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+    except ValueError as e:
+        raise HTTPException(status_code=422, detail=str(e))
+
+@router.post("/models/{model_name}/rollback/{version}")
+async def rollback_model(model_name: str, version: str):
+    """Rollback to a previous model version."""
+    settings = get_settings()
+    registry = ModelRegistry(artifacts_path=settings.artifacts_path)
+    try:
+        result = registry.rollback(model_name, version)
+        return RollbackResponse(**result).model_dump()
+    except FileNotFoundError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+    except ValueError as e:
+        raise HTTPException(status_code=422, detail=str(e))
+
+@router.get("/models/{model_name}/compare")
+async def compare_versions(model_name: str, v1: str, v2: str):
+    """Compare metrics between two model versions."""
+    settings = get_settings()
+    registry = ModelRegistry(artifacts_path=settings.artifacts_path)
+    try:
+        result = registry.compare_versions(model_name, v1, v2)
+        return CompareResponse(**result).model_dump()
+    except FileNotFoundError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+    except ValueError as e:
+        raise HTTPException(status_code=422, detail=str(e))

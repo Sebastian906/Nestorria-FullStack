@@ -5,6 +5,8 @@ artifacts directory with JSON metadata.
 """
 
 import json
+import os
+import tempfile
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
@@ -149,3 +151,138 @@ class ModelRegistry:
         # Sort by date, return latest
         versions.sort(key=lambda m: m.get("date", ""), reverse=True)
         return versions[0]
+
+    def _active_versions_file(self) -> Path:
+        """Path to the active versions index."""
+        return self.artifacts_path / "active_versions.json"
+    
+    def _load_active(self) -> dict:
+        """Load active version mappings."""
+        path = self._active_versions_file()
+        if path.exists():
+            return json.loads(path.read_text(encoding="utf-8"))
+        return {}
+    
+    def _save_active(self, active: dict) -> None:
+        """Persist active version mappings atomically.
+
+        Writes to a temporary file then replaces the target to prevent
+        readers from observing partial content on crash.
+        """
+        self.artifacts_path.mkdir(parents=True, exist_ok=True)
+        target = self._active_versions_file()
+        fd, tmp_path = tempfile.mkstemp(
+            dir=str(self.artifacts_path), suffix=".tmp", prefix="active_"
+        )
+        try:
+            with os.fdopen(fd, "w", encoding="utf-8") as f:
+                json.dump(active, f, indent=2)
+            os.replace(tmp_path, str(target))
+        except BaseException:
+            os.unlink(tmp_path)
+            raise
+    
+    def get_active(self, name: str) -> dict | None:
+        """Get the active (production) version of a model."""
+        active = self._load_active()
+        version = active.get(name)
+        if not version:
+            return self.get_latest(name)
+        return self.get_version(name, version)
+    
+    def get_version(self, name: str, version: str) -> dict | None:
+        """Get metadata for a specific model version."""
+        self._validate_name(name)
+        self._validate_version(version)
+        metadata_path = self.artifacts_path / name / version / "metadata.json"
+        if metadata_path.exists():
+            return json.loads(metadata_path.read_text(encoding="utf-8"))
+        return None
+    
+    def list_versions(self, name: str) -> list[dict]:
+        """List all versions of a model with metadata."""
+        self._validate_name(name)
+        name_dir = self.artifacts_path / name
+        if not name_dir.exists():
+            return []
+    
+        versions = []
+        for version_dir in sorted(name_dir.iterdir()):
+            if not version_dir.is_dir():
+                continue
+            metadata_path = version_dir / "metadata.json"
+            if metadata_path.exists():
+                versions.append(
+                    json.loads(metadata_path.read_text(encoding="utf-8"))
+                )
+        return versions
+    
+    def promote(self, name: str, version: str) -> dict:
+        """Promote a model version to active/production."""
+        current = self.get_version(name, version)
+        if not current:
+            raise FileNotFoundError(
+                f"Model {name} version {version} not found"
+            )
+    
+        active = self._load_active()
+        previous_version = active.get(name)
+        active[name] = version
+        self._save_active(active)
+    
+        logger.info(
+            "model_promoted",
+            name=name,
+            version=version,
+            previous_version=previous_version,
+        )
+        return {
+            "name": name,
+            "previous_version": previous_version,
+            "new_version": version,
+        }
+    
+    def rollback(self, name: str, target_version: str) -> dict:
+        """Rollback to a previous version (alias for promote to older version)."""
+        return self.promote(name, target_version)
+    
+    def compare_versions(self, name: str, v1: str, v2: str) -> dict:
+        """Compare metrics between two model versions."""
+        m1 = self.get_version(name, v1)
+        m2 = self.get_version(name, v2)
+    
+        if not m1:
+            raise FileNotFoundError(f"Model {name} version {v1} not found")
+        if not m2:
+            raise FileNotFoundError(f"Model {name} version {v2} not found")
+    
+        metrics1 = m1.get("metrics", {})
+        metrics2 = m2.get("metrics", {})
+    
+        # Compute deltas for common metric keys
+        # Explicit direction: higher-is-better vs lower-is-better
+        higher_is_better = {"r2", "f1", "precision", "recall", "roc_auc", "accuracy", "ndcg"}
+        all_keys = set(metrics1.keys()) | set(metrics2.keys())
+        comparison = {}
+        for key in all_keys:
+            val1 = metrics1.get(key)
+            val2 = metrics2.get(key)
+            if isinstance(val1, (int, float)) and isinstance(val2, (int, float)):
+                improved = val2 > val1 if key in higher_is_better else val2 < val1
+                comparison[key] = {
+                    v1: val1,
+                    v2: val2,
+                    "delta": val2 - val1,
+                    "improved": improved,
+                }
+            else:
+                comparison[key] = {v1: val1, v2: val2}
+    
+        return {
+            "model": name,
+            "version_1": v1,
+            "version_2": v2,
+            "date_1": m1.get("date"),
+            "date_2": m2.get("date"),
+            "metrics_comparison": comparison,
+        }
