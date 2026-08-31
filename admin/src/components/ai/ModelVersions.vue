@@ -100,12 +100,12 @@ watch(() => props.modelName, fetchVersions)
                     </td>
                     <td class="py-2 text-right space-x-2">
                         <button v-if="v.version !== activeVersion" @click="promote(v.version)"
-                            :disabled="actionLoading === v.version"
+                            :disabled="actionLoading"
                             class="text-xs bg-green-600 text-white px-2 py-1 rounded hover:bg-green-700 disabled:opacity-50">
                             {{ actionLoading === v.version ? '...' : 'Promote' }}
                         </button>
                         <button v-if="v.version !== activeVersion" @click="rollback(v.version)"
-                            :disabled="actionLoading === v.version"
+                            :disabled="actionLoading"
                             class="text-xs bg-yellow-500 text-white px-2 py-1 rounded hover:bg-yellow-600 disabled:opacity-50">
                             {{ actionLoading === v.version ? '...' : 'Rollback' }}
                         </button>

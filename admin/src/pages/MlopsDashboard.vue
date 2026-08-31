@@ -9,12 +9,14 @@ const { getToken } = useAuth()
 const models = ref([])
 const loading = ref(true)
 const error = ref(null)
+const selectedModel = ref('')
 
 onMounted(async () => {
     try {
         const token = await getToken.value()
         const data = await aiService.getModels(token)
         models.value = data.models || []
+        if (models.value.length) selectedModel.value = models.value[0].name
     } catch (e) {
         error.value = e.message || 'Failed to load models'
     } finally {
@@ -40,7 +42,10 @@ onMounted(async () => {
 
             <div v-if="models.length">
                 <h2 class="text-lg font-semibold mb-3">Version Comparison</h2>
-                <VersionCompare :model-name="models[0].name" />
+                <select v-model="selectedModel" class="border rounded px-2 py-1.5 text-sm mb-3">
+                    <option v-for="m in models" :key="m.name" :value="m.name">{{ m.name }}</option>
+                </select>
+                <VersionCompare :model-name="selectedModel" />
             </div>
         </template>
     </div>
