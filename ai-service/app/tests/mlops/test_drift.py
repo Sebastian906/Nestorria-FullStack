@@ -56,12 +56,14 @@ class TestDriftDetection:
         new_data = rng.normal(0.5, 1, 1000)
 
         detector = DriftDetector(reference)
-        # Very strict threshold
-        strict = detector.check_drift(new_data, threshold=0.001)
-        # Very loose threshold
-        loose = detector.check_drift(new_data, threshold=0.99)
-        # Loose threshold should be less likely to detect drift
-        assert loose["drifted"] is False or strict["drifted"] is True
+        result = detector.check_drift(new_data)
+        p = result["p_value"]
+        # Strict threshold (below p) must detect drift
+        strict = detector.check_drift(new_data, threshold=p + 0.01)
+        assert strict["drifted"] is True
+        # Loose threshold (above p) must NOT detect drift
+        loose = detector.check_drift(new_data, threshold=max(p - 0.01, 0.0))
+        assert loose["drifted"] is False
 
     def test_multidimensional_input(self):
         rng = np.random.default_rng(42)
@@ -72,3 +74,12 @@ class TestDriftDetection:
         result = detector.check_drift(new_data)
         assert len(result["per_feature"]) == 5
         assert result["drifted"] is False
+
+    def test_mismatched_features_raises(self):
+        rng = np.random.default_rng(42)
+        reference = rng.normal(0, 1, (500, 2))
+        new_data = rng.normal(0, 1, (500, 3))
+
+        detector = DriftDetector(reference)
+        with pytest.raises(ValueError, match="Feature count mismatch"):
+            detector.check_drift(new_data)

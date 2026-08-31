@@ -1,17 +1,20 @@
 """Prediction logging for future analysis.
 
 Append-only JSONL file. One line per prediction.
-90-day TTL via file rotation (not implemented here — YAGNI for now).
+90-day TTL: old log files are cleaned up on write.
 """
 
 import json
-from datetime import datetime, timezone
+import os
+from datetime import datetime, timezone, timedelta
 from pathlib import Path
 from typing import Optional
 
 import structlog
 
 logger = structlog.get_logger("ai-service.mlops")
+
+RETENTION_DAYS = 90
 
 class PredictionLogger:
     """Log predictions to a JSONL file for analysis."""
@@ -20,6 +23,20 @@ class PredictionLogger:
         self.artifacts_path = Path(artifacts_path)
         self._log_file = self.artifacts_path / "predictions.jsonl"
         self.artifacts_path.mkdir(parents=True, exist_ok=True)
+
+    def _cleanup_old_logs(self) -> None:
+        """Remove prediction log files older than RETENTION_DAYS."""
+        cutoff = datetime.now(timezone.utc) - timedelta(days=RETENTION_DAYS)
+        for log_file in self.artifacts_path.glob("predictions*.jsonl"):
+            try:
+                mtime = datetime.fromtimestamp(
+                    log_file.stat().st_mtime, tz=timezone.utc
+                )
+                if mtime < cutoff:
+                    log_file.unlink()
+                    logger.info("old_prediction_log_removed", path=str(log_file))
+            except OSError:
+                pass
 
     def log_prediction(
         self,
@@ -44,6 +61,7 @@ class PredictionLogger:
             f.write(json.dumps(record) + "\n")
 
         logger.info("prediction_logged", model=model_name, version=version)
+        self._cleanup_old_logs()
 
     def get_predictions(
         self,

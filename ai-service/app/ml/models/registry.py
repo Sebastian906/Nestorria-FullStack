@@ -5,6 +5,8 @@ artifacts directory with JSON metadata.
 """
 
 import json
+import os
+import tempfile
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
@@ -162,11 +164,23 @@ class ModelRegistry:
         return {}
     
     def _save_active(self, active: dict) -> None:
-        """Persist active version mappings."""
+        """Persist active version mappings atomically.
+
+        Writes to a temporary file then replaces the target to prevent
+        readers from observing partial content on crash.
+        """
         self.artifacts_path.mkdir(parents=True, exist_ok=True)
-        self._active_versions_file().write_text(
-            json.dumps(active, indent=2), encoding="utf-8"
+        target = self._active_versions_file()
+        fd, tmp_path = tempfile.mkstemp(
+            dir=str(self.artifacts_path), suffix=".tmp", prefix="active_"
         )
+        try:
+            with os.fdopen(fd, "w", encoding="utf-8") as f:
+                json.dump(active, f, indent=2)
+            os.replace(tmp_path, str(target))
+        except BaseException:
+            os.unlink(tmp_path)
+            raise
     
     def get_active(self, name: str) -> dict | None:
         """Get the active (production) version of a model."""
@@ -246,17 +260,20 @@ class ModelRegistry:
         metrics2 = m2.get("metrics", {})
     
         # Compute deltas for common metric keys
+        # Explicit direction: higher-is-better vs lower-is-better
+        higher_is_better = {"r2", "f1", "precision", "recall", "roc_auc", "accuracy", "ndcg"}
         all_keys = set(metrics1.keys()) | set(metrics2.keys())
         comparison = {}
         for key in all_keys:
             val1 = metrics1.get(key)
             val2 = metrics2.get(key)
             if isinstance(val1, (int, float)) and isinstance(val2, (int, float)):
+                improved = val2 > val1 if key in higher_is_better else val2 < val1
                 comparison[key] = {
                     v1: val1,
                     v2: val2,
                     "delta": val2 - val1,
-                    "improved": val2 > val1 if "r2" in key or "f1" in key else val2 < val1,
+                    "improved": improved,
                 }
             else:
                 comparison[key] = {v1: val1, v2: val2}

@@ -181,6 +181,8 @@ async def promote_model(model_name: str, version: str):
         return PromoteResponse(**result).model_dump()
     except FileNotFoundError as e:
         raise HTTPException(status_code=404, detail=str(e))
+    except ValueError as e:
+        raise HTTPException(status_code=422, detail=str(e))
 
 @router.post("/models/{model_name}/rollback/{version}")
 async def rollback_model(model_name: str, version: str):
@@ -192,6 +194,8 @@ async def rollback_model(model_name: str, version: str):
         return RollbackResponse(**result).model_dump()
     except FileNotFoundError as e:
         raise HTTPException(status_code=404, detail=str(e))
+    except ValueError as e:
+        raise HTTPException(status_code=422, detail=str(e))
 
 @router.get("/models/{model_name}/compare")
 async def compare_versions(model_name: str, v1: str, v2: str):
@@ -203,3 +207,5 @@ async def compare_versions(model_name: str, v1: str, v2: str):
         return CompareResponse(**result).model_dump()
     except FileNotFoundError as e:
         raise HTTPException(status_code=404, detail=str(e))
+    except ValueError as e:
+        raise HTTPException(status_code=422, detail=str(e))

@@ -36,7 +36,13 @@ class DriftDetector:
         else:
             ref = self.reference
 
-        n_features = max(ref.shape[1], new_data.shape[1])
+        if ref.shape[1] != new_data.shape[1]:
+            raise ValueError(
+                f"Feature count mismatch: reference has {ref.shape[1]} "
+                f"features, new_data has {new_data.shape[1]}"
+            )
+
+        n_features = ref.shape[1]
         per_feature = []
         any_drift = False
 
