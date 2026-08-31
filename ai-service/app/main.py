@@ -18,6 +18,7 @@ from app.middleware.error_handler import register_error_handlers
 from app.middleware.request_id import RequestIdMiddleware
 from app.routers import health
 from app.utils.logging import setup_logging
+from app.routers.admin import router as admin_router
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -118,6 +119,8 @@ def create_app() -> FastAPI:
             window_seconds=settings.visual_search_rate_window,
             prefix="/dl/",
         )
+
+    application.include_router(admin_router, prefix="/ai")
 
     return application
 

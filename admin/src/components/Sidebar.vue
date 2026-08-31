@@ -36,6 +36,11 @@ const navItems = [
         label: 'Categories',
         icon: assets.network
     },
+    {
+        path: '/ai',
+        label: 'AI Dashboard',
+        icon: assets.brain
+    },
 ]
 
 const checkAuth = () => {

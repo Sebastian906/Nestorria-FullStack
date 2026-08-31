@@ -61,6 +61,7 @@ public class SecurityConfig {
                 .requestMatchers("/actuator/health").permitAll()
                 // WebSocket: auth manejada por WebSocketAuthInterceptor, no por BearerTokenAuthenticationFilter
                 .requestMatchers("/ws").permitAll()
+                // /api/ai/admin/**: role check done in AdminAiController (DB-stored role, not JWT claim)
                 .anyRequest().authenticated()
             )
             .oauth2ResourceServer(oauth2 -> oauth2.jwt(Customizer.withDefaults()))
