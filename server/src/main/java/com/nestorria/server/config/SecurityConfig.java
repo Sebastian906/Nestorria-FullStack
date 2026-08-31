@@ -29,6 +29,9 @@ public class SecurityConfig {
     @Value("${clerk.issuer-uri}")
     private String issuerUri;
 
+    @Value("${stripe.webhook-secret:}")
+    private String stripeWebhookSecret;
+
     SecurityConfig(ToolEndpointAuthFilter toolEndpointAuthFilter) {
         this.toolEndpointAuthFilter = toolEndpointAuthFilter;
     }
@@ -48,21 +51,25 @@ public class SecurityConfig {
         http
             .cors(cors -> cors.configurationSource(corsConfigurationSource))
             .csrf(csrf -> csrf.disable())
-            .authorizeHttpRequests(auth -> auth
-                .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
-                .requestMatchers("/").permitAll()
-                .requestMatchers("/swagger-ui/**", "/swagger-ui.html", "/v3/api-docs/**").permitAll()
-                .requestMatchers(HttpMethod.GET, "/api/properties/me").permitAll()
-                .requestMatchers(HttpMethod.GET, "/api/properties/nearby").permitAll()
-                .requestMatchers(HttpMethod.GET, "/api/properties/*/reviews").permitAll()
-                .requestMatchers(HttpMethod.POST, "/api/payments/stripe/webhook").permitAll()
-                .requestMatchers(HttpMethod.GET, "/api/agencies").permitAll()
-                // Actuator: health público para load balancers, el resto autenticado
-                .requestMatchers("/actuator/health").permitAll()
-                // WebSocket: auth manejada por WebSocketAuthInterceptor, no por BearerTokenAuthenticationFilter
-                .requestMatchers("/ws").permitAll()
-                .anyRequest().authenticated()
-            )
+            .authorizeHttpRequests(auth -> {
+                auth.requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
+                    .requestMatchers("/").permitAll()
+                    .requestMatchers("/swagger-ui/**", "/swagger-ui.html", "/v3/api-docs/**").permitAll()
+                    .requestMatchers(HttpMethod.GET, "/api/properties/me").permitAll()
+                    .requestMatchers(HttpMethod.GET, "/api/properties/nearby").permitAll()
+                    .requestMatchers(HttpMethod.GET, "/api/properties/*/reviews").permitAll()
+                    .requestMatchers(HttpMethod.GET, "/api/agencies").permitAll()
+                    // Actuator: health público para load balancers, el resto autenticado
+                    .requestMatchers("/actuator/health").permitAll()
+                    // WebSocket: auth manejada por WebSocketAuthInterceptor, no por BearerTokenAuthenticationFilter
+                    .requestMatchers("/ws").permitAll()
+                    // /api/ai/admin/**: role check done in AdminAiController (DB-stored role, not JWT claim)
+                    .anyRequest().authenticated();
+                // Only permit webhook endpoint if STRIPE_WEBHOOK_SECRET is configured
+                if (stripeWebhookSecret != null && !stripeWebhookSecret.isBlank()) {
+                    auth.requestMatchers(HttpMethod.POST, "/api/payments/stripe/webhook").permitAll();
+                }
+            })
             .oauth2ResourceServer(oauth2 -> oauth2.jwt(Customizer.withDefaults()))
             // Tool endpoint auth filter runs BEFORE JWT filter
             .addFilterBefore(toolEndpointAuthFilter, BearerTokenAuthenticationFilter.class)

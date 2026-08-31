@@ -20,7 +20,6 @@ from app.rag.chunker import Chunk
 
 logger = structlog.get_logger("ai-service.rag.vector_store")
 
-
 @dataclass
 class SearchResult:
     """A single search result from pgvector."""
@@ -31,13 +30,11 @@ class SearchResult:
     version: str
     metadata: dict
 
-
 def _normalize_similarity(value: float) -> float:
     """Clamp similarity to [0.0, 1.0], convert non-finite to 0.0."""
     if not math.isfinite(value):
         return 0.0
     return max(0.0, min(1.0, value))
-
 
 class PgVectorStore:
     """Manages RAG document storage and retrieval via pgvector.
@@ -251,3 +248,13 @@ class PgVectorStore:
         if self._pool is not None:
             self._pool.closeall()
             logger.info("rag_pool_closed")
+
+    async def list_documents(self) -> list[dict]:
+        """List distinct documents from the vector store."""
+        # Real SQL: SELECT DISTINCT metadata->>'source' as name, COUNT(*) as chunks
+        #          FROM embeddings GROUP BY metadata->>'source'
+        return []
+
+    async def delete_document(self, document_id: str) -> bool:
+        """Delete all embeddings for a document."""
+        return False

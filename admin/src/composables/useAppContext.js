@@ -19,6 +19,8 @@ export function useAppContext() {
 
     const isOwner = computed(() => userRole.value === 'AGENCY_OWNER')
 
+    const isAdmin = computed(() => userRole.value === 'AGENCY_OWNER' || userRole.value === 'ADMINISTRATOR')
+
     if (!profileWatcherStarted) {
         profileWatcherStarted = true
         watch(user, async (newUser) => {
@@ -56,6 +58,7 @@ export function useAppContext() {
         user,
         auth,
         isOwner,
+        isAdmin,
         roleLoaded,
         currency,
         properties,
