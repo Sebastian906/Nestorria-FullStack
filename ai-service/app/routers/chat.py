@@ -7,9 +7,8 @@ import structlog
 from fastapi import APIRouter, Depends, HTTPException, Request
 from fastapi.responses import StreamingResponse
 
-from app.dependencies import get_config
 from app.rag.schemas import ChatRequest, ConversationResponse, ConversationMessage
-from app.routers.rag import _get_components, _require_api_key
+from app.routers.rag import _get_components
 
 logger = structlog.get_logger("ai-service.routers.chat")
 
@@ -81,7 +80,6 @@ async def chat_stream(
 
     Returns text/event-stream with events: start, token, end, error.
     """
-    await _require_api_key(request)
     user_id = _get_user_id(request)
     generator, _ = await _get_generator()
 
@@ -109,7 +107,6 @@ async def get_conversation(
     request: Request,
 ):
     """GET /rag/conversations/{id} — retrieve conversation history."""
-    await _require_api_key(request)
     user_id = _get_user_id(request)
     _, conversation_manager = await _get_generator()
 

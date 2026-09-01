@@ -26,12 +26,13 @@ async def test_health_has_timestamp(client):
 
 @pytest.mark.anyio
 async def test_ready_returns_200_without_database(client):
-    """GET /ready returns 200 when DATABASE_URL is not configured.
+    """GET /ready returns 200 when DATABASE_URL is not configured."""
+    from unittest.mock import patch
+    from app.config import Settings
 
-    By default, Settings.database_url is None, so the service
-    is considered ready without database.
-    """
-    response = await client.get("/ready")
+    mock_settings = Settings(database_url=None)
+    with patch("app.routers.health.get_settings", return_value=mock_settings):
+        response = await client.get("/ready")
 
     assert response.status_code == 200
     data = response.json()

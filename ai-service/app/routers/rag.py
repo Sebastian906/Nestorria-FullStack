@@ -5,13 +5,11 @@ POST /rag/retrieve — similarity search
 """
 
 import asyncio
-import secrets
 import time
 
 import structlog
 from fastapi import APIRouter, Depends, HTTPException, Request
 
-from app.dependencies import get_config
 from app.rag.schemas import (
     IngestRequest,
     IngestResponse,
@@ -68,26 +66,11 @@ async def _get_components():
                 )
     return _store, _embedder, _ingestor, _retriever
 
-async def _require_api_key(request: Request):
-    """Validate API key if configured. Skip in dev; reject in prod if missing."""
-    config = await get_config()
-    if not config.api_key:
-        if config.environment == "production":
-            raise HTTPException(status_code=500, detail="API key not configured")
-        return  # no key configured → allow (development/staging)
-
-    provided = request.headers.get("X-API-Key", "")
-    if not secrets.compare_digest(provided, config.api_key):
-        raise HTTPException(status_code=401, detail="Invalid API key")
-
 @router.post("/ingest", response_model=IngestResponse)
 async def ingest_document(
     body: IngestRequest,
-    http_request: Request = None,
 ):
     """Ingest a document into the RAG vector store."""
-    await _require_api_key(http_request)
-
     _, _, ingestor, _ = await _get_components()
 
     loop = asyncio.get_event_loop()
@@ -114,11 +97,8 @@ async def ingest_document(
 @router.post("/retrieve", response_model=RetrieveResponse)
 async def retrieve_documents(
     body: RetrieveRequest,
-    http_request: Request = None,
 ):
     """Retrieve relevant chunks for a query."""
-    await _require_api_key(http_request)
-
     _, _, _, retriever = await _get_components()
 
     loop = asyncio.get_event_loop()

@@ -3,10 +3,6 @@
 Stores image embeddings in PostgreSQL and performs cosine similarity
 search. Each property can have multiple images, each with its own
 embedding. Search results are aggregated per property (max similarity).
-
-ponytail: sequential scan without index — fine for ~50 images.
-When scale demands it (1K+ images), upgrade pgvector to 0.8.0+
-and add HNSW index (requires >2000 dimension support).
 """
 
 import math
@@ -76,8 +72,6 @@ class VisualSimilarityEngine:
     def __init__(self):
         self.preprocessor = ImagePreprocessor()
         self.extractor = ImageEmbeddingExtractor()
-        # ponytail: single connection, fine for experimental/low volume.
-        # Upgrade to psycopg2.pool.ThreadedConnectionPool if concurrent requests matter.
         self._conn = None
         logger.info("similarity_engine_initialized")
 

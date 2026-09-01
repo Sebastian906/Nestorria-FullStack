@@ -6,7 +6,6 @@ POST /ml/recommendation/score — returns ranked properties with score breakdown
 import structlog
 from fastapi import APIRouter, Depends, HTTPException, Request
 
-from app.dependencies import get_config
 from app.ml.recommendation.ranker import HybridRanker
 from app.ml.recommendation.schemas import (
     RecommendationRequest,
@@ -38,21 +37,8 @@ def get_ranker() -> HybridRanker:
 @router.post("/score", response_model=RecommendationResponse)
 async def score_recommendations(
     body: RecommendationRequest,
-    http_request: Request,
-    ranker: HybridRanker = Depends(get_ranker),
 ):
-    """Score and rank candidate properties for a user.
-    
-    Requires authenticated request (API key from Spring Boot).
-    Requires property data and user history in the request body.
-    Returns HTTP 503 when required data is unavailable.
-    """
-    # API key validation
-    config = await get_config()
-    api_key = http_request.headers.get("X-API-Key")
-    if config.api_key and api_key != config.api_key:
-        raise HTTPException(status_code=401, detail="Invalid API key")
-
+    # Auth handled by ApiKeyAuthMiddleware
     # Assign A/B variant
     variant = HybridRanker.assign_variant(body.userId)
 

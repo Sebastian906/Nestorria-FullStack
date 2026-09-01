@@ -1,7 +1,7 @@
 """Custom exceptions for ai-service.
 
-RequestException is prepared for future HTTP client calls (AI-004+).
-Currently unused in AI-001 but establishes the contract.
+RequestException is prepared for future HTTP client calls.
+Currently unused but establishes the contract.
 """
 
 from typing import Any

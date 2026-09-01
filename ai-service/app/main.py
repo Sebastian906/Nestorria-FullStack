@@ -16,6 +16,8 @@ from fastapi.responses import JSONResponse
 from app.config import get_settings
 from app.middleware.error_handler import register_error_handlers
 from app.middleware.request_id import RequestIdMiddleware
+from app.middleware.auth import ApiKeyAuthMiddleware
+from app.middleware.audit import AuditLogMiddleware
 from app.routers import health
 from app.utils.logging import setup_logging
 from app.routers.admin import router as admin_router
@@ -53,6 +55,15 @@ def create_app() -> FastAPI:
     # Middleware — order matters: request_id first so it's available to error handlers
     application.add_middleware(RequestIdMiddleware)
 
+    # Audit logging — after request_id so it's available
+    application.add_middleware(AuditLogMiddleware)
+
+    # API key auth — excludes health probes for K8s/Docker
+    application.add_middleware(
+        ApiKeyAuthMiddleware,
+        exclude_paths=["/health", "/ready"],
+    )
+
     # Error handlers
     register_error_handlers(application)
 
@@ -67,7 +78,7 @@ def create_app() -> FastAPI:
     from app.routers import cancellation
     application.include_router(cancellation.router)
 
-    # Recommendation scoring router (AI-006)
+    # Recommendation scoring router
     from app.routers import recommendation
     application.include_router(recommendation.router)
 
@@ -95,7 +106,7 @@ def create_app() -> FastAPI:
         RateLimitMiddleware,
         max_requests=settings.rag_rate_limit,
         window_seconds=settings.rag_rate_window,
-        exclude_prefixes=["/rag/chat"],
+        exclude_prefixes=["/rag/chat", "/health", "/ready"],
     )
 
     # Rate limiting for RAG ingestion
@@ -105,6 +116,22 @@ def create_app() -> FastAPI:
         window_seconds=settings.rag_rate_window,
         prefix="/rag/",
         exclude_prefixes=["/rag/chat"],
+    )
+
+    # Rate limiting for ML endpoints (30/min per IP)
+    application.add_middleware(
+        RateLimitMiddleware,
+        max_requests=30,
+        window_seconds=60,
+        prefix="/ml/",
+    )
+
+    # Rate limiting for admin endpoints (10/min per IP)
+    application.add_middleware(
+        RateLimitMiddleware,
+        max_requests=10,
+        window_seconds=60,
+        prefix="/admin/",
     )
 
     # Visual search router — experimental
