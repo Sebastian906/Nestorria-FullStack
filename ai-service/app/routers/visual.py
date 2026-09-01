@@ -6,13 +6,11 @@ POST /dl/visual/search               — search by uploaded image
 
 import asyncio
 import io
-import secrets
 
 import structlog
 from fastapi import APIRouter, Depends, File, HTTPException, Query, Request, UploadFile
 from PIL import Image
 
-from app.dependencies import get_config
 from app.dl.image.schemas import (
     SimilarProperty,
     VisualSearchResponse,
@@ -24,11 +22,8 @@ logger = structlog.get_logger("ai-service.routers.visual")
 
 router = APIRouter(prefix="/dl/visual", tags=["visual-search"])
 
-# ponytail: lazy singleton with lock — prevents double-init under concurrency.
-# Loaded once on first request, not at startup (avoids importing torch at boot).
 _engine = None
 _engine_lock = asyncio.Lock()
-
 
 async def get_engine():
     """Get or initialize the visual similarity engine."""
@@ -40,33 +35,13 @@ async def get_engine():
                 _engine = VisualSimilarityEngine()
     return _engine
 
-
-async def _require_api_key(request: Request):
-    """Validate API key if configured. Skip in dev; reject in prod if missing."""
-    config = await get_config()
-    if not config.api_key:
-        if config.environment == "production":
-            raise HTTPException(status_code=500, detail="API key not configured")
-        return  # no key configured → allow (development/staging)
-
-    provided = request.headers.get("X-API-Key", "")
-    if not secrets.compare_digest(provided, config.api_key):
-        raise HTTPException(status_code=401, detail="Invalid API key")
-
-    if not config.visual_search_enabled:
-        raise HTTPException(status_code=503, detail="Visual search is disabled")
-
-
 @router.get("/similar/{property_id}", response_model=VisualSimilarResponse)
 async def find_similar(
     property_id: str,
     limit: int = Query(default=5, ge=1, le=20),
-    http_request: Request = None,
     engine=Depends(get_engine),
 ):
     """Find properties visually similar to a given property."""
-    await _require_api_key(http_request)
-
     loop = asyncio.get_event_loop()
     results = await loop.run_in_executor(
         None, engine.find_similar, property_id, limit
@@ -81,16 +56,13 @@ async def find_similar(
         model="resnet50",
     )
 
-
 @router.post("/search", response_model=VisualSearchResponse)
 async def search_by_image(
     image: UploadFile = File(...),
     limit: int = Query(default=5, ge=1, le=20),
-    http_request: Request = None,
     engine=Depends(get_engine),
 ):
     """Search for properties visually similar to an uploaded image."""
-    await _require_api_key(http_request)
 
     # Validate file type
     if image.content_type not in ("image/jpeg", "image/png"):

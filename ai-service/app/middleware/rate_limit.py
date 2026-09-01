@@ -1,6 +1,5 @@
 """In-memory sliding window rate limiter middleware.
 
-ponytail: per-IP sliding window, no external deps.
 For distributed deployments, swap to Redis-backed limiter.
 """
 

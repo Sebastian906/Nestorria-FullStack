@@ -11,11 +11,14 @@ from datetime import datetime, timezone
 
 import structlog
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
 from app.config import get_settings
 from app.middleware.error_handler import register_error_handlers
 from app.middleware.request_id import RequestIdMiddleware
+from app.middleware.auth import ApiKeyAuthMiddleware
+from app.middleware.audit import AuditLogMiddleware
 from app.routers import health
 from app.utils.logging import setup_logging
 from app.routers.admin import router as admin_router
@@ -50,34 +53,16 @@ def create_app() -> FastAPI:
         redoc_url="/redoc" if settings.environment != "production" else None,
     )
 
-    # Middleware — order matters: request_id first so it's available to error handlers
-    application.add_middleware(RequestIdMiddleware)
+    # Middleware — registration order = outermost first.
+    # Starlette executes LAST-registered FIRST on request,
+    # so request_id (registered last) runs first and sets
+    # request.state.request_id before audit reads it.
 
-    # Error handlers
-    register_error_handlers(application)
-
-    # Routers
-    application.include_router(health.router)
-
-    # Price prediction router
-    from app.routers import price
-    application.include_router(price.router)
-
-    # Cancellation prediction router
-    from app.routers import cancellation
-    application.include_router(cancellation.router)
-
-    # Recommendation scoring router (AI-006)
-    from app.routers import recommendation
-    application.include_router(recommendation.router)
-
-    # RAG router with rate limiting
-    from app.routers import rag
-    application.include_router(rag.router)
-
-    # Chat router
-    from app.routers import chat
-    application.include_router(chat.router)
+    # 1. Rate limiting (outermost — first rejection layer)
+    # 2. API key auth (second — rejects unauthenticated after rate limit)
+    # 3. CORS (before auth so preflight OPTIONS passes)
+    # 4. Audit logging (reads request_id set by step 5)
+    # 5. Request ID (innermost — runs first on request, sets request_id)
 
     # Rate limiting per user for chat — 20 msgs/user/hour
     def _chat_user_key(request):
@@ -95,7 +80,7 @@ def create_app() -> FastAPI:
         RateLimitMiddleware,
         max_requests=settings.rag_rate_limit,
         window_seconds=settings.rag_rate_window,
-        exclude_prefixes=["/rag/chat"],
+        exclude_prefixes=["/rag/chat", "/health", "/ready"],
     )
 
     # Rate limiting for RAG ingestion
@@ -106,6 +91,70 @@ def create_app() -> FastAPI:
         prefix="/rag/",
         exclude_prefixes=["/rag/chat"],
     )
+
+    # Rate limiting for ML endpoints (30/min per IP)
+    application.add_middleware(
+        RateLimitMiddleware,
+        max_requests=30,
+        window_seconds=60,
+        prefix="/ml/",
+    )
+
+    # Rate limiting for admin endpoints (10/min per IP)
+    application.add_middleware(
+        RateLimitMiddleware,
+        max_requests=10,
+        window_seconds=60,
+        prefix="/ai/admin/",
+    )
+
+    # API key auth — excludes health probes for K8s/Docker
+    application.add_middleware(
+        ApiKeyAuthMiddleware,
+        exclude_paths=["/health", "/ready"],
+    )
+
+    # CORS — must be before auth so preflight OPTIONS requests are allowed
+    origins = [o.strip() for o in settings.cors_origins.split(",") if o.strip()]
+    application.add_middleware(
+        CORSMiddleware,
+        allow_origins=origins,
+        allow_credentials=True,
+        allow_methods=["*"],
+        allow_headers=["*"],
+    )
+
+    # Audit logging — reads request_id set by RequestIdMiddleware
+    application.add_middleware(AuditLogMiddleware)
+
+    # Request ID — innermost, runs first on request, sets request.state.request_id
+    application.add_middleware(RequestIdMiddleware)
+
+    # Error handlers
+    register_error_handlers(application)
+
+    # Routers
+    application.include_router(health.router)
+
+    # Price prediction router
+    from app.routers import price
+    application.include_router(price.router)
+
+    # Cancellation prediction router
+    from app.routers import cancellation
+    application.include_router(cancellation.router)
+
+    # Recommendation scoring router
+    from app.routers import recommendation
+    application.include_router(recommendation.router)
+
+    # RAG router
+    from app.routers import rag
+    application.include_router(rag.router)
+
+    # Chat router
+    from app.routers import chat
+    application.include_router(chat.router)
 
     # Visual search router — experimental
     if settings.visual_search_enabled:

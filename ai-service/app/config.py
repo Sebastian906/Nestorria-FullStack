@@ -28,11 +28,16 @@ class Settings(BaseSettings):
     # Logging
     log_level: str = "INFO"
 
-    # Optional dependencies — configured later, not required for AI-001
+    # database_url: optional, service works without it
     database_url: str | None = None
+    # api_key: required in production (ApiKeyAuthMiddleware enforces this).
+    # Optional in development/staging — allows unauthenticated requests.
     api_key: str | None = None
 
-    # ML Configuration (AI-002)
+    # CORS
+    cors_origins: str = "http://localhost:5173,http://localhost:5174"
+
+    # ML Configuration
     artifacts_path: str = "artifacts"
     test_size: float = 0.2
     validation_size: float = 0.1
@@ -66,7 +71,7 @@ class Settings(BaseSettings):
     rag_rate_limit: int = 10  # max ingestion requests per window per IP
     rag_rate_window: int = 60  # window in seconds
 
-    # LLM Configuration (AI-009)
+    # LLM Configuration
     llm_provider: Literal["groq"] = "groq"
     llm_api_key: str = ""
     llm_model: str = "openai/gpt-oss-20b"
