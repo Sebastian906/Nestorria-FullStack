@@ -35,9 +35,9 @@ async def readiness_check():
 
     Behavior:
     - database_url not configured → 200 (service works without DB)
-    - database_url configured → 200
+    - database_url configured → 200 (reports "configured", no real check yet)
 
-    Actual connection verification with timeout.
+    Future: actual connection verification with timeout.
     """
     settings = get_settings()
     logger = structlog.get_logger("ai-service")

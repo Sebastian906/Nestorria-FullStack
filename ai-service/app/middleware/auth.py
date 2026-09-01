@@ -59,4 +59,8 @@ class ApiKeyAuthMiddleware(BaseHTTPMiddleware):
                 content={"detail": "Invalid or missing API key"},
             )
 
+        # Mark request as authenticated — downstream middleware (audit)
+        # can trust client-supplied identity headers only when this is set.
+        request.state.authenticated = True
+
         return await call_next(request)

@@ -22,8 +22,12 @@ class AuditLogMiddleware(BaseHTTPMiddleware):
         request_id = getattr(request.state, "request_id", None)
         client_host = request.client.host if request.client else "unknown"
 
-        # Extract user identity if present
-        user_id = request.headers.get("X-User-ID", "-")
+        # Derive user_id only from verified authentication state.
+        # X-User-ID is set by the trusted gateway (Spring Boot) after Clerk
+        # JWT validation. Only trust it when the request passed API key auth.
+        # Unauthenticated requests (health, docs) get "-" as identity.
+        authenticated = getattr(request.state, "authenticated", False)
+        user_id = request.headers.get("X-User-ID", "-") if authenticated else "-"
 
         response = await call_next(request)
 

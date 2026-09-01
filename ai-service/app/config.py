@@ -28,8 +28,10 @@ class Settings(BaseSettings):
     # Logging
     log_level: str = "INFO"
 
-    # Optional dependencies — configured later
+    # database_url: optional, service works without it
     database_url: str | None = None
+    # api_key: required in production (ApiKeyAuthMiddleware enforces this).
+    # Optional in development/staging — allows unauthenticated requests.
     api_key: str | None = None
 
     # CORS

@@ -30,10 +30,12 @@ async def test_ready_excluded_from_auth(client):
 
 @pytest.mark.anyio
 async def test_request_without_api_key_dev_allows(client):
-    """In development (no API key configured), requests are allowed."""
+    """In development (no API key configured), protected routes are allowed."""
     # Default config has api_key=None and environment="development"
-    response = await client.get("/health")
+    # /ai/admin/status is protected but middleware passes through in dev
+    response = await client.get("/ai/admin/status")
     assert response.status_code == 200
+    assert response.json()["status"] == "ok"
 
 @pytest.mark.anyio
 @patch("app.middleware.auth.get_settings")
@@ -47,11 +49,10 @@ async def test_request_without_api_key_prod_rejects(mock_settings):
     )
 
     from fastapi.testclient import TestClient
-    # Use sync TestClient for simplicity with mocked settings
     with TestClient(app=app, raise_server_exceptions=False) as tc:
         response = tc.get("/ml/price/predict")
-        # Should be rejected because api_key is None in production
-        assert response.status_code in (401, 403, 404, 500)
+        assert response.status_code == 500
+        assert response.json()["detail"] == "API key not configured"
 
 @pytest.mark.anyio
 @patch("app.middleware.auth.get_settings")
@@ -67,10 +68,11 @@ async def test_request_with_valid_api_key(mock_settings):
     from fastapi.testclient import TestClient
     with TestClient(app=app, raise_server_exceptions=False) as tc:
         response = tc.get(
-            "/health",
+            "/ai/admin/status",
             headers={"X-API-Key": "test-secret-key-123"},
         )
         assert response.status_code == 200
+        assert response.json()["status"] == "ok"
 
 @pytest.mark.anyio
 @patch("app.middleware.auth.get_settings")
