@@ -34,7 +34,7 @@ RUN chown -R spring:spring /app
 USER spring
 
 # Port (Render uses PORT env var, default 4000 matches application.properties)
-EXPOSE ${PORT:-4000}
+EXPOSE 4000
 
 # Health check using wget (available via busybox in Alpine)
 HEALTHCHECK --interval=30s --timeout=5s --start-period=60s --retries=3 \
