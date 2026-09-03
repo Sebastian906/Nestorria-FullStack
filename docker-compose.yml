@@ -7,9 +7,9 @@ services:
     image: pgvector/pgvector:pg16
     container_name: nestorria-primary
     environment:
-      POSTGRES_DB: nestorria
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: sebas
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
     ports:
       - "5432:5432"
     volumes:
@@ -57,7 +57,7 @@ services:
     env_file:
       - ./ai-service/.env
     environment:
-      DATABASE_URL: postgresql://postgres:sebas@postgres-primary:5432/nestorria_ai
+      DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres-primary:5432/nestorria_ai
       SPRING_BOOT_BASE_URL: http://server:4000
     depends_on:
       postgres-primary:
