@@ -135,9 +135,11 @@ export default function PropertyMap({
                 url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
             />
             <MapUpdater center={center} />
-            {propertiesWithCoords.map((property) => (
+            {propertiesWithCoords.map((property) => {
+                const pid = property._id ?? (property as any).id;
+                return (
                 <Marker
-                    key={property._id}
+                    key={pid}
                     position={[
                         property.location!.latitude!,
                         property.location!.longitude!,
@@ -157,11 +159,11 @@ export default function PropertyMap({
                             />
                             <h3 className="font-semibold text-sm">{property.title}</h3>
                             <p className="text-gray-500 text-xs">{property.city}</p>
-                            <p className="font-bold text-primary text-sm mt-1">
+                            <p className="font-bold text-secondary text-sm mt-1">
                                 ${property.price.sale.toLocaleString()} sale
                             </p>
                             <Link
-                                to={`/listing/${property._id}`}
+                                to={`/listing/${pid}`}
                                 className="text-xs text-blue-500 hover:underline mt-1 block"
                             >
                                 Check details
@@ -169,7 +171,8 @@ export default function PropertyMap({
                         </div>
                     </Popup>
                 </Marker>
-            ))}
+                );
+            })}
             {/* Dibujar la ruta si existe */}
             {route && <RoutePolyline route={route} />}
             {propertiesWithCoords.length === 0 && (

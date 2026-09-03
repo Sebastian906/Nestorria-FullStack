@@ -1,6 +1,7 @@
 import axios from "axios";
 import { useAuth } from "@clerk/react";
 import type { Property, NearbySearchRequest } from "../assets/data";
+import { mapApiProperty } from "./propertyListingService";
 
 const API_BASE = import.meta.env.VITE_BACKEND_URL;
 
@@ -38,7 +39,7 @@ export function usePropertySearchService() {
         const response = await axios.get(
             `${API_BASE}/api/properties/nearby?${searchParams.toString()}`
         );
-        return response.data;
+        return (response.data as any[]).map(mapApiProperty);
     }
 
     /**
@@ -60,7 +61,7 @@ export function usePropertySearchService() {
             `${API_BASE}/api/properties/search?${searchParams.toString()}`,
             { headers: { Authorization: `Bearer ${token}` } }
         );
-        return response.data;
+        return (response.data as any[]).map(mapApiProperty);
     }
 
     return { findNearby, searchWithFilters };
