@@ -11,7 +11,7 @@ vi.mock('@clerk/react', () => ({
 
 // Mock the streamChat service
 const mockStream = vi.fn()
-vi.mock('../../services/chatService', () => ({
+vi.mock('../services/chatService', () => ({
     streamChat: (...args: unknown[]) => mockStream(...args),
 }))
 
