@@ -10,7 +10,7 @@ describe('Navbar', () => {
 
         expect(screen.getByRole('link', { name: /home/i })).toBeInTheDocument()
         expect(screen.getByRole('link', { name: /listing/i })).toBeInTheDocument()
-        expect(screen.getByRole('link', { name: /blog/i })).toBeInTheDocument()
+        expect(screen.getByRole('link', { name: /map/i })).toBeInTheDocument()
         expect(screen.getByRole('link', { name: /contact/i })).toBeInTheDocument()
     })
 

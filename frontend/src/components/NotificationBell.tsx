@@ -33,7 +33,7 @@ interface NotificationResponse {
 }
 
 const NotificationBell = () => {
-    const { getToken, isLoaded } = useAuth()
+    const { getToken } = useAuth()
     const { connected, notifications: wsNotifications, unreadCount: wsUnreadCount } = useWebSocket()
     const [notifications, setNotifications] = useState<Notification[]>([])
     const [unreadCount, setUnreadCount] = useState(0)
@@ -279,7 +279,7 @@ const NotificationBell = () => {
                     <path d="M10.3 21a1.94 1.94 0 0 0 3.4 0" />
                 </svg>
                 {unreadCount > 0 && (
-                    <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs font-bold rounded-full min-w-[20px] h-5 flex items-center justify-center px-1">
+                    <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs font-bold rounded-full min-w-5 h-5 flex items-center justify-center px-1">
                         {unreadCount > 99 ? "99+" : unreadCount}
                     </span>
                 )}
@@ -329,7 +329,7 @@ const NotificationBell = () => {
                                                 {notification.title}
                                             </p>
                                             {!notification.isRead && (
-                                                <span className="w-2 h-2 bg-secondary rounded-full mt-1.5 flex-shrink-0" />
+                                                <span className="w-2 h-2 bg-secondary rounded-full mt-1.5 shrink-0" />
                                             )}
                                         </div>
                                         <p className="text-xs text-gray-500 mt-0.5 line-clamp-2">
