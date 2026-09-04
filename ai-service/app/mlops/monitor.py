@@ -51,7 +51,7 @@ def _file_lock(path: Path):
                     msvcrt.locking(fd, msvcrt.LK_UNLCK, 1)
                 else:
                     import fcntl
-                    fcntl.flock(fd, fcntl.LOCK_UNLCK)
+                    fcntl.flock(fd, fcntl.LOCK_UN)
             except OSError:
                 pass
         os.close(fd)
