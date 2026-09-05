@@ -12,14 +12,15 @@ numpy>=2.0.0,<3.0.0
 scipy>=1.11.0,<2.0.0
 
 # Deep Learning — CPU-only
-torch>=2.0.0,<3.0.0
-torchvision>=0.15.0,<1.0.0
+--extra-index-url https://download.pytorch.org/whl/cpu
+torch==2.7.1+cpu
+torchvision==0.22.1+cpu
 Pillow>=10.0.0,<12.3.0
 
 # Database (pgvector)
 psycopg2-binary>=2.9.0,<3.0.0
 
-sentence-transformers>=3.0.0,<6.0.0
+sentence-transformers>=3.0.0,<6.0.1
 
 groq>=0.13.0,<1.7.0
 
@@ -29,3 +30,5 @@ httpx>=0.27.0
 pytest>=8.0.0,<9.1.1
 pytest-asyncio>=0.24.0,<1.4.0
 httpx>=0.27.0,<1.0.0
+
+prometheus_client>=0.20.0,<1.0.0

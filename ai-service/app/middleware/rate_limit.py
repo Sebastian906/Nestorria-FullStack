@@ -10,7 +10,10 @@ from fastapi import Request
 from starlette.middleware.base import BaseHTTPMiddleware, RequestResponseEndpoint
 from starlette.responses import JSONResponse, Response
 
+from app.middleware.metrics import RATE_REJECTED
+
 _buckets: dict[str, list[float]] = defaultdict(list)
+
 
 class RateLimitMiddleware(BaseHTTPMiddleware):
     """Sliding window rate limiter. Key can be per-IP (default) or
@@ -56,6 +59,7 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
 
         if len(self._buckets[key]) >= self.max_requests:
             retry_after = int(self._buckets[key][0] - cutoff) + 1
+            RATE_REJECTED.labels(scope=self.prefix or "global").inc()
             return JSONResponse(
                 status_code=429,
                 content={"detail": "Rate limit exceeded. Try again later."},

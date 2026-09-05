@@ -60,15 +60,18 @@ public class SecurityConfig {
                     .requestMatchers(HttpMethod.GET, "/api/properties/*/reviews").permitAll()
                     .requestMatchers(HttpMethod.GET, "/api/agencies").permitAll()
                     // Actuator: health público para load balancers, el resto autenticado
-                    .requestMatchers("/actuator/health").permitAll()
+                    .requestMatchers("/actuator/health", "/actuator/health/**").permitAll()
+                    .requestMatchers("/actuator/prometheus").permitAll()
                     // WebSocket: auth manejada por WebSocketAuthInterceptor, no por BearerTokenAuthenticationFilter
+                    // Stripe webhook debe ir ANTES de anyRequest (si no, IllegalStateException)
+                    .requestMatchers(HttpMethod.POST, "/api/payments/stripe/webhook").permitAll()
                     .requestMatchers("/ws").permitAll()
                     // /api/ai/admin/**: role check done in AdminAiController (DB-stored role, not JWT claim)
                     .anyRequest().authenticated();
                 // Only permit webhook endpoint if STRIPE_WEBHOOK_SECRET is configured
-                if (stripeWebhookSecret != null && !stripeWebhookSecret.isBlank()) {
-                    auth.requestMatchers(HttpMethod.POST, "/api/payments/stripe/webhook").permitAll();
-                }
+                // if (stripeWebhookSecret != null && !stripeWebhookSecret.isBlank()) {
+                //     auth.requestMatchers(HttpMethod.POST, "/api/payments/stripe/webhook").permitAll();
+                // }
             })
             .oauth2ResourceServer(oauth2 -> oauth2.jwt(Customizer.withDefaults()))
             // Tool endpoint auth filter runs BEFORE JWT filter
