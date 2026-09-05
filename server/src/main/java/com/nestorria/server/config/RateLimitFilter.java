@@ -16,6 +16,8 @@ import com.nestorria.server.common.config.AppProperties;
 
 import io.github.bucket4j.Bucket;
 import io.github.bucket4j.ConsumptionProbe;
+import io.micrometer.core.instrument.Counter;
+import io.micrometer.core.instrument.MeterRegistry;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -25,14 +27,18 @@ import jakarta.servlet.http.HttpServletResponse;
 public class RateLimitFilter extends OncePerRequestFilter {
 
     private final AppProperties.RateLimitProperties rateLimitProps;
+    private final Counter rateLimitRejected;
     private final ConcurrentHashMap<String, TimedBucket> buckets = new ConcurrentHashMap<>();
 
     // Evict buckets inactive for 2x the refill interval (1 min refill → 2 min expiry)
     private static final long EXPIRY_NANOS = Duration.ofMinutes(2).toNanos();
     private static final int MAX_BUCKETS = 10_000;
 
-    public RateLimitFilter(AppProperties appProperties) {
+    public RateLimitFilter(AppProperties appProperties, MeterRegistry meterRegistry) {
         this.rateLimitProps = appProperties.rateLimit();
+        this.rateLimitRejected = Counter.builder("rate_limit_rejected_total")
+                .description("Total rate limit rejections")
+                .register(meterRegistry);
     }
 
     private static final class TimedBucket {
@@ -80,6 +86,8 @@ public class RateLimitFilter extends OncePerRequestFilter {
                 String.valueOf(probe.getRemainingTokens()));
             filterChain.doFilter(request, response);
         } else {
+            // Punto real de rechazo — única instrumentación
+            rateLimitRejected.increment();
             long retryAfterSeconds =
                 (probe.getNanosToWaitForRefill() + 999_999_999L) / 1_000_000_000;
             response.setStatus(429);
@@ -96,17 +104,17 @@ public class RateLimitFilter extends OncePerRequestFilter {
     private boolean isExcluded(String uri) {
         return uri.equals("/api/health/")
             || uri.equals("/api/health")
-            || uri.startsWith("/api/payments/stripe/webhook");
+            || uri.startsWith("/actuator")
+            || uri.startsWith("/api/payments/stripe/webhook")
+            || uri.startsWith("/actuator");
     }
 
     private String resolveKey(HttpServletRequest request) {
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-
         if (auth instanceof JwtAuthenticationToken jwtAuth) {
             Jwt jwt = jwtAuth.getToken();
             return "user:" + jwt.getSubject();
         }
-
         // Unauthenticated — use IP
         return "ip:" + resolveClientIp(request);
     }

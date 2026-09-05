@@ -70,5 +70,40 @@ services:
       start_period: 10s
     restart: unless-stopped
 
+  prometheus:
+    image: prom/prometheus:v3.1.0
+    container_name: nestorria-prometheus
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./devops/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./devops/prometheus/alerts.yml:/etc/prometheus/alerts.yml:ro
+      - prometheus_data:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.retention.time=7d'
+    depends_on:
+      - server
+      - ai-service
+    restart: unless-stopped
+
+  grafana:
+    image: grafana/grafana:11.3.0
+    container_name: nestorria-grafana
+    ports:
+      - "3000:3000"
+    environment:
+      - GF_SECURITY_ADMIN_USER=admin
+      - GF_SECURITY_ADMIN_PASSWORD=nestorria # SOLO local
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./devops/grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./devops/grafana/dashboards:/var/lib/grafana/dashboards:ro
+    depends_on:
+      - prometheus
+    restart: unless-stopped
+
 volumes:
   primary_data:
+  prometheus_data:
+  grafana_data:

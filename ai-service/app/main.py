@@ -4,7 +4,9 @@
 # PostgreSQL lc_messages=es_ES causes error messages to be sent in WIN1252/Latin1,
 # and psycopg2 C extension crashes trying to decode them as UTF-8.
 import os
+
 os.environ["PGCLIENTENCODING"] = "UTF8"
+from app.middleware.metrics import MetricsMiddleware
 
 from contextlib import asynccontextmanager
 from datetime import datetime, timezone
@@ -20,6 +22,7 @@ from app.middleware.request_id import RequestIdMiddleware
 from app.middleware.auth import ApiKeyAuthMiddleware
 from app.middleware.audit import AuditLogMiddleware
 from app.routers import health
+from app.routers import metrics
 from app.utils.logging import setup_logging
 from app.routers.admin import router as admin_router
 
@@ -80,7 +83,7 @@ def create_app() -> FastAPI:
         RateLimitMiddleware,
         max_requests=settings.rag_rate_limit,
         window_seconds=settings.rag_rate_window,
-        exclude_prefixes=["/rag/chat", "/health", "/ready"],
+        exclude_prefixes=["/rag/chat", "/health", "/ready", "/metrics"],
     )
 
     # Rate limiting for RAG ingestion
@@ -89,7 +92,7 @@ def create_app() -> FastAPI:
         max_requests=settings.rag_rate_limit,
         window_seconds=settings.rag_rate_window,
         prefix="/rag/",
-        exclude_prefixes=["/rag/chat"],
+        exclude_prefixes=["/rag/chat", "/metrics"],
     )
 
     # Rate limiting for ML endpoints (30/min per IP)
@@ -111,7 +114,7 @@ def create_app() -> FastAPI:
     # API key auth — excludes health probes for K8s/Docker
     application.add_middleware(
         ApiKeyAuthMiddleware,
-        exclude_paths=["/health", "/ready"],
+        exclude_paths=["/health", "/ready", "/metrics"],
     )
 
     # CORS — must be before auth so preflight OPTIONS requests are allowed
@@ -135,6 +138,9 @@ def create_app() -> FastAPI:
 
     # Routers
     application.include_router(health.router)
+
+    application.add_middleware(MetricsMiddleware)
+    application.include_router(metrics.router)
 
     # Price prediction router
     from app.routers import price

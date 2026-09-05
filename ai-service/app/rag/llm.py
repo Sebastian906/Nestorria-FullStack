@@ -7,9 +7,9 @@ import structlog
 from groq import AsyncGroq
 
 from app.config import get_settings
+from app.middleware.metrics import LLM_COUNT, LLM_LAT
 
 logger = structlog.get_logger("ai-service.rag.llm")
-
 
 class LLMClient:
     """Async LLM client wrapping Groq SDK.
@@ -54,6 +54,8 @@ class LLMClient:
                 tokens_prompt=usage.prompt_tokens if usage else 0,
                 tokens_completion=usage.completion_tokens if usage else 0,
             )
+            LLM_COUNT.labels(self.model, "generate", "ok").inc()
+            LLM_LAT.labels(self.model, "generate").observe((time.perf_counter() - t0))
             return content
 
         except Exception as e:
@@ -64,6 +66,8 @@ class LLMClient:
                 latency_ms=round(latency_ms, 1),
                 error_type=type(e).__name__,
             )
+            LLM_COUNT.labels(self.model, "generate", "error").inc()
+            LLM_LAT.labels(self.model, "generate").observe((time.perf_counter() - t0))
             raise
 
     async def stream(self, messages: list[dict]) -> AsyncIterator[str]:
@@ -88,6 +92,8 @@ class LLMClient:
 
             latency_ms = (time.perf_counter() - t0) * 1000
             logger.info("llm_stream_completed", model=self.model, latency_ms=round(latency_ms, 1))
+            LLM_COUNT.labels(self.model, "stream", "ok").inc()
+            LLM_LAT.labels(self.model, "stream").observe((time.perf_counter() - t0))
 
         except Exception as e:
             latency_ms = (time.perf_counter() - t0) * 1000
@@ -97,4 +103,6 @@ class LLMClient:
                 latency_ms=round(latency_ms, 1),
                 error_type=type(e).__name__,
             )
+            LLM_COUNT.labels(self.model, "stream", "error").inc()
+            LLM_LAT.labels(self.model, "stream").observe((time.perf_counter() - t0))
             raise
