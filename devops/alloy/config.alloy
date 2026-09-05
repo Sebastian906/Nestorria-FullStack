@@ -1,0 +1,33 @@
+discovery.docker "nestorria" {
+  host = "tcp://socket-proxy:2375"
+  refresh_interval = "5s"
+}
+
+discovery.relabel "nestorria" {
+  targets = discovery.docker.nestorria.targets
+  rule {
+    source_labels = ["__meta_docker_container_name"]
+    regex = "/(.*)"
+    target_label = "container"
+  }
+}
+
+loki.source.docker "nestorria" {
+  host = "tcp://socket-proxy:2375"
+  targets = discovery.relabel.nestorria.output
+  labels = {"app" = "docker"}
+  forward_to = [loki.process.nestorria.receiver]
+}
+loki.process "nestorria" {
+  stage.docker {}
+  stage.json {
+    expressions = {level="level", service="service", request_id="request_id", requestId="requestId"}
+  }
+  stage.labels {
+    values = {service="service", container="container"}
+  }
+  forward_to = [loki.write.default.receiver]
+}
+loki.write "default" {
+  endpoint { url = "http://loki:3100/loki/api/v1/push" }
+}
