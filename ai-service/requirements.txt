@@ -13,8 +13,8 @@ scipy>=1.11.0,<2.0.0
 
 # Deep Learning — CPU-only
 --extra-index-url https://download.pytorch.org/whl/cpu
-torch==2.7.1+cpu
-torchvision==0.22.1+cpu
+torch==2.14.0+cpu
+torchvision==0.29.0+cpu
 Pillow>=10.0.0,<12.3.0
 
 # Database (pgvector)
