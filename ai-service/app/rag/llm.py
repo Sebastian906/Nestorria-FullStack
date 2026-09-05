@@ -1,5 +1,6 @@
 """LLM client abstraction for Groq."""
 
+import asyncio
 import time
 from typing import AsyncIterator
 
@@ -76,6 +77,7 @@ class LLMClient:
         Yields raw token strings.
         """
         t0 = time.perf_counter()
+        status = "ok"
         try:
             response = await self.client.chat.completions.create(
                 model=self.model,
@@ -92,10 +94,19 @@ class LLMClient:
 
             latency_ms = (time.perf_counter() - t0) * 1000
             logger.info("llm_stream_completed", model=self.model, latency_ms=round(latency_ms, 1))
-            LLM_COUNT.labels(self.model, "stream", "ok").inc()
-            LLM_LAT.labels(self.model, "stream").observe((time.perf_counter() - t0))
 
+        except asyncio.CancelledError:
+            status = "cancelled"
+            latency_ms = (time.perf_counter() - t0) * 1000
+            logger.info("llm_stream_cancelled", model=self.model, latency_ms=round(latency_ms, 1))
+            raise
+        except GeneratorExit:
+            status = "cancelled"
+            latency_ms = (time.perf_counter() - t0) * 1000
+            logger.info("llm_stream_cancelled", model=self.model, latency_ms=round(latency_ms, 1))
+            raise
         except Exception as e:
+            status = "error"
             latency_ms = (time.perf_counter() - t0) * 1000
             logger.error(
                 "llm_stream_failed",
@@ -103,6 +114,7 @@ class LLMClient:
                 latency_ms=round(latency_ms, 1),
                 error_type=type(e).__name__,
             )
-            LLM_COUNT.labels(self.model, "stream", "error").inc()
-            LLM_LAT.labels(self.model, "stream").observe((time.perf_counter() - t0))
             raise
+        finally:
+            LLM_COUNT.labels(self.model, "stream", status).inc()
+            LLM_LAT.labels(self.model, "stream").observe((time.perf_counter() - t0))

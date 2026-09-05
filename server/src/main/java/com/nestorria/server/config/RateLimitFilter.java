@@ -104,9 +104,10 @@ public class RateLimitFilter extends OncePerRequestFilter {
     private boolean isExcluded(String uri) {
         return uri.equals("/api/health/")
             || uri.equals("/api/health")
-            || uri.startsWith("/actuator")
-            || uri.startsWith("/api/payments/stripe/webhook")
-            || uri.startsWith("/actuator");
+            || uri.equals("/actuator/health")
+            || uri.startsWith("/actuator/health/")
+            || uri.equals("/actuator/prometheus")
+            || uri.startsWith("/api/payments/stripe/webhook");
     }
 
     private String resolveKey(HttpServletRequest request) {

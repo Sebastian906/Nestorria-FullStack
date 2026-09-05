@@ -12,6 +12,13 @@ RUN apt-get update && \
 COPY requirements.txt .
 RUN pip install --no-cache-dir --prefix=/install -r requirements.txt
 
+ENV PIP_NO_CACHE_DIR=1 PYTHONDONTWRITEBYTECODE=1
+ARG PIP_EXTRA_INDEX_URL=https://download.pytorch.org/whl/cpu
+COPY requirements.txt .
+RUN pip install --prefix=/install -r requirements.txt \
+    && rm -rf /root/.cache/pip /tmp/* \
+    && pip list | grep -Ei "torch|nvidia|triton|cuda" || true
+
 # ---- Stage 2: Runtime ----
 FROM python:3.12-slim
 

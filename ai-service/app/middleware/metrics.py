@@ -23,10 +23,18 @@ class MetricsMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request: Request, call_next):
         if request.url.path == "/metrics":
             return await call_next(request)
-        route = request.scope.get("route")
-        tmpl = getattr(route, "path", None) or normalize(request.url.path)
         t0 = time.perf_counter()
-        resp = await call_next(request)
-        HTTP_COUNT.labels(request.method, tmpl, str(resp.status_code)).inc()
+        try:
+            resp = await call_next(request)
+            status = str(resp.status_code)
+        except Exception:
+            route = request.scope.get("route")
+            tmpl = getattr(route, "path", None) or normalize(request.url.path) or "/unmatched"
+            HTTP_COUNT.labels(request.method, tmpl, "500").inc()
+            HTTP_LAT.labels(request.method, tmpl).observe(time.perf_counter()-t0)
+            raise
+        route = request.scope.get("route")
+        tmpl = getattr(route, "path", None) or normalize(request.url.path) or "/unmatched"
+        HTTP_COUNT.labels(request.method, tmpl, status).inc()
         HTTP_LAT.labels(request.method, tmpl).observe(time.perf_counter()-t0)
         return resp
