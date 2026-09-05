@@ -9,6 +9,11 @@ import sys
 
 import structlog
 
+def _add_service(logger, method_name, event_dict):
+    event_dict.setdefault("service", "nestorria-ai-service")
+    event_dict.setdefault("environment", "development")
+    return event_dict
+
 def setup_logging(log_level: str = "INFO") -> None:
     """Configure structlog with JSON rendering.
 
@@ -31,6 +36,7 @@ def setup_logging(log_level: str = "INFO") -> None:
             structlog.contextvars.merge_contextvars,
             structlog.processors.add_log_level,
             structlog.processors.TimeStamper(fmt="iso"),
+            _add_service,
             structlog.dev.ConsoleRenderer() if sys.stderr.isatty() else structlog.processors.JSONRenderer(),
         ],
         wrapper_class=structlog.make_filtering_bound_logger(

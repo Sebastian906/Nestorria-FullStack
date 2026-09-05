@@ -1,0 +1,18 @@
+loki.source.docker "nestorria" {
+  host = "unix:///var/run/docker.sock"
+  refresh_interval = "5s"
+  forward_to = [loki.process.nestorria.receiver]
+}
+loki.process "nestorria" {
+  stage.docker_container {}
+  stage.json {
+    expressions = {level="level", service="service", request_id="request_id", requestId="requestId"}
+  }
+  stage.labels {
+    values = {service="service", container="container"}
+  }
+  forward_to = [loki.write.default.receiver]
+}
+loki.write "default" {
+  endpoint { url = "http://loki:3100/loki/api/v1/push" }
+}
