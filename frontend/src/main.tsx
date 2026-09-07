@@ -17,7 +17,8 @@ if (!PUBLISHABLE_KEY) {
 
 function LocalizedApp() {
   const { i18n } = useTranslation();
-  const [locale, setLocale] = useState(i18n.language?.startsWith('es') ? esES : enUS);
+  // ponytail: localizations v4 vs react v6 types mismatch -> any, runtime shape is compatible
+  const [locale, setLocale] = useState<any>(i18n.language?.startsWith('es') ? esES : enUS);
 
   useEffect(() => {
     const update = (lng: string) => setLocale(lng.startsWith('es') ? esES : enUS);

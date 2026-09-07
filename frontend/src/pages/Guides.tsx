@@ -98,7 +98,7 @@ const steps = [
 
 const Guides = () => {
     const { t } = useTranslation('guides');
-    const stepText = {
+    const stepText: Record<string, { d: string; l: string | null }> = {
         "01": { d: t('s1d'), l: t('s1l') },
         "02": { d: t('s2d'), l: t('s2l') },
         "03": { d: t('s3d'), l: null },
