@@ -1,0 +1,40 @@
+{
+    "add": {
+        "required": "Complete todos los campos obligatorios",
+        "imageRequired": "Suba al menos una imagen",
+        "auth": "Error de autenticación. Inicie sesión nuevamente.",
+        "success": "Propiedad agregada correctamente",
+        "name": "Nombre de la propiedad",
+        "description": "Descripción",
+        "city": "Ciudad",
+        "country": "País",
+        "type": "Tipo de propiedad",
+        "selectType": "Seleccione tipo",
+        "address": "Dirección",
+        "area": "Área",
+        "map": "Ubicación en el mapa",
+        "mapHint": "Haga clic en el mapa para seleccionar la ubicación exacta",
+        "neighborhood": "Barrio",
+        "postal": "Código postal",
+        "rent": "Precio de renta",
+        "perNight": "/noche",
+        "sale": "Precio de venta",
+        "bedrooms": "Habitaciones",
+        "bathrooms": "Baños",
+        "garages": "Garajes",
+        "amenities": "Amenidades",
+        "areaPh": "Área (m²)",
+        "autoPh": "Se completa automáticamente"
+    },
+    "list": {
+        "loadFail": "No se pudieron cargar las propiedades",
+        "availabilityFail": "No se pudo cambiar la disponibilidad",
+        "loading": "Cargando propiedades…",
+        "empty": "Sin propiedades. Agregue la primera.",
+        "index": "N.º",
+        "name": "Nombre",
+        "address": "Dirección",
+        "price": "Precio",
+        "available": "Disponible"
+    }
+}

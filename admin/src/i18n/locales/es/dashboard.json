@@ -1,0 +1,18 @@
+{
+    "title": "Panel",
+    "totalSales": "Ventas totales",
+    "totalEarnings": "Ingresos totales",
+    "table": {
+        "index": "N.º",
+        "property": "Propiedad",
+        "dates": "Fechas de reserva",
+        "amount": "Monto",
+        "status": "Estado",
+        "empty": "Aún no hay reservas.",
+        "completed": "Completada",
+        "pending": "Pendiente"
+    },
+    "errors": {
+        "loadFail": "No se pudieron cargar los datos del panel"
+    }
+}

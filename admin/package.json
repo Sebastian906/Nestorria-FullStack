@@ -9,12 +9,14 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@clerk/localizations": "^4.16.0",
     "@clerk/vue": "^2.3.3",
     "@stomp/stompjs": "^7.3.0",
     "@tailwindcss/vite": "^4.3.0",
     "axios": "^1.18.0",
     "tailwindcss": "^4.3.0",
     "vue": "^3.5.34",
+    "vue-i18n": "^11.4.10",
     "vue-router": "^5.1.0",
     "vue-toastification": "2.0.0-rc.5"
   },

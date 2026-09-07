@@ -1,0 +1,48 @@
+{
+    "errors": {
+        "notAvailable": "La propiedad no está disponible en las fechas seleccionadas",
+        "badDates": "La fecha de salida debe ser posterior a la fecha de llegada",
+        "alreadySigned": "Usted ya ha firmado este contrato",
+        "pickDates": "Seleccione las fechas de llegada y salida",
+        "generic": "Ocurrió un error inesperado"
+    },
+    "success": {
+        "created": "Reserva y contrato creados correctamente",
+        "confirmed": "Reserva confirmada",
+        "contractGenerated": "Contrato generado correctamente"
+    },
+    "empty": {
+        "noBookings": "Usted no tiene reservas.",
+        "loading": "Cargando sus reservas..."
+    },
+    "actions": {
+        "book": "Reservar ahora",
+        "sign": "Firmar contrato"
+    },
+    "page": {
+        "title": "Mis reservas",
+        "agencyTitle": "Reservas de la agencia",
+        "loading": "Cargando reservas...",
+        "empty": "No se encontraron reservas."
+    },
+    "status": {
+        "pending": "Firma pendiente",
+        "signed": "Firmado",
+        "draft": "Borrador",
+        "expired": "Vencido"
+    },
+    "card": {
+        "guests": "Huéspedes",
+        "total": "Total",
+        "bookingId": "ID de reserva",
+        "checkIn": "Llegada",
+        "checkOut": "Salida",
+        "payment": "Pago",
+        "paid": "Pagado",
+        "unpaid": "Sin pagar",
+        "payNow": "Pagar ahora",
+        "generating": "Generando...",
+        "generate": "Generar contrato",
+        "view": "Ver contrato"
+    }
+}

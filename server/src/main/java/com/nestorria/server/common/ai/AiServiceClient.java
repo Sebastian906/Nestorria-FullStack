@@ -31,11 +31,9 @@ import lombok.extern.slf4j.Slf4j;
  * - Retry: 3 intentos con exponential backoff (500ms, 1s, 2s)
  * - Timeout: connect 3s, read 5s (operaciones síncronas)
  * - Fallback: delega a AiFallbackHandler (solo en @Retry, no en @CircuitBreaker)
- *
  * Streaming:
  * - Usa un RestClient separado con read timeout extendido (30s)
  * - No aplica @CircuitBreaker/@Retry (el stream se lee de forma lazy)
- *
  * Aspect ordering: @Retry (outer) → @CircuitBreaker (inner).
  * - Transport failures → retried by @Retry → fallback on exhaustion
  * - Open circuit → CallNotPermittedException → ignored by retry → fallback
@@ -167,11 +165,9 @@ public class AiServiceClient {
      * Consume SSE streaming de ai-service.
      * Usa un RestClient dedicado con read timeout extendido (30s)
      * para no bloquear las operaciones síncronas (5s read timeout).
-     *
      * No se aplica @CircuitBreaker/@Retry porque RestClient es síncrono
      * y el stream se lee de forma lazy. El manejo de errores se hace
      * en el caller (AiChatStreamingService).
-     *
      * @param request chat request con message, userId, conversationId
      * @return InputStream con el contenido SSE (text/event-stream)
      */
@@ -204,5 +200,32 @@ public class AiServiceClient {
     List<PropertySummaryResponse> recommendationsFallback(String userId, int limit, Throwable t) {
         log.warn("ai-service recommendations fallback: userId={}, error={}", userId, t.getMessage());
         return fallbackHandler.recommendationsFallback(userId, limit);
+    }
+
+    @CircuitBreaker(name = "ai-service")
+    @Retry(name = "ai-service", fallbackMethod = "translateFallback")
+    public String translate(String text, String source, String target) {
+        if (text == null || source.equals(target)) {
+            return text;
+        }
+
+        record TranslateRequest(String text, String source, String target) {}
+        record TranslateResponse(String translated) {}
+
+        TranslateResponse res = restClient.post()
+            .uri("/translate")
+            .body(new TranslateRequest(text, source, target))
+            .retrieve()
+            .body(TranslateResponse.class);
+
+        if (res != null && res.translated() != null) {
+            return res.translated();
+        }
+        return text;
+    }
+
+    String translateFallback(String text, String source, String target, Throwable t) {
+        log.warn("translate fallback: {}", t.getMessage());
+        return text;
     }
 }

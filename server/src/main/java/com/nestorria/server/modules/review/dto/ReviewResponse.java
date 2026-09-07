@@ -12,6 +12,8 @@ public record ReviewResponse(
     String userImage,
     int rating,
     String comment,
+    String originalLang,
+    String displayComment,
     boolean isVerified,
     Instant createdAt
 ) {
@@ -24,8 +26,16 @@ public record ReviewResponse(
             r.getUser().getImage(),
             r.getRating(),
             r.getComment(),
+            r.getOriginalLang(),
+            r.getComment(),
             r.isVerified(),
-            r.getCreatedAt()
-        );
+            r.getCreatedAt());
+    }
+
+    public static ReviewResponse of(Review r, String display) {
+        var b = fromEntity(r);
+        return new ReviewResponse(b.id(), b.propertyId(), b.userId(), b.userName(), b.userImage(), b.rating(),
+                b.comment(), b.originalLang(), display, b.isVerified(), b.createdAt());
+        
     }
 }

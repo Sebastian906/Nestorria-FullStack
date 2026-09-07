@@ -4,12 +4,16 @@ import { useAuth, useUser } from "@clerk/react"
 import axios from "axios"
 import toast from "react-hot-toast"
 import { assets, type Contract, type SignatureRole } from "../assets/data"
+import { useTranslation } from "react-i18next"
+import { serverMsg } from "../services/serverMsg"
+import { formatDate } from "../utils/format"
 
 const ContractDetails = () => {
     const { id } = useParams<{ id: string }>()
     const navigate = useNavigate()
     const { getToken } = useAuth()
     const { user } = useUser()
+    const { t } = useTranslation("user")
 
     const [contract, setContract] = useState<Contract | null>(null)
     const [loading, setLoading] = useState(true)
@@ -26,15 +30,14 @@ const ContractDetails = () => {
             })
             setContract(data)
         } catch (error: any) {
-            const message = error.response?.data?.message || error.message
             if (error.response?.status === 403) {
-                toast.error("You don't have access to this contract")
+                toast.error(t("user:contract.noAccess"))
                 navigate("/my-bookings")
             } else if (error.response?.status === 404) {
-                toast.error("Contract not found")
+                toast.error(t("user:contract.notFound"))
                 navigate("/my-bookings")
             } else {
-                toast.error(message)
+                toast.error(serverMsg(error, "booking:errors.generic"))
             }
         } finally {
             setLoading(false)
@@ -59,17 +62,16 @@ const ContractDetails = () => {
             )
             setContract(data)
             if (data.status === "SIGNED") {
-                toast.success("Contract signed by both parties. Successfully signed!")
+                toast.success(t("user:contract.signedOk"))
             } else {
-                toast.success("Signature registered successfully")
+                toast.success(t("user:contract.signatureOk"))
             }
         } catch (error: any) {
-            const message = error.response?.data?.message || error.message
             if (error.response?.status === 409) {
-                toast.error("You have already signed this contract")
+                toast.error(t("user:contract.alreadySigned"))
                 fetchContract()
             } else {
-                toast.error(message)
+                toast.error(serverMsg(error, "booking:errors.generic"))
             }
         } finally {
             setSigning(false)
@@ -96,13 +98,13 @@ const ContractDetails = () => {
     const getStatusConfig = (status: string) => {
         switch (status) {
             case "DRAFT":
-                return { label: "Draft", bgColor: "bg-gray-100", textColor: "text-gray-600", dotColor: "bg-gray-400" }
+                return { label: t("user:contract.draft"), bgColor: "bg-gray-100", textColor: "text-gray-600", dotColor: "bg-gray-400" }
             case "PENDING_SIGNATURE":
-                return { label: "Pending Signatures", bgColor: "bg-yellow-50", textColor: "text-yellow-700", dotColor: "bg-yellow-500" }
+                return { label: t("user:contract.pending"), bgColor: "bg-yellow-50", textColor: "text-yellow-700", dotColor: "bg-yellow-500" }
             case "SIGNED":
-                return { label: "Signed", bgColor: "bg-green-50", textColor: "text-green-700", dotColor: "bg-green-500" }
+                return { label: t("user:contract.signed"), bgColor: "bg-green-50", textColor: "text-green-700", dotColor: "bg-green-500" }
             case "EXPIRED":
-                return { label: "Expired", bgColor: "bg-red-50", textColor: "text-red-700", dotColor: "bg-red-500" }
+                return { label: t("user:contract.expired"), bgColor: "bg-red-50", textColor: "text-red-700", dotColor: "bg-red-500" }
             default:
                 return { label: status, bgColor: "bg-gray-100", textColor: "text-gray-600", dotColor: "bg-gray-400" }
         }
@@ -110,8 +112,8 @@ const ContractDetails = () => {
 
     const getContractTypeLabel = (type: string) => {
         switch (type) {
-            case "RENTAL": return "Rental Contract"
-            case "PURCHASE": return "Purchase Contract"
+            case "RENTAL": return t("user:contract.rental")
+            case "PURCHASE": return t("user:contract.purchase")
             default: return type
         }
     }
@@ -137,7 +139,7 @@ const ContractDetails = () => {
         return (
             <div className='bg-linear-to-r from-[#F0FDF4] to-white py-16 pt-28 w-full min-h-screen'>
                 <div className='max-padd-container'>
-                    <p className="text-gray-500 text-center py-10">Loading contract...</p>
+                    <p className="text-gray-500 text-center py-10">{t("user:contract.loading")}</p>
                 </div>
             </div>
         )
@@ -147,7 +149,7 @@ const ContractDetails = () => {
         return (
             <div className='bg-linear-to-r from-[#F0FDF4] to-white py-16 pt-28 w-full min-h-screen'>
                 <div className='max-padd-container'>
-                    <p className="text-gray-500 text-center py-10">Contract not found</p>
+                    <p className="text-gray-500 text-center py-10">{t("user:contract.notFound")}</p>
                 </div>
             </div>
         )
@@ -169,7 +171,7 @@ const ContractDetails = () => {
                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
                     </svg>
-                    Back to My Bookings
+                    {t("user:contract.back")}
                 </button>
 
                 {/* Header Card */}
@@ -192,30 +194,25 @@ const ContractDetails = () => {
                     {/* Contract Meta */}
                     <div className='grid grid-cols-2 sm:grid-cols-4 gap-4 mt-6 pt-4 border-t border-slate-900/10'>
                         <div>
-                            <p className='text-xs text-gray-400 mb-1'>Contract ID</p>
+                            <p className='text-xs text-gray-400 mb-1'>{t("user:contract.id")}</p>
                             <p className='text-sm font-medium break-all'>{contract.id}</p>
                         </div>
                         <div>
-                            <p className='text-xs text-gray-400 mb-1'>Booking ID</p>
+                            <p className='text-xs text-gray-400 mb-1'>{t("user:contract.bookingId")}</p>
                             <p className='text-sm font-medium break-all'>{contract.bookingId}</p>
                         </div>
                         <div>
-                            <p className='text-xs text-gray-400 mb-1'>Generated</p>
+                            <p className='text-xs text-gray-400 mb-1'>{t("user:contract.generated")}</p>
                             <p className='text-sm font-medium'>
                                 {contract.generatedAt
-                                    ? new Date(contract.generatedAt).toLocaleDateString('en-US', {
-                                        year: 'numeric', month: 'long', day: 'numeric',
-                                        hour: '2-digit', minute: '2-digit'
-                                    })
+                                    ? formatDate(contract.generatedAt)
                                     : '—'}
                             </p>
                         </div>
                         <div>
-                            <p className='text-xs text-gray-400 mb-1'>Created</p>
+                            <p className='text-xs text-gray-400 mb-1'>{t("user:contract.created")}</p>
                             <p className='text-sm font-medium'>
-                                {new Date(contract.createdAt).toLocaleDateString('en-US', {
-                                    year: 'numeric', month: 'long', day: 'numeric'
-                                })}
+                                {formatDate(contract.createdAt)}
                             </p>
                         </div>
                     </div>
@@ -224,14 +221,14 @@ const ContractDetails = () => {
                 {/* Clauses Section */}
                 <div className='bg-white rounded-xl border border-slate-900/10 p-6 mb-6'>
                     <div className='flex items-center justify-between mb-4'>
-                        <h3 className='h3'>Contract Clauses</h3>
+                        <h3 className='h3'>{t("user:contract.clauses")}</h3>
                         <button
                             onClick={expandAllClauses}
                             className='text-sm text-secondary hover:text-secondary/80 transition-colors'
                         >
                             {expandedClauses.size === contract.clauses.length
-                                ? 'Collapse all'
-                                : 'Expand all'}
+                                ? t("user:contract.collapse")
+                                : t("user:contract.expand")}
                         </button>
                     </div>
                     <div className='space-y-3'>
@@ -279,11 +276,11 @@ const ContractDetails = () => {
 
                 {/* Signatures Section */}
                 <div className='bg-white rounded-xl border border-slate-900/10 p-6 mb-6'>
-                    <h3 className='h3 mb-4'>Digital Signatures</h3>
+                    <h3 className='h3 mb-4'>{t("user:contract.signatures")}</h3>
 
                     {contract.signatures.length === 0 ? (
                         <p className='text-sm text-gray-500 py-4'>
-                            No signatures have been registered yet.
+                            {t("user:contract.noSignatures")}
                         </p>
                     ) : (
                         <div className='space-y-3'>
@@ -304,14 +301,11 @@ const ContractDetails = () => {
                                                     ? 'bg-blue-100 text-blue-700'
                                                     : 'bg-purple-100 text-purple-700'
                                                 }`}>
-                                                {signature.role === 'TENANT' ? 'Tenant' : 'Agency'}
+                                                {signature.role === 'TENANT' ? t("user:contract.tenant") : t("user:contract.agency")}
                                             </span>
                                         </div>
                                         <p className='text-xs text-gray-500 mt-0.5'>
-                                            Signed on {new Date(signature.signedAt).toLocaleDateString('en-US', {
-                                                year: 'numeric', month: 'long', day: 'numeric',
-                                                hour: '2-digit', minute: '2-digit'
-                                            })}
+                                            {t("user:contract.signedOn")} {formatDate(signature.signedAt)}
                                         </p>
                                     </div>
                                 </div>
@@ -329,9 +323,9 @@ const ContractDetails = () => {
                                             : 'bg-gray-300'
                                         }`} />
                                     <span className='text-sm'>
-                                        Tenant: {contract.signatures.some(s => s.role === 'TENANT')
-                                            ? 'Signed'
-                                            : 'Pending'}
+                                        {t("user:contract.tenant")}: {contract.signatures.some(s => s.role === 'TENANT')
+                                            ? t("user:contract.signed")
+                                            : t("user:contract.pending")}
                                     </span>
                                 </div>
                                 <div className='flex items-center gap-2'>
@@ -340,9 +334,9 @@ const ContractDetails = () => {
                                             : 'bg-gray-300'
                                         }`} />
                                     <span className='text-sm'>
-                                        Agency: {contract.signatures.some(s => s.role === 'AGENCY_OWNER')
-                                            ? 'Signed'
-                                            : 'Pending'}
+                                        {t("user:contract.agency")}: {contract.signatures.some(s => s.role === 'AGENCY_OWNER')
+                                            ? t("user:contract.signed")
+                                            : t("user:contract.pending")}
                                     </span>
                                 </div>
                             </div>
@@ -357,11 +351,11 @@ const ContractDetails = () => {
                             <div className='flex items-center justify-center w-16 h-16 rounded-full bg-secondary/10 mx-auto mb-4'>
                                 <img src={assets.signature} alt="" width={32} className="opacity-70" />
                             </div>
-                            <h4 className='h4 mb-2'>Signature Pending</h4>
+                            <h4 className='h4 mb-2'>{t("user:contract.pendingTitle")}</h4>
                             <p className='text-sm text-gray-500 mb-6 max-w-md mx-auto'>
                                 {userRole === 'TENANT'
-                                    ? 'As a tenant, your signature is necessary to complete this contract.'
-                                    : 'As a representative of the agency, your signature is necessary to complete this contract.'}
+                                    ? t("user:contract.pendingTenant")
+                                    : t("user:contract.pendingAgency")}
                             </p>
                             <button
                                 onClick={() => handleSign(userRole)}
@@ -374,10 +368,10 @@ const ContractDetails = () => {
                                             <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
                                             <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
                                         </svg>
-                                        Signing...
+                                        {t("user:contract.signing")}
                                     </span>
                                 ) : (
-                                    'Sign Contract'
+                                    t("user:contract.sign")
                                 )}
                             </button>
                         </div>
@@ -388,7 +382,7 @@ const ContractDetails = () => {
                 {userSigned && contract.status !== "SIGNED" && (
                     <div className='bg-green-50 rounded-xl border border-green-200 p-6 mb-6 text-center'>
                         <p className='text-sm text-green-700'>
-                            You have already signed this contract. Waiting for the signature of the other party.
+                            {t("user:contract.waiting")}
                         </p>
                     </div>
                 )}
@@ -401,16 +395,16 @@ const ContractDetails = () => {
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
                             </svg>
                         </div>
-                        <h4 className='h4 text-green-800 mb-2'>Contract Completed</h4>
+                        <h4 className='h4 text-green-800 mb-2'>{t("user:contract.completed")}</h4>
                         <p className='text-sm text-green-700'>
-                            Both parties have signed. This contract is officially formalized.
+                            {t("user:contract.completedBody")}
                         </p>
                     </div>
                 )}
 
                 {/* Cash on Delivery Payment Info */}
                 <div className='bg-white rounded-xl border border-slate-900/10 p-6'>
-                    <h3 className='h3 mb-4'>Payment Method</h3>
+                    <h3 className='h3 mb-4'>{t("user:contract.payment")}</h3>
                     <div className='flex items-center gap-4 p-4 bg-secondary/5 rounded-lg'>
                         <div className='flex items-center justify-center w-12 h-12 rounded-full bg-secondary/10'>
                             <svg className="w-6 h-6 text-secondary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -418,10 +412,9 @@ const ContractDetails = () => {
                             </svg>
                         </div>
                         <div>
-                            <h5 className='font-medium text-sm'>Cash on Delivery</h5>
+                            <h5 className='font-medium text-sm'>{t("user:contract.cod")}</h5>
                             <p className='text-xs text-gray-500'>
-                                The payment will be made in cash at the time of delivery.
-                                Coming soon: payment gateway with Stripe.
+                                {t("user:contract.codBody")}
                             </p>
                         </div>
                     </div>

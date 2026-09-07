@@ -2,12 +2,16 @@ import { useState, useMemo } from "react"
 import { Link } from "react-router-dom"
 import { useAppContext } from "../context/AppContext"
 import { assets, type Property } from "../assets/data"
+import { formatCurrency } from "../utils/format";
+import { useTranslation } from "react-i18next";
 
 const MAX_COMPARE = 4
 
 const Compare = () => {
-    const { properties, currency } = useAppContext()
+    const { properties } = useAppContext()
     const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
+
+    const { t } = useTranslation(["listing", "property"]);
 
     const toggleSelect = (id: string) => {
         setSelectedIds(prev => {
@@ -36,26 +40,26 @@ const Compare = () => {
     }, [properties, selectedIds])
 
     const comparisonFields = [
-        { label: "Price (Sale)", render: (p: Property) => `${currency}${p.price.sale.toLocaleString()}` },
-        { label: "Price (Rent/Night)", render: (p: Property) => `${currency}${p.price.rent}` },
-        { label: "Area", render: (p: Property) => `${p.area} m²` },
-        { label: "Bedrooms", render: (p: Property) => p.facilities.bedrooms },
-        { label: "Bathrooms", render: (p: Property) => p.facilities.bathrooms },
-        { label: "Garages", render: (p: Property) => p.facilities.garages },
-        { label: "Type", render: (p: Property) => p.propertyType },
-        { label: "City", render: (p: Property) => p.city },
-        { label: "Available", render: (p: Property) => p.isAvailable ? "Yes" : "No" },
-        { label: "Rating", render: (p: Property) => p.averageRating ? `${p.averageRating.toFixed(1)} (${p.reviewCount})` : "No reviews" },
+        { label: t("listing:compare.priceSale"), render: (p: Property) => formatCurrency(p.price.sale) },
+        { label: t("listing:compare.priceRent"), render: (p: Property) => formatCurrency(p.price.rent) },
+        { label: t("listing:compare.area"), render: (p: Property) => `${p.area} m²` },
+        { label: t("listing:compare.bedrooms"), render: (p: Property) => p.facilities.bedrooms },
+        { label: t("listing:compare.bathrooms"), render: (p: Property) => p.facilities.bathrooms },
+        { label: t("listing:compare.garages"), render: (p: Property) => p.facilities.garages },
+        { label: t("listing:type"), render: (p: Property) => t(`listing:types.${p.propertyType}`, { defaultValue: p.propertyType }) },
+        { label: t("listing:compare.city"), render: (p: Property) => p.city },
+        { label: t("listing:compare.available"), render: (p: Property) => p.isAvailable ? t("listing:compare.yes") : t("listing:compare.no") },
+        { label: t("listing:compare.rating"), render: (p: Property) => p.averageRating ? `${p.averageRating.toFixed(1)} (${p.reviewCount})` : t("listing:compare.noReviews") },
     ]
 
     return (
         <div className='bg-linear-to-r from-[#F0FDF4] to-white py-16 pt-28'>
             <div className='max-padd-container'>
                 <div className='flex items-center justify-between mb-6'>
-                    <h2 className='h2'>Compare Properties</h2>
+                    <h2 className='h2'>{t("listing:compare.title")}</h2>
                     {selectedIds.size > 0 && (
                         <button onClick={clearAll} className="text-sm text-red-500 hover:underline">
-                            Clear all ({selectedIds.size})
+                            {t("listing:compare.clear", { n: selectedIds.size })}
                         </button>
                     )}
                 </div>
@@ -63,7 +67,7 @@ const Compare = () => {
                 {/* Property selector */}
                 <div className='mb-8'>
                     <p className="text-sm text-gray-500 mb-3">
-                        Select up to {MAX_COMPARE} properties to compare ({selectedIds.size}/{MAX_COMPARE})
+                        {t("listing:compare.hint", { max: MAX_COMPARE, cur: selectedIds.size })}
                     </p>
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
                         {properties.map((property) => (
@@ -104,7 +108,7 @@ const Compare = () => {
                         <table className="w-full bg-white rounded-xl ring-1 ring-slate-900/5">
                             <thead>
                                 <tr className="border-b border-slate-900/5">
-                                    <th className="text-left p-4 text-sm font-medium text-gray-500 w-40">Feature</th>
+                                    <th className="text-left p-4 text-sm font-medium text-gray-500 w-40">{t("listing:compare.feature")}</th>
                                     {selectedProperties.map((p) => (
                                         <th key={p._id} className="text-left p-4">
                                             <div className="flex items-center justify-between">
@@ -138,7 +142,7 @@ const Compare = () => {
                                 ))}
                                 {/* Amenities row */}
                                 <tr className="border-t border-slate-900/5">
-                                    <td className="p-4 text-sm font-medium text-gray-600">Amenities</td>
+                                    <td className="p-4 text-sm font-medium text-gray-600">{t("listing:compare.amenities")}</td>
                                     {selectedProperties.map((p) => (
                                         <td key={p._id} className="p-4 text-sm">
                                             <div className="flex flex-wrap gap-1">
@@ -160,7 +164,7 @@ const Compare = () => {
                 ) : (
                     <div className="text-center py-16 bg-white rounded-xl ring-1 ring-slate-900/5">
                         <img src={assets.sliders} alt="" className="w-12 h-12 mx-auto mb-4 opacity-30" />
-                        <p className="text-gray-500">Select properties above to start comparing</p>
+                        <p className="text-gray-500">{t("listing:compare.empty")}</p>
                     </div>
                 )}
             </div>

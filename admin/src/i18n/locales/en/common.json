@@ -1,0 +1,17 @@
+{
+    "errors": {
+        "auth": "Authentication error. Please log in again.",
+        "generic": "Something went wrong"
+    },
+    "actions": {
+        "save": "Save",
+        "cancel": "Cancel",
+        "saving": "Saving..."
+    },
+    "a11y": {
+        "language": "Language"
+    },
+    "ph": {
+        "typeHere": "Type here..."
+    }
+}

@@ -1,0 +1,92 @@
+{
+    "errors": {
+        "versionsFail": "No se pudieron cargar las versiones",
+        "loadFail": "No se pudieron cargar las versiones del modelo",
+        "promoteFail": "No se pudo promover la versión",
+        "rollbackFail": "No se pudo revertir la versión",
+        "compareFail": "No se pudo comparar"
+    },
+    "success": {
+        "promoted": "Promovido a v{{version}}",
+        "rolledBack": "Revertido a v{{version}}"
+    },
+    "dashboard": {
+        "title": "Panel IA",
+        "loading": "Cargando...",
+        "loadFail": "No se pudieron cargar los datos de IA"
+    },
+    "mlops": {
+        "title": "Panel MLOps",
+        "loading": "Cargando...",
+        "loadFail": "No se pudieron cargar los modelos",
+        "management": "Gestión de versiones",
+        "comparison": "Comparación de versiones",
+        "empty": "No hay modelos registrados."
+    },
+    "versions": {
+        "title": "Versiones",
+        "refresh": "Actualizar",
+        "loading": "Cargando versiones...",
+        "empty": "Sin versiones.",
+        "version": "Versión",
+        "date": "Fecha",
+        "features": "Características",
+        "actions": "Acciones",
+        "active": "activa",
+        "promote": "Promover",
+        "rollback": "Revertir",
+        "cols": "cols."
+    },
+    "compare": {
+        "title": "Comparar versiones",
+        "loading": "Cargando versiones...",
+        "versionA": "Versión A",
+        "versionB": "Versión B",
+        "select": "Seleccione",
+        "comparing": "Comparando...",
+        "compare": "Comparar",
+        "metric": "Métrica",
+        "delta": "Diferencia"
+    },
+    "status": {
+        "title": "Estado del servicio IA",
+        "checking": "Verificando...",
+        "status": "Estado",
+        "models": "Modelos",
+        "none": "Ninguno",
+        "rag": "RAG",
+        "llm": "LLM",
+        "enabled": "Activado",
+        "disabled": "Desactivado"
+    },
+    "card": {
+        "version": "Versión",
+        "status": "Estado",
+        "lastTrained": "Último entrenamiento:"
+    },
+    "training": {
+        "title": "Entrenamiento",
+        "select": "Seleccione modelo",
+        "start": "Iniciar entrenamiento",
+        "starting": "Iniciando...",
+        "started": "Trabajo {{jobId}} iniciado"
+    },
+    "kb": {
+        "title": "Base de conocimiento",
+        "loading": "Cargando documentos...",
+        "empty": "Aún no hay documentos.",
+        "delete": "Eliminar",
+        "upload": "Subir documento",
+        "loadFail": "No se pudieron cargar los documentos",
+        "uploadFail": "No se pudo subir"
+    },
+    "metrics": {
+        "title": "Métricas de chat",
+        "loading": "Cargando...",
+        "total": "Mensajes totales",
+        "users": "Usuarios activos",
+        "avg": "Respuesta prom.",
+        "errors": "Tasa de error",
+        "loadFail": "No se pudieron cargar las métricas"
+    }
+}

@@ -23,12 +23,14 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 
 @Entity
-@Table(name = "reviews", 
-    uniqueConstraints = @UniqueConstraint(name = "uk_review_user_property", columnNames = {"user_id", "property_id"}),
+@Table(
+    name = "reviews",
+    uniqueConstraints = @UniqueConstraint(name = "uk_review_user_property", columnNames = { "user_id", "property_id" }),
     indexes = {
-    @Index(name = "idx_review_property_created", columnList = "property_id, created_at DESC"),
-    @Index(name = "idx_review_user_created", columnList = "user_id, created_at DESC")
-})
+        @Index(name = "idx_review_property_created", columnList = "property_id, created_at DESC"),
+        @Index(name = "idx_review_user_created", columnList = "user_id, created_at DESC")
+    }
+)
 @Getter
 @Setter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
@@ -54,6 +56,9 @@ public class Review extends Auditable {
     @Column(columnDefinition = "TEXT")
     private String comment;
 
+    @Column(name = "original_lang", length = 5)
+    private String originalLang = "es";
+
     @Column(name = "is_verified", nullable = false)
     private boolean isVerified = false;
 
@@ -62,5 +67,6 @@ public class Review extends Auditable {
         this.property = property;
         this.rating = rating;
         this.comment = comment;
+        this.originalLang = "es";
     }
 }

@@ -1,0 +1,92 @@
+{
+    "errors": {
+        "versionsFail": "Failed to load versions",
+        "loadFail": "Failed to load model versions",
+        "promoteFail": "Promote failed",
+        "rollbackFail": "Rollback failed",
+        "compareFail": "Comparison failed"
+    },
+    "success": {
+        "promoted": "Promoted to v{{version}}",
+        "rolledBack": "Rolled back to v{{version}}"
+    },
+    "dashboard": {
+        "title": "AI Dashboard",
+        "loading": "Loading...",
+        "loadFail": "Failed to load AI data"
+    },
+    "mlops": {
+        "title": "MLOps Dashboard",
+        "loading": "Loading...",
+        "loadFail": "Failed to load models",
+        "management": "Version Management",
+        "comparison": "Version Comparison",
+        "empty": "No models registered."
+    },
+    "versions": {
+        "title": "Versions",
+        "refresh": "Refresh",
+        "loading": "Loading versions...",
+        "empty": "No versions found.",
+        "version": "Version",
+        "date": "Date",
+        "features": "Features",
+        "actions": "Actions",
+        "active": "active",
+        "promote": "Promote",
+        "rollback": "Rollback",
+        "cols": "cols"
+    },
+    "compare": {
+        "title": "Compare Versions",
+        "loading": "Loading versions...",
+        "versionA": "Version A",
+        "versionB": "Version B",
+        "select": "Select",
+        "comparing": "Comparing...",
+        "compare": "Compare",
+        "metric": "Metric",
+        "delta": "Delta"
+    },
+    "status": {
+        "title": "AI Service Status",
+        "checking": "Checking...",
+        "status": "Status",
+        "models": "Models",
+        "none": "None",
+        "rag": "RAG",
+        "llm": "LLM",
+        "enabled": "Enabled",
+        "disabled": "Disabled"
+    },
+    "card": {
+        "version": "Version",
+        "status": "Status",
+        "lastTrained": "Last trained:"
+    },
+    "training": {
+        "title": "Training",
+        "select": "Select model",
+        "start": "Start Training",
+        "starting": "Starting...",
+        "started": "Job {{jobId}} started"
+    },
+    "kb": {
+        "title": "Knowledge Base",
+        "loading": "Loading documents...",
+        "empty": "No documents ingested yet.",
+        "delete": "Delete",
+        "upload": "Upload document",
+        "loadFail": "Failed to load documents",
+        "uploadFail": "Upload failed"
+    },
+    "metrics": {
+        "title": "Chat Metrics",
+        "loading": "Loading...",
+        "total": "Total Messages",
+        "users": "Active Users",
+        "avg": "Avg Response",
+        "errors": "Error Rate",
+        "loadFail": "Failed to load chat metrics"
+    }
+}

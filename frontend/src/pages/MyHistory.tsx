@@ -4,6 +4,8 @@ import { useAuth } from "@clerk/react"
 import axios from "axios"
 import toast from "react-hot-toast"
 import { Link } from "react-router-dom"
+import { useTranslation } from "react-i18next"
+import { serverMsg } from "../services/serverMsg"
 
 interface HistoryEvent {
     id: string
@@ -17,6 +19,7 @@ interface HistoryEvent {
 const MyHistory = () => {
     const { user, searchedCities, currency } = useAppContext()
     const { getToken } = useAuth()
+    const { t } = useTranslation("user")
     const [events, setEvents] = useState<HistoryEvent[]>([])
     const [loading, setLoading] = useState(true)
     const [failedSources, setFailedSources] = useState<string[]>([])
@@ -35,8 +38,8 @@ const MyHistory = () => {
                 timeline.push({
                     id: `search-${item.city}`,
                     type: "search",
-                    title: `Searched: ${item.city}`,
-                    detail: `You searched for properties in ${item.city}`,
+                    title: t("user:history.searched", { city: item.city }),
+                    detail: t("user:history.searchedDetail", { city: item.city }),
                     date: item.searchedAt,
                     link: `/listing?destination=${encodeURIComponent(item.city)}`
                 })
@@ -51,7 +54,7 @@ const MyHistory = () => {
                     timeline.push({
                         id: `booking-${b.id}`,
                         type: "booking",
-                        title: `Booking: ${b.property?.title || "Property"}`,
+                        title: t("user:history.booking", { title: b.property?.title || "Property" }),
                         detail: `${b.checkInDate} → ${b.checkOutDate} | ${currency}${b.totalPrice} | ${b.status}`,
                         date: b.checkInDate,
                         link: `/my-bookings`
@@ -70,7 +73,7 @@ const MyHistory = () => {
                     timeline.push({
                         id: `invoice-${inv.id}`,
                         type: "invoice",
-                        title: `Invoice: ${inv.invoiceNumber}`,
+                        title: t("user:history.invoice", { number: inv.invoiceNumber }),
                         detail: `${currency}${inv.total} | ${inv.status}`,
                         date: inv.issueDate
                     })
@@ -83,11 +86,11 @@ const MyHistory = () => {
             timeline.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
             setEvents(timeline)
         } catch (error: any) {
-            toast.error("Error loading history")
+            toast.error(serverMsg(error, "user:history.loadFail"))
         } finally {
             setLoading(false)
         }
-    }, [user, getToken, searchedCities, currency])
+    }, [user, getToken, searchedCities, currency, t])
 
     useEffect(() => { loadHistory() }, [loadHistory])
 
@@ -135,7 +138,7 @@ const MyHistory = () => {
         return (
             <div className='bg-linear-to-r from-[#F0FDF4] to-white py-16 pt-28'>
                 <div className='max-padd-container text-center py-10'>
-                    <p className="text-gray-500">Please log in to see your history.</p>
+                    <p className="text-gray-500">{t("user:history.login")}</p>
                 </div>
             </div>
         )
@@ -144,15 +147,15 @@ const MyHistory = () => {
     return (
         <div className='bg-linear-to-r from-[#F0FDF4] to-white py-16 pt-28'>
             <div className='max-padd-container'>
-                <h2 className='h2 mb-6'>My History</h2>
-                {loading && <p className="text-gray-500 text-center py-10">Loading history...</p>}
+                <h2 className='h2 mb-6'>{t("user:history.title")}</h2>
+                {loading && <p className="text-gray-500 text-center py-10">{t("user:history.loading")}</p>}
                 {!loading && failedSources.length > 0 && (
                     <p className="text-amber-600 bg-amber-50 text-sm p-3 rounded-lg mb-4 text-center">
-                        Some data couldn't be loaded: {failedSources.join(", ")}. Showing partial results.
+                        {t("user:history.partial", { sources: failedSources.join(", ") })}
                     </p>
                 )}
                 {!loading && events.length === 0 && (
-                    <p className="text-gray-500 text-center py-10">No activity yet.</p>
+                    <p className="text-gray-500 text-center py-10">{t("user:history.none")}</p>
                 )}
                 <div className="space-y-3">
                     {events.map((event) => (

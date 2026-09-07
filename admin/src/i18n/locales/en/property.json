@@ -1,0 +1,40 @@
+{
+    "add": {
+        "required": "Please fill all required fields",
+        "imageRequired": "Please upload at least one image",
+        "auth": "Authentication error. Please log in again.",
+        "success": "Property added successfully",
+        "name": "Property Name",
+        "description": "Property Description",
+        "city": "City",
+        "country": "Country",
+        "type": "Property Type",
+        "selectType": "Select Type",
+        "address": "Address",
+        "area": "Area",
+        "map": "Map Location",
+        "mapHint": "Click on the map to select the exact location of the property",
+        "neighborhood": "Neighborhood",
+        "postal": "Postal Code",
+        "rent": "Rent Price",
+        "perNight": "/night",
+        "sale": "Sale Price",
+        "bedrooms": "Bedrooms",
+        "bathrooms": "Bathrooms",
+        "garages": "Garages",
+        "amenities": "Amenities",
+        "areaPh": "Area (sq ft)",
+        "autoPh": "Auto-completed"
+    },
+    "list": {
+        "loadFail": "Could not load properties",
+        "availabilityFail": "Could not change availability",
+        "loading": "Loading properties…",
+        "empty": "No properties found. Add your first property.",
+        "index": "Index",
+        "name": "Name",
+        "address": "Address",
+        "price": "Price",
+        "available": "Available"
+    }
+}

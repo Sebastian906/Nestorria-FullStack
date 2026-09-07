@@ -1,4 +1,5 @@
 import { useState, useCallback } from "react";
+import { useTranslation } from "react-i18next";
 import { usePropertySearchService } from "../services/propertySearchService";
 import type { Property, NearbySearchRequest } from "../assets/data";
 
@@ -8,6 +9,7 @@ interface NearbySearchPanelProps {
 }
 
 export default function NearbySearchPanel({ onResults, onError }: NearbySearchPanelProps) {
+    const { t } = useTranslation('listing');
     const { findNearby } = usePropertySearchService();
     const [isLoading, setIsLoading] = useState(false);
     const [radius, setRadius] = useState<number>(5);
@@ -16,7 +18,7 @@ export default function NearbySearchPanel({ onResults, onError }: NearbySearchPa
 
     const getCurrentLocation = useCallback(() => {
         if (!navigator.geolocation) {
-            setLocationError("Your web browser does not support geolocation");
+            setLocationError(t('nearby.geoUnsupported'));
             return;
         }
 
@@ -35,16 +37,16 @@ export default function NearbySearchPanel({ onResults, onError }: NearbySearchPa
                 setIsLoading(false);
                 switch (error.code) {
                     case error.PERMISSION_DENIED:
-                        setLocationError("Location permission denied. Enable location in your web browser.");
+                        setLocationError(t('nearby.denied'));
                         break;
                     case error.POSITION_UNAVAILABLE:
-                        setLocationError("Location not available");
+                        setLocationError(t('nearby.unavailable'));
                         break;
                     case error.TIMEOUT:
-                        setLocationError("Timeout exceeded");
+                        setLocationError(t('nearby.timeout'));
                         break;
                     default:
-                        setLocationError("Error obtaining location");
+                        setLocationError(t('nearby.generic'));
                 }
             },
             { enableHighAccuracy: true, timeout: 10000, maximumAge: 300000 }
@@ -53,7 +55,7 @@ export default function NearbySearchPanel({ onResults, onError }: NearbySearchPa
 
     const handleSearch = useCallback(async () => {
         if (!userLocation) {
-            onError("First get your location using the button above.");
+            onError(t('nearby.needLocation'));
             return;
         }
 
@@ -67,16 +69,16 @@ export default function NearbySearchPanel({ onResults, onError }: NearbySearchPa
             const results = await findNearby(params);
             onResults(results);
         } catch (error: any) {
-            const message = error.response?.data?.message || "Error looking for close locations";
+            const message = error.response?.data?.message || t('nearby.searchFail');
             onError(message);
         } finally {
             setIsLoading(false);
         }
-    }, [userLocation, radius, findNearby, onResults, onError]);
+    }, [userLocation, radius, findNearby, onResults, onError, t]);
 
     return (
         <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-100">
-            <h3 className="font-semibold text-lg mb-3">Search near me</h3>
+            <h3 className="font-semibold text-lg mb-3">{t('nearby.title')}</h3>
 
             {/* Botón de ubicación */}
             <div className="mb-4">
@@ -90,14 +92,14 @@ export default function NearbySearchPanel({ onResults, onError }: NearbySearchPa
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
                         </svg>
-                        {isLoading ? "Getting location..." : "Use my location"}
+                        {isLoading ? t('nearby.getting') : t('nearby.useLocation')}
                     </button>
                 ) : (
                     <div className="flex items-center gap-2 text-sm text-gray-600 bg-gray-50 px-3 py-2 rounded-lg">
                         <svg className="w-4 h-4 text-secondary" fill="currentColor" viewBox="0 0 20 20">
                             <path fillRule="evenodd" d="M5.05 4.05a7 7 0 119.9 9.9L10 18.9l-4.95-4.95a7 7 0 010-9.9zM10 11a2 2 0 100-4 2 2 0 000 4z" clipRule="evenodd" />
                         </svg>
-                        <span>Location: {userLocation.lat.toFixed(4)}, {userLocation.lng.toFixed(4)}</span>
+                        <span>{t('nearby.location')}: {userLocation.lat.toFixed(4)}, {userLocation.lng.toFixed(4)}</span>
                         <button
                             onClick={() => setUserLocation(null)}
                             className="ml-auto text-gray-400 hover:text-gray-600"
@@ -114,7 +116,7 @@ export default function NearbySearchPanel({ onResults, onError }: NearbySearchPa
             {/* Radio de búsqueda */}
             <div className="mb-4">
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Radius: {radius} km
+                    {t('nearby.radius')}: {radius} {t('nearby.km')}
                 </label>
                 <input
                     type="range"
@@ -142,10 +144,10 @@ export default function NearbySearchPanel({ onResults, onError }: NearbySearchPa
                             <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
                             <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
                         </svg>
-                        Searching...
+                        {t('nearby.searching')}
                     </span>
                 ) : (
-                    "Search nearby properties"
+                    t('nearby.search')
                 )}
             </button>
         </div>

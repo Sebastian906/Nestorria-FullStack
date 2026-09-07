@@ -1,4 +1,9 @@
 <script setup>
+import { useI18n } from 'vue-i18n'
+import { formatDate } from '../../utils/format.js'
+
+const { t } = useI18n()
+
 defineProps({
     model: { type: Object, required: true }
 })
@@ -8,8 +13,8 @@ defineProps({
     <div class="border rounded-lg p-4 bg-white shadow-sm">
         <h3 class="font-semibold text-lg">{{ model.name }}</h3>
         <div class="text-sm text-gray-600 mt-2 space-y-1">
-            <p>Version: {{ model.version }}</p>
-            <p>Status:
+            <p>{{ t('ai.card.version') }}: {{ model.version }}</p>
+            <p>{{ t('ai.card.status') }}:
                 <span :class="model.status === 'active' ? 'text-green-600' : 'text-yellow-600'">
                     {{ model.status }}
                 </span>
@@ -21,7 +26,7 @@ defineProps({
             </span>
         </div>
         <p v-if="model.lastTrained" class="text-xs text-gray-400 mt-2">
-            Last trained: {{ new Date(model.lastTrained).toLocaleDateString() }}
+            {{ t('ai.card.lastTrained') }} {{ formatDate(model.lastTrained) }}
         </p>
     </div>
 </template>

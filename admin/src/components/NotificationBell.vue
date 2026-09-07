@@ -2,7 +2,7 @@
     <div class="notification-bell-container relative">
         <!-- Bell Button -->
         <button @click.stop="toggleDropdown" class="relative p-1.5 rounded-full transition-all duration-200"
-            :class="isOpen ? 'bg-secondary/20' : 'hover:bg-secondary/10'" aria-label="Notifications">
+            :class="isOpen ? 'bg-secondary/20' : 'hover:bg-secondary/10'" :aria-label="t('notifications.title')">
             <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none"
                 stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                 <path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9" />
@@ -20,17 +20,17 @@
                    md:top-auto md:mt-0 md:bottom-full md:mb-2">
             <!-- Header -->
             <div class="flex items-center justify-between px-4 py-3 border-b border-slate-100">
-                <h3 class="font-semibold text-gray-800">Notifications</h3>
+                <h3 class="font-semibold text-gray-800">{{ t('notifications.title') }}</h3>
                 <button v-if="unreadCount > 0" @click="markAllAsRead"
                     class="text-xs text-green-500 hover:text-green-600 font-medium">
-                    Mark all as read
+                    {{ t('notifications.markAll') }}
                 </button>
             </div>
 
             <!-- Notifications List -->
             <div class="max-h-96 overflow-y-auto">
                 <div v-if="notifications.length === 0" class="py-8 text-center text-gray-400">
-                    <p class="text-sm">You don't have notifications</p>
+                    <p class="text-sm">{{ t('notifications.empty') }}</p>
                 </div>
                 <div v-for="notification in notifications" :key="notification.id"
                     @click="!notification.isRead && markAsRead(notification.id)"
@@ -60,7 +60,7 @@
             <div v-if="hasMore && notifications.length > 0" class="border-t border-slate-100">
                 <button @click="loadMore" :disabled="loading"
                     class="w-full py-2 text-sm text-green-500 hover:text-green-600 font-medium disabled:opacity-50">
-                    {{ loading ? 'Loading...' : 'Load more' }}
+                    {{ loading ? t('notifications.loading') : t('notifications.loadMore') }}
                 </button>
             </div>
         </div>
@@ -71,9 +71,11 @@
 import { ref, onMounted, onUnmounted, watch } from 'vue'
 import { useWebSocket } from '../composables/useWebSocket'
 import { useAppContext } from '../composables/useAppContext'
+import { useI18n } from 'vue-i18n'
 import axios from 'axios'
 
 const { auth } = useAppContext()
+const { t } = useI18n()
 
 const notifications = ref([])
 const unreadCount = ref(0)
@@ -214,15 +216,15 @@ const toggleDropdown = () => {
 
 const getNotificationIcon = (type) => {
     const icons = {
-        BOOKING_CONFIRMED: 'Booking Confirmed',
-        BOOKING_CANCELLED: 'Booking Cancelled',
-        PAYMENT_RECEIVED: 'Payment Received',
-        CONTRACT_SIGNED: 'Contract Signed',
-        CONTRACT_EXPIRED: 'Contract Expired',
-        REVIEW_RECEIVED: 'Review Received',
-        PROPERTY_INQUIRY: 'Property Inquiry'
+        BOOKING_CONFIRMED: t('notifications.typeConfirmed'),
+        BOOKING_CANCELLED: t('notifications.typeCancelled'),
+        PAYMENT_RECEIVED: t('notifications.typePayment'),
+        CONTRACT_SIGNED: t('notifications.typeSigned'),
+        CONTRACT_EXPIRED: t('notifications.typeExpired'),
+        REVIEW_RECEIVED: t('notifications.typeReview'),
+        PROPERTY_INQUIRY: t('notifications.typeInquiry')
     }
-    return icons[type] || 'Notification Alert'
+    return icons[type] || t('notifications.typeDefault')
 }
 
 const formatDate = (dateString) => {
@@ -233,10 +235,10 @@ const formatDate = (dateString) => {
     const diffHours = Math.floor(diffMs / 3600000)
     const diffDays = Math.floor(diffMs / 86400000)
 
-    if (diffMins < 1) return 'Now'
-    if (diffMins < 60) return `${diffMins}m ago`
-    if (diffHours < 24) return `${diffHours}h ago`
-    if (diffDays < 7) return `${diffDays}d ago`
+    if (diffMins < 1) return t('notifications.now')
+    if (diffMins < 60) return t('notifications.minAgo', { n: diffMins })
+    if (diffHours < 24) return t('notifications.hourAgo', { n: diffHours })
+    if (diffDays < 7) return t('notifications.dayAgo', { n: diffDays })
     return date.toLocaleDateString(undefined, { day: 'numeric', month: 'short' })
 }
 

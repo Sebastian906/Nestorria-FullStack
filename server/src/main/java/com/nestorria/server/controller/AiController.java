@@ -129,4 +129,20 @@ public class AiController {
             @RequestParam(defaultValue = "10") int limit) {
         return aiServiceClient.getAiRecommendations(jwt.getSubject(), Math.min(limit, 20));
     }
+
+    @Operation(summary = "Traducir texto corto (títulos/descripciones) al idioma UI")
+    @PostMapping("/translate")
+    public TranslateResponse translate(
+            @Valid @RequestBody TranslateRequest request) {
+        String translated = aiServiceClient.translate(
+            request.text(), request.source(), request.target());
+        return new TranslateResponse(translated);
+    }
+
+    public record TranslateRequest(
+        @jakarta.validation.constraints.Size(max = 2000) String text,
+        @jakarta.validation.constraints.Pattern(regexp = "en|es|auto") String source,
+        @jakarta.validation.constraints.Pattern(regexp = "en|es") String target) {}
+
+    public record TranslateResponse(String translated) {}
 }

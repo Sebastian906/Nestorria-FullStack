@@ -1,0 +1,17 @@
+{
+    "assistant": "AI Assistant",
+    "open": "Open chat",
+    "close": "Close chat",
+    "input": "Type your message...",
+    "waiting": "Waiting for response...",
+    "newConversation": "New conversation",
+    "empty": "Hi! Ask me about properties, contracts, or business rules.",
+    "msgSuffix": "msg",
+    "sources": "Sources",
+    "errors": {
+        "rateLimited": "You reached the message limit. Try again later.",
+        "service": "AI service error",
+        "connection": "Connection error",
+        "generic": "Could not send the message"
+    }
+}

@@ -7,6 +7,10 @@ import axios from "axios"
 import { useAuth } from "@clerk/react"
 import toast from "react-hot-toast"
 import PropertyMap from "../components/PropertyMap";
+import { useTranslation } from "react-i18next";
+import { serverMsg } from "../services/serverMsg";
+import { formatCurrency } from "../utils/format";
+import { useDisplayText } from "../hooks/useDisplayText";
 
 interface Review {
     id: string;
@@ -24,7 +28,10 @@ const PropertyDetails = () => {
 
     const { properties, currency, navigate, user, favoriteIds, toggleFavorite } = useAppContext()
     const { getToken } = useAuth()
+    const { t } = useTranslation(["property", "booking"])
     const [property, setProperty] = useState<any>(null)
+    const displayTitle = useDisplayText(property?.title)
+    const displayDescription = useDisplayText(property?.description)
     const { id } = useParams()
     const [checkInDate, setCheckInDate] = useState<any>(null)
     const [checkOutDate, setCheckOutDate] = useState<any>(null)
@@ -42,11 +49,11 @@ const PropertyDetails = () => {
     const checkAvailability = async () => {
         try {
             if (!checkInDate || !checkOutDate) {
-                toast.error("Please select check-in and check-out dates");
+                toast.error(t("property:errors.pickDates"));
                 return
             }
             if (checkInDate >= checkOutDate) {
-                toast.error("checkInDate should be less than checkOutDate");
+                toast.error(t("property:errors.badRange"));
                 return
             }
             const { data } = await axios.post(`/api/bookings/check-availability`, {
@@ -58,14 +65,14 @@ const PropertyDetails = () => {
             });
             if (data.isAvailable) {
                 setIsAvailable(true);
-                toast.success("Property is available");
+                toast.success(t("property:errors.available"));
             } else {
                 setIsAvailable(false);
-                toast.error("Property is not available for the selected dates");
+                toast.error(t("property:errors.notAvailable"));
             }
         } catch (error: any) {
             setIsAvailable(false);
-            toast.error(error.message);
+            toast.error(serverMsg(error, "property:errors.generic"));
         }
     };
 
@@ -84,21 +91,21 @@ const PropertyDetails = () => {
                         { bookingId: booking.id, contractType: "RENTAL" },
                         { headers: { Authorization: `Bearer ${await getToken()}` } }
                     );
-                    toast.success("Booking and contract created successfully");
+                    toast.success(t("booking:success.created"));
                     navigate(`/contracts/${contract.id}`)
                 } catch (contractError: any) {
-                    toast.success("Booking confirmed");
+                    toast.success(t("booking:success.confirmed"));
                     if (contractError.response?.status === 409) {
-                        toast.error("There is already a contract for this booking");
+                        toast.error(t("booking:errors.alreadySigned"));
                     } else {
-                        toast.error(contractError.response?.data?.message || "The contract couldn't be generated");
+                        toast.error(serverMsg(contractError, "booking:errors.generic"));
                     }
                     navigate('/my-bookings')
                 }
                 scrollTo(0, 0)
             }
         } catch (error: any) {
-            toast.error(error.response?.data?.message || error.message);
+            toast.error(serverMsg(error, "property:errors.generic"));
         }
     }
 
@@ -118,11 +125,11 @@ const PropertyDetails = () => {
     // Submit a new review
     const submitReview = async () => {
         if (!user) {
-            toast.error("Inicia sesión para dejar una reseña")
+            toast.error(t("property:errors.loginForReview"))
             return
         }
         if (newRating < 1 || newRating > 5) {
-            toast.error("La calificación debe ser entre 1 y 5")
+            toast.error(t("property:errors.ratingRange"))
             return
         }
         setSubmittingReview(true)
@@ -133,16 +140,15 @@ const PropertyDetails = () => {
             }, {
                 headers: { Authorization: `Bearer ${await getToken()}` },
             })
-            toast.success("Review published succesfully")
+            toast.success(t("property:success.reviewPublished"))
             setNewRating(5)
             setNewComment("")
             fetchReviews() // Recargar reviews
         } catch (error: any) {
-            const message = error.response?.data?.message || error.message
             if (error.response?.status === 409) {
-                toast.error("You have already published a review on this property")
+                toast.error(t("property:errors.reviewExists"))
             } else {
-                toast.error(message)
+                toast.error(serverMsg(error, "property:errors.generic"))
             }
         } finally {
             setSubmittingReview(false)
@@ -209,18 +215,18 @@ const PropertyDetails = () => {
         return stars
     }
 
-    // Formatear fecha relativa
+    // Formatear fecha relativa (localizada)
     const formatRelativeDate = (dateStr: string) => {
         const date = new Date(dateStr)
         const now = new Date()
         const diffMs = now.getTime() - date.getTime()
         const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24))
-        if (diffDays === 0) return "Hoy"
-        if (diffDays === 1) return "Ayer"
-        if (diffDays < 7) return `Hace ${diffDays} días`
-        if (diffDays < 30) return `Hace ${Math.floor(diffDays / 7)} semanas`
-        if (diffDays < 365) return `Hace ${Math.floor(diffDays / 30)} meses`
-        return `Hace ${Math.floor(diffDays / 365)} años`
+        if (diffDays === 0) return t("property:details.relToday")
+        if (diffDays === 1) return t("property:details.relYesterday")
+        if (diffDays < 7) return t("property:details.relDays", { n: diffDays })
+        if (diffDays < 30) return t("property:details.relWeeks", { n: Math.floor(diffDays / 7) })
+        if (diffDays < 365) return t("property:details.relMonths", { n: Math.floor(diffDays / 30) })
+        return t("property:details.relYears", { n: Math.floor(diffDays / 365) })
     }
 
     return (
@@ -245,11 +251,11 @@ const PropertyDetails = () => {
                                 <p className="text-gray-500 text-sm mt-1 ml-6">{property.location.neighborhood}</p>
                             )}
                             {property.location?.postalCode && (
-                                <p className="text-gray-400 text-xs ml-6">Postal Code: {property.location.postalCode}</p>
+                                <p className="text-gray-400 text-xs ml-6">{t('property:details.postal')}: {property.location.postalCode}</p>
                             )}
                             {property.location?.latitude != null && property.location?.longitude != null && (
                                 <div className="mt-4 relative overflow-hidden rounded-lg">
-                                    <h3 className="font-semibold text-lg mb-3">Map location</h3>
+                                    <h3 className="font-semibold text-lg mb-3">{t('property:details.map')}</h3>
                                     <PropertyMap
                                         properties={[property]}
                                         center={[property.location.latitude, property.location.longitude]}
@@ -259,9 +265,9 @@ const PropertyDetails = () => {
                                 </div>
                             )}
                             <div className='flex justify-between flex-col md:flex-row sm:items-end mt-3'>
-                                <h3 className='h3'>{property.title}</h3>
+                                <h3 className='h3'>{displayTitle || property.title}</h3>
                                 <div className='bold-18'>
-                                    {currency}{property.price.sale} | {currency}{property.price.rent}.00/night
+                                    {formatCurrency(property.price.sale, currency)} | {formatCurrency(property.price.rent, currency)}{t('listing:perNight')}
                                 </div>
                             </div>
                             {/* FAVORITE BUTTON */}
@@ -285,7 +291,7 @@ const PropertyDetails = () => {
                                         <path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z" />
                                     </svg>
                                     <span className='text-sm font-medium'>
-                                        {favoriteIds.has(property._id) ? 'Saved' : 'Save'}
+                                        {favoriteIds.has(property._id) ? t('common:favorites.saved') : t('common:favorites.save')}
                                     </span>
                                 </button>
                             )}
@@ -302,7 +308,7 @@ const PropertyDetails = () => {
                                     </div>
                                 ) : (
                                     <div className='flex items-center gap-x-2 text-amber-400 relative top-1.5'>
-                                        <h4 className='bold-18 relative bottom-0.5 text-black'>Sin reviews</h4>
+                                        <h4 className='bold-18 relative bottom-0.5 text-black'>{t('property:details.noReviews')}</h4>
                                     </div>
                                 )}
                             </div>
@@ -341,10 +347,10 @@ const PropertyDetails = () => {
                                 </p>
                             </div>
                             <div className="mt-6">
-                                <h4 className='h4 mt-4 mb-1'>Property Details</h4>
-                                <p className='mb-4'>{property.description}</p>
+                                <h4 className='h4 mt-4 mb-1'>{t('property:details.title')}</h4>
+                                <p className='mb-4'>{displayDescription || property.description}</p>
                             </div>
-                            <h4 className='h4 mt-6 mb-2'>Amenities</h4>
+                            <h4 className='h4 mt-6 mb-2'>{t('property:details.amenities')}</h4>
                             <div className='flex flex-wrap gap-3 items-start'>
                                 {property.amenities.map((amenity: any, index: any) => (
                                     <div
@@ -367,7 +373,7 @@ const PropertyDetails = () => {
                                             alt='calendarIcon'
                                             width={20}
                                         />
-                                        <label htmlFor='checkInDate'>Check In</label>
+                                        <label htmlFor='checkInDate'>{t('property:details.checkIn')}</label>
                                     </div>
                                     <input
                                         onChange={(e) => { setCheckInDate(e.target.value); setIsAvailable(null) }}
@@ -385,7 +391,7 @@ const PropertyDetails = () => {
                                             alt='calendarIcon'
                                             width={20}
                                         />
-                                        <label htmlFor='checkOutDate'>Check Out</label>
+                                        <label htmlFor='checkOutDate'>{t('property:details.checkOut')}</label>
                                     </div>
                                     <input
                                         onChange={(e) => { setCheckOutDate(e.target.value); setIsAvailable(null) }}
@@ -404,7 +410,7 @@ const PropertyDetails = () => {
                                             alt='userIcon'
                                             width={20}
                                         />
-                                        <label htmlFor='guests'>Guests</label>
+                                        <label htmlFor='guests'>{t('property:details.guests')}</label>
                                     </div>
                                     <input
                                         onChange={(e) => setGuests(Number(e.target.value))}
@@ -427,12 +433,12 @@ const PropertyDetails = () => {
                                         width={20}
                                         className='invert'
                                     />
-                                    <span>{isAvailable ? 'Book Property' : 'Check Dates'}</span>
+                                    <span>{isAvailable ? t('property:details.book') : t('property:details.check')}</span>
                                 </button>
                             </form>
                             {/* SECCION DE REVIEWS */}
                             <div className='mt-10 border-t border-slate-900/10 pt-8'>
-                                <h4 className='h4 mb-6'>Reviews & Ratings</h4>
+                                <h4 className='h4 mb-6'>{t('property:details.reviews')}</h4>
 
                                 {/* Resumen de rating */}
                                 {averageRating != null && reviewCount > 0 && (
@@ -443,7 +449,7 @@ const PropertyDetails = () => {
                                                 {renderReadonlyStars(Math.round(averageRating))}
                                             </div>
                                             <p className='text-xs text-gray-500 mt-1'>
-                                                {reviewCount} {reviewCount === 1 ? 'review' : 'reviews'}
+                                                {reviewCount} {reviewCount === 1 ? t('property:details.review') : t('property:details.reviewsPl')}
                                             </p>
                                         </div>
                                     </div>
@@ -451,10 +457,10 @@ const PropertyDetails = () => {
 
                                 {/* Lista de reviews */}
                                 {reviewsLoading ? (
-                                    <p className='text-gray-500 text-sm'>Loading reviews...</p>
+                                    <p className='text-gray-500 text-sm'>{t('property:details.loadingReviews')}</p>
                                 ) : reviews.length === 0 ? (
                                     <p className='text-gray-500 text-sm mb-6'>
-                                        There aren't any reviews yet. Be the first to leave a review.
+                                        {t('property:details.emptyReviews')}
                                     </p>
                                 ) : (
                                     <div className='space-y-4 mb-8'>
@@ -474,7 +480,7 @@ const PropertyDetails = () => {
                                                             <h5 className='font-medium text-sm'>{review.userName}</h5>
                                                             {review.isVerified && (
                                                                 <span className='text-xs bg-green-100 text-green-700 px-1.5 py-0.5 rounded'>
-                                                                    Verified
+                                                                    {t('property:details.verified')}
                                                                 </span>
                                                             )}
                                                         </div>
@@ -501,9 +507,9 @@ const PropertyDetails = () => {
                                 {/* Formulario para nueva review */}
                                 {user ? (
                                     <div className='p-4 rounded-lg border border-slate-900/10 bg-secondary/5'>
-                                        <h5 className='font-medium mb-3'>Leave your review</h5>
+                                        <h5 className='font-medium mb-3'>{t('property:details.leave')}</h5>
                                         <div className='flex items-center gap-2 mb-3'>
-                                            <span className='text-sm text-gray-500'>Rating:</span>
+                                            <span className='text-sm text-gray-500'>{t('property:details.rating')}:</span>
                                             <div className='flex items-center gap-1'>
                                                 {renderInteractiveStars()}
                                             </div>
@@ -514,7 +520,7 @@ const PropertyDetails = () => {
                                         <textarea
                                             value={newComment}
                                             onChange={(e) => setNewComment(e.target.value)}
-                                            placeholder="Tell us about your experience (optional)"
+                                            placeholder={t('property:details.commentPh')}
                                             rows={3}
                                             maxLength={2000}
                                             className='w-full p-3 border border-gray-300 rounded-lg text-sm outline-none focus:border-secondary resize-none'
@@ -528,13 +534,13 @@ const PropertyDetails = () => {
                                                 disabled={submittingReview || newRating < 1}
                                                 className='btn-secondary rounded-lg px-6 py-1.5 text-sm disabled:opacity-50'
                                             >
-                                                {submittingReview ? 'Sending...' : 'Publish'}
+                                                {submittingReview ? t('property:details.sending') : t('property:details.publish')}
                                             </button>
                                         </div>
                                     </div>
                                 ) : (
                                     <p className='text-sm text-gray-500'>
-                                        Login to make a review.
+                                        {t('property:details.loginToReview')}
                                     </p>
                                 )}
                             </div>
@@ -542,23 +548,23 @@ const PropertyDetails = () => {
                         {/* RIGHT SIDE */}
                         <div className='flex-1 max-w-sm'>
                             <div className='p-6 rounded-xl border border-slate-900/10'>
-                                <h4 className='h4 mb-3'>Contact Agent</h4>
+                                <h4 className='h4 mb-3'>{t('property:details.contact')}</h4>
                                 <form className='flex flex-col gap-4'>
                                     <input
                                         type="text"
-                                        placeholder="Your Name"
+                                        placeholder={t('property:details.namePh')}
                                         className='p-2 py-1 border border-gray-300 rounded-md text-sm'
                                         required
                                     />
                                     <input
                                         type="text"
-                                        placeholder="Your Email"
+                                        placeholder={t('property:details.emailPh')}
                                         className='p-2 py-1 border border-gray-300 rounded-md text-sm'
                                         required
                                     />
                                     <textarea
                                         rows={4}
-                                        placeholder="Your Message"
+                                        placeholder={t('property:details.messagePh')}
                                         className='p-2 py-1 border border-gray-300 rounded-md text-sm'
                                         required
                                     />
@@ -566,20 +572,20 @@ const PropertyDetails = () => {
                                         type='submit'
                                         className='btn-secondary rounded-lg py-1.5'
                                     >
-                                        Send Message
+                                        {t('property:details.sendMessage')}
                                     </button>
                                 </form>
                                 <h4 className='h4 mb-3 mt-8'>
-                                    For Buying Contact
+                                    {t('property:details.buyingContact')}
                                 </h4>
                                 <div className='text-sm w-80 divide-y divide-gray-500/30 border border-gray-500/30 rounded'>
                                     <div className='flex items-start justify-between p-3'>
                                         <div>
                                             <div className='flex items-center space-x-2'>
                                                 <h5>{property.agency.name}</h5>
-                                                <p>Agency</p>
+                                                <p>{t('property:details.agency')}</p>
                                             </div>
-                                            <p>Agency Office</p>
+                                            <p>{t('property:details.agencyOffice')}</p>
                                         </div>
                                         <img
                                             src={property.agency.owner.image}
@@ -614,7 +620,7 @@ const PropertyDetails = () => {
                                                 alt='mailIcon'
                                                 width={19}
                                             />
-                                            Send Email
+                                            {t('property:details.sendEmail')}
                                         </button>
                                         <button className='flex items-center justify-center gap-2 w-1/2 py-3 cursor-pointer'>
                                             <img
@@ -622,7 +628,7 @@ const PropertyDetails = () => {
                                                 alt='phoneIcon'
                                                 width={19}
                                             />
-                                            Call Now
+                                            {t('property:details.callNow')}
                                         </button>
                                     </div>
                                 </div>

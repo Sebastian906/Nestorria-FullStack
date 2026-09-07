@@ -66,6 +66,8 @@ public class SecurityConfig {
                     // Stripe webhook debe ir ANTES de anyRequest (si no, IllegalStateException)
                     .requestMatchers(HttpMethod.POST, "/api/payments/stripe/webhook").permitAll()
                     .requestMatchers("/ws").permitAll()
+                    // Translate público (solo lectura, rate-limit ai por IP, max 2000 chars, fallback a original)
+                    .requestMatchers(HttpMethod.POST, "/api/ai/translate").permitAll()
                     // /api/ai/admin/**: role check done in AdminAiController (DB-stored role, not JWT claim)
                     .anyRequest().authenticated();
                 // Only permit webhook endpoint if STRIPE_WEBHOOK_SECRET is configured

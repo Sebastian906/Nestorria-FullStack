@@ -5,6 +5,8 @@ import type { Property } from "../assets/data";
 import "leaflet/dist/leaflet.css";
 import L from "leaflet";
 import { useEffect, useState } from "react";
+import { formatNumber } from "../utils/format";
+import { useTranslation } from "react-i18next";
 
 // Fix para iconos de Leaflet con bundlers modernos
 delete (L.Icon.Default.prototype as any)._getIconUrl;
@@ -94,6 +96,7 @@ export default function PropertyMap({
     routeFrom,
     routeTo,
 }: PropertyMapProps) {
+    const { t } = useTranslation('listing');
     // Estado de la ruta cargada desde el backend
     const [route, setRoute] = useState<PropertyRoute | null>(null);
 
@@ -160,13 +163,13 @@ export default function PropertyMap({
                             <h3 className="font-semibold text-sm">{property.title}</h3>
                             <p className="text-gray-500 text-xs">{property.city}</p>
                             <p className="font-bold text-secondary text-sm mt-1">
-                                ${property.price.sale.toLocaleString()} sale
+                                {`${formatNumber(property.price.sale)}`}
                             </p>
                             <Link
                                 to={`/listing/${pid}`}
                                 className="text-xs text-blue-500 hover:underline mt-1 block"
                             >
-                                Check details
+                                {t('map.checkDetails')}
                             </Link>
                         </div>
                     </Popup>
@@ -178,7 +181,7 @@ export default function PropertyMap({
             {propertiesWithCoords.length === 0 && (
                 <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 z-1000 bg-white px-4 py-2 rounded-lg shadow-lg">
                     <p className="text-gray-500 text-sm">
-                        There are no properties with valid coordinates to display on the map.
+                        {t('map.noCoords')}
                     </p>
                 </div>
             )}

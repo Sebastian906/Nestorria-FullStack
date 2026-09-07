@@ -2,9 +2,12 @@ import { useState } from 'react';
 import { assets } from '../assets/data'
 import { useAppContext } from '../context/AppContext'
 import { useAuth } from '@clerk/react';
+import { useTranslation } from 'react-i18next';
 import axios from "axios"
 
 const Hero = () => {
+
+    const { t } = useTranslation('home');
 
     const { navigate, searchedCities, setSearchedCities } = useAppContext();
     const { getToken } = useAuth()
@@ -45,7 +48,7 @@ const Hero = () => {
                     {/* CONTENT */}
                     <div className='text-white flex flex-col mt-12'>
                         <button className='max-w-80 flex items-center space-x-3 border border-white medium-13 rounded-full px-4 pr-0.5 py-1 cursor-pointer'>
-                            <span>Explore how we simplify stays and spaces</span>
+                            <span>{t('hero.eyebrow')}</span>
                             <span className='flexCenter size-6 p-1 rounded-full bg-white'>
                                 <img
                                     src={assets.right}
@@ -55,7 +58,7 @@ const Hero = () => {
                             </span>
                         </button>
                         <h2 className='h2 capitalize leading-tight mt-3 my-2 text-white'>
-                            Explore<span className='bg-linear-to-r from-secondary to-white bg-clip-text text-transparent'> exceptional properties</span> located in stunning surroundings.
+                            {t('hero.titleA')}<span className='bg-linear-to-r from-secondary to-white bg-clip-text text-transparent'> {t('hero.titleB')}</span> {t('hero.titleC')}
                         </h2>
                     </div>
                     {/* SEARCH BOOKING FORM */}
@@ -70,7 +73,7 @@ const Hero = () => {
                                     alt='pinIcon'
                                     width={20}
                                 />
-                                <label htmlFor='destinationInput'>Destination</label>
+                                <label htmlFor='destinationInput'>{t('hero.destination')}</label>
                             </div>
                             <input
                                 onChange={(e) => setDestination(e.target.value)}
@@ -79,7 +82,7 @@ const Hero = () => {
                                 id='destinationInput'
                                 type='text'
                                 className='rounded border border-gray-200 px-3 py-1.5 mt-1.5 text-sm outline-none'
-                                placeholder='Type here...'
+                                placeholder={t('common:search.placeholder')}
                                 required
                             />
                             <datalist id='destinations'>
@@ -98,7 +101,7 @@ const Hero = () => {
                                     alt='calendarIcon'
                                     width={20}
                                 />
-                                <label htmlFor='checkIn'>Check In</label>
+                                <label htmlFor='checkIn'>{t('hero.checkIn')}</label>
                             </div>
                             <input
                                 type='date'
@@ -113,7 +116,7 @@ const Hero = () => {
                                     alt='calendarIcon'
                                     width={20}
                                 />
-                                <label htmlFor='checkOut'>Check Out</label>
+                                <label htmlFor='checkOut'>{t('hero.checkOut')}</label>
                             </div>
                             <input
                                 type='date'
@@ -128,7 +131,7 @@ const Hero = () => {
                                     alt='userIcon'
                                     width={20}
                                 />
-                                <label htmlFor='guests'>Guests</label>
+                                <label htmlFor='guests'>{t('hero.guests')}</label>
                             </div>
                             <input
                                 type='number'
@@ -149,7 +152,7 @@ const Hero = () => {
                                 width={20}
                                 className='invert'
                             />
-                            <span>Search</span>
+                            <span>{t('hero.search')}</span>
                         </button>
                     </form>
                 </div>

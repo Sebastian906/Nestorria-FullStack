@@ -1,0 +1,25 @@
+{
+    "buttons": {
+        "login": "Login",
+        "registerAgency": "Register Agency",
+        "dashboard": "Dashboard"
+    },
+    "search": {
+        "placeholder": "Type here..."
+    },
+    "a11y": {
+        "language": "Language"
+    },
+    "errors": {
+        "loadProperties": "Couldn't load properties",
+        "loadProfile": "Couldn't load your profile",
+        "updateFavorite": "Couldn't update favorite",
+        "loginForFavorites": "Sign in to add favorites"
+    },
+    "favorites": {
+        "added": "Added to favorites",
+        "removed": "Removed from favorites",
+        "save": "Save",
+        "saved": "Saved"
+    }
+}

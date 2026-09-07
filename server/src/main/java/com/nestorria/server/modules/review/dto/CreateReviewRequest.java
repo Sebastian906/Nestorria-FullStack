@@ -6,5 +6,6 @@ import jakarta.validation.constraints.Size;
 
 public record CreateReviewRequest(
     @Min(1) @Max(5) int rating,
-    @Size(max = 2000) String comment
+    @Size(max = 2000) String comment,
+    String uiLocale
 ) {}

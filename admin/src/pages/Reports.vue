@@ -1,11 +1,14 @@
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, computed } from 'vue'
 import { useAppContext } from '../composables/useAppContext'
 import { useToast } from 'vue-toastification'
+import { useI18n } from 'vue-i18n'
+import { serverMsg } from '../utils/serverMsg.js'
 import axios from 'axios'
 
 const { auth, roleLoaded } = useAppContext()
 const toast = useToast()
+const { t } = useI18n()
 
 // Estado
 const loading = ref(false)
@@ -14,16 +17,16 @@ const customStartDate = ref('')
 const customEndDate = ref('')
 const reportType = ref('bookings')
 
-// Períodos predefinidos
-const periods = [
-    { value: 'current-month', label: 'Mes Actual' },
-    { value: 'previous-month', label: 'Mes Anterior' },
-    { value: 'current-year', label: 'Año Actual' },
-    { value: 'previous-year', label: 'Año Anterior' },
-    { value: 'last-3-months', label: 'Últimos 3 Meses' },
-    { value: 'last-6-months', label: 'Últimos 6 Meses' },
-    { value: 'custom', label: 'Personalizado' }
-]
+// Períodos predefinidos (traducidos, reactivos al idioma)
+const periods = computed(() => [
+    { value: 'current-month', label: t('reports.pCurrentMonth') },
+    { value: 'previous-month', label: t('reports.pPreviousMonth') },
+    { value: 'current-year', label: t('reports.pCurrentYear') },
+    { value: 'previous-year', label: t('reports.pPreviousYear') },
+    { value: 'last-3-months', label: t('reports.pLast3') },
+    { value: 'last-6-months', label: t('reports.pLast6') },
+    { value: 'custom', label: t('reports.pCustom') },
+])
 
 // Formatea Date a YYYY-MM-DD usando timezone local (no UTC)
 const toLocalDateStr = (d) => {
@@ -133,19 +136,11 @@ const downloadReport = async (format) => {
         document.body.removeChild(link)
         window.URL.revokeObjectURL(downloadUrl)
         
-        toast.success(`Reporte ${format.toUpperCase()} descargado exitosamente`)
-        
+        toast.success(t('reports.downloaded', { format: format.toUpperCase() }))
+
     } catch (error) {
         console.error('Error downloading report:', error)
-        let message = 'Error al descargar el reporte'
-        if (error.response?.data instanceof Blob && error.response.data.size < 1024) {
-            try {
-                message = await error.response.data.text()
-            } catch { /* ignore parse error */ }
-        } else if (error.response?.data?.message) {
-            message = error.response.data.message
-        }
-        toast.error(message)
+        toast.error(serverMsg(error, 'reports.errors.generic'))
     } finally {
         loading.value = false
     }
@@ -163,38 +158,38 @@ const isCustomDateValid = () => {
     <div class="px-4 md:px-8 py-6 xl:py-8 m-1 sm:m-3 h-[97vh] overflow-y-scroll lg:w-11/12 bg-white shadow rounded-xl">
         <!-- Header -->
         <div class="mb-6">
-            <h1 class="text-2xl font-bold text-gray-800 mb-2">Reportes</h1>
-            <p class="text-gray-600">Descarga informes de bookings y propiedades en formato Excel o PDF</p>
+            <h1 class="text-2xl font-bold text-gray-800 mb-2">{{ t('reports.title') }}</h1>
+            <p class="text-gray-600">{{ t('reports.subtitle') }}</p>
         </div>
 
         <!-- Tipo de Reporte -->
         <div class="mb-6">
-            <label class="block text-sm font-medium text-gray-700 mb-2">Tipo de Reporte</label>
+            <label class="block text-sm font-medium text-gray-700 mb-2">{{ t('reports.type') }}</label>
             <div class="flex gap-4">
                 <button
                     @click="reportType = 'bookings'"
-                    :class="reportType === 'bookings' 
-                        ? 'bg-blue-600 text-white' 
+                    :class="reportType === 'bookings'
+                        ? 'bg-blue-600 text-white'
                         : 'bg-gray-100 text-gray-700 hover:bg-gray-200'"
                     class="px-4 py-2 rounded-lg font-medium transition-colors"
                 >
-                    Bookings
+                    {{ t('reports.bookings') }}
                 </button>
                 <button
                     @click="reportType = 'properties'"
-                    :class="reportType === 'properties' 
-                        ? 'bg-blue-600 text-white' 
+                    :class="reportType === 'properties'
+                        ? 'bg-blue-600 text-white'
                         : 'bg-gray-100 text-gray-700 hover:bg-gray-200'"
                     class="px-4 py-2 rounded-lg font-medium transition-colors"
                 >
-                    Propiedades
+                    {{ t('reports.properties') }}
                 </button>
             </div>
         </div>
 
         <!-- Período -->
         <div class="mb-6">
-            <label class="block text-sm font-medium text-gray-700 mb-2">Período</label>
+            <label class="block text-sm font-medium text-gray-700 mb-2">{{ t('reports.period') }}</label>
             <select 
                 v-model="selectedPeriod"
                 class="w-full md:w-64 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
@@ -208,7 +203,7 @@ const isCustomDateValid = () => {
         <!-- Fechas Personalizadas -->
         <div v-if="selectedPeriod === 'custom'" class="mb-6 flex flex-wrap gap-4">
             <div>
-                <label class="block text-sm font-medium text-gray-700 mb-2">Fecha Inicio</label>
+                <label class="block text-sm font-medium text-gray-700 mb-2">{{ t('reports.from') }}</label>
                 <input
                     v-model="customStartDate"
                     type="date"
@@ -216,7 +211,7 @@ const isCustomDateValid = () => {
                 />
             </div>
             <div>
-                <label class="block text-sm font-medium text-gray-700 mb-2">Fecha Fin</label>
+                <label class="block text-sm font-medium text-gray-700 mb-2">{{ t('reports.to') }}</label>
                 <input
                     v-model="customEndDate"
                     type="date"
@@ -236,8 +231,8 @@ const isCustomDateValid = () => {
                 <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                 </svg>
-                <span v-if="!loading">Descargar XLSX</span>
-                <span v-else>Descargando...</span>
+                <span v-if="!loading">{{ t('reports.downloadXlsx') }}</span>
+                <span v-else>{{ t('reports.downloading') }}</span>
             </button>
 
             <!-- Botón PDF (Rojo) -->
@@ -249,26 +244,26 @@ const isCustomDateValid = () => {
                 <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
                 </svg>
-                <span v-if="!loading">Descargar PDF</span>
-                <span v-else>Descargando...</span>
+                <span v-if="!loading">{{ t('reports.downloadPdf') }}</span>
+                <span v-else>{{ t('reports.downloading') }}</span>
             </button>
         </div>
 
         <!-- Info adicional -->
         <div class="mt-8 p-4 bg-green-100 rounded-lg">
-            <h3 class="font-medium text-gray-800 mb-2">Información del Reporte</h3>
+            <h3 class="font-medium text-gray-800 mb-2">{{ t('reports.info') }}</h3>
             <ul class="text-sm text-gray-600 space-y-1">
                 <li v-if="reportType === 'bookings'">
-                    • El reporte incluye: ID, fecha, cliente, propiedad, contrato, fechas de estadía, noches, monto y estado
+                    • {{ t('reports.includesBookings') }}
                 </li>
                 <li v-if="reportType === 'properties'">
-                    • El reporte incluye: ID, título, ciudad, país, tipo, precios, contratos, revenue y disponibilidad
+                    • {{ t('reports.includesProperties') }}
                 </li>
                 <li>
-                    • Período seleccionado: <span class="font-medium">{{ periods.find(p => p.value === selectedPeriod)?.label }}</span>
+                    • {{ t('reports.selectedPeriod') }} <span class="font-medium">{{ periods.find(p => p.value === selectedPeriod)?.label }}</span>
                 </li>
                 <li v-if="selectedPeriod === 'custom' && customStartDate && customEndDate">
-                    • Desde {{ customStartDate }} hasta {{ customEndDate }}
+                    • {{ t('reports.range', { from: customStartDate, to: customEndDate }) }}
                 </li>
             </ul>
         </div>

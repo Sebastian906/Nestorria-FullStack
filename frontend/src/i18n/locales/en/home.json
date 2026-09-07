@@ -1,0 +1,80 @@
+{
+    "hero": {
+        "eyebrow": "Explore how we simplify stays and spaces",
+        "titleA": "Explore",
+        "titleB": "exceptional properties",
+        "titleC": "located in stunning surroundings.",
+        "search": "Search",
+        "destination": "Destination",
+        "checkIn": "Check In",
+        "checkOut": "Check Out",
+        "guests": "Guests"
+    },
+    "featured": {
+        "eyebrow": "Your New Home Awaits!",
+        "title": "Discover Your Place Here",
+        "showing": "Displaying 1-9",
+        "from": "from 3k listings"
+    },
+    "cta": {
+        "badge": "Trusted by Experts",
+        "title": "Sell or Rent Faster with Expert Strategies and Real Support!",
+        "subtitle": "Achieve your goals faster with personalized strategies, hands-on support, and results that speak for themselves.",
+        "action": "Get Started"
+    },
+    "faq": {
+        "experts": "Trusted Real Estate Experts",
+        "expertsBody": "Trust, clarity, and simplicity are at the core of everything we do to make your property journey easy.",
+        "title1": "Homes Made for Living",
+        "title2": "Simplifying Your Property Search Every Step",
+        "para": "From finding the right location to finalizing the deal, we ensure your real estate journey is smooth, efficient, and fullfilling.",
+        "q1": "Lightning-Fast Booking",
+        "a1": "Designed for speed — instant search and seamless property viewing.",
+        "q2": "Fully Customizable Homes",
+        "a2": "Easily change layouts, features, and designs to fit your lifestyle.",
+        "q3": "Responsive by Location",
+        "a3": "Every property is accessible by area — no extra effort required.",
+        "q4": "Real Estate Powered",
+        "a4": "Backed using trusted property data — no extra agents or steps needed.",
+        "q5": "Smart Home Support",
+        "a5": "All houses come ready with modern smart living features included."
+    },
+    "about": {
+        "title1": "Your Trusted Real Estate Partner",
+        "title2": "Helping You Every Step of the Way",
+        "para": "Trust, clarity, and simplicity are at the core of everything we do to make your property journey easy.",
+        "f1": "In-app scheduling for property viewings",
+        "f2": "Real-time market price update",
+        "f3": "User-friendly interface for smooth navigation",
+        "f4": "Access to off-market properties",
+        "trustedBy": "Trusted By",
+        "users": "users"
+    },
+    "testimonial": {
+        "postedOn": "Posted on",
+        "quote": "Radiant made undercutting all of our competitors an absolute breeze."
+    },
+    "footer": {
+        "tagline": "Experience modern living through well-presented properties, professional support, and thoughtfully designed spaces.",
+        "company": "COMPANY",
+        "support": "SUPPORT",
+        "stayUpdated": "STAY UPDATED",
+        "newsletter": "Subscribe to our newsletter for inspiration and special offers.",
+        "emailPh": "Your email",
+        "subscribe": "Subscribe",
+        "rights": "All rights reserved.",
+        "about": "About",
+        "careers": "Careers",
+        "press": "Press",
+        "blog": "Blog",
+        "partners": "Partners",
+        "help": "Help Center",
+        "safety": "Safety Information",
+        "cancellation": "Cancellation Options",
+        "contactUs": "Contact Us",
+        "accessibility": "Accessibility",
+        "privacy": "Privacy",
+        "terms": "Terms",
+        "sitemap": "Sitemap"
+    }
+}

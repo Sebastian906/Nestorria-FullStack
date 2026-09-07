@@ -1,7 +1,9 @@
 import { assets } from "../assets/data"
 import Title from "./Title"
+import { useTranslation } from "react-i18next"
 
 const About = () => {
+    const { t } = useTranslation('home');
     return (
         <section className='max-padd-container py-16 xl:py-28 pt-36!'>
             {/* CONTAINER */}
@@ -9,9 +11,9 @@ const About = () => {
                 {/* INFO - LEFT SIDE */}
                 <div className='flex-1'>
                     <Title
-                        title1={'Your Trusted Real Estate Partner'}
-                        title2={'Helping You Every Step of the Way'}
-                        para={'Trust, clarity, and simplicity are at the core of everything we do to make your propety journey easy.'}
+                        title1={t('about.title1')}
+                        title2={t('about.title2')}
+                        para={t('about.para')}
                         titleStyles={'mb-10'}
                         title2Styles={''}
                         paraStyles={''}
@@ -23,7 +25,7 @@ const About = () => {
                                 alt='Calendar'
                                 width={20}
                             />
-                            <p>In-app scheduling for property viewings</p>
+                            <p>{t('about.f1')}</p>
                         </div>
                         <div className='flex gap-3'>
                             <img
@@ -31,7 +33,7 @@ const About = () => {
                                 alt='Graph'
                                 width={20}
                             />
-                            <p>Real-time market price update</p>
+                            <p>{t('about.f2')}</p>
                         </div>
                         <div className='flex gap-3'>
                             <img
@@ -39,7 +41,7 @@ const About = () => {
                                 alt='Map'
                                 width={20}
                             />
-                            <p>User-friendly interface for smooth navigation</p>
+                            <p>{t('about.f3')}</p>
                         </div>
                         <div className='flex gap-3'>
                             <img
@@ -47,7 +49,7 @@ const About = () => {
                                 alt='Pound'
                                 width={20}
                             />
-                            <p>Access to off-market properties</p>
+                            <p>{t('about.f4')}</p>
                         </div>
                     </div>
                     {/* RATING */}
@@ -104,9 +106,9 @@ const About = () => {
                                 <p className='text-gray-600 medium-16 ml-2'>5.0</p>
                             </div>
                             <p className='text-sm text-gray-500'>
-                                Trusted By {' '}
+                                {t('about.trustedBy')} {' '}
                                 <span className='font-medium text-gray-800'>100.000+</span>{' '}
-                                users
+                                {t('about.users')}
                             </p>
                         </div>
                     </div>

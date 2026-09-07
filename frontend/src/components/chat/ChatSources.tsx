@@ -1,13 +1,16 @@
+import { useTranslation } from "react-i18next";
+
 interface ChatSourcesProps {
     sources: string[]
 }
 
 const ChatSources = ({ sources }: ChatSourcesProps) => {
+    const { t } = useTranslation('chat');
     if (!sources || sources.length === 0) return null
 
     return (
         <div className="mt-2 pt-2 border-t border-gray-200/50">
-            <p className="text-[11px] text-gray-400 mb-1 font-medium uppercase tracking-wide">Sources</p>
+            <p className="text-[11px] text-gray-400 mb-1 font-medium uppercase tracking-wide">{t('sources')}</p>
             <div className="flex flex-wrap gap-1">
                 {sources.map((source, i) => (
                     <span

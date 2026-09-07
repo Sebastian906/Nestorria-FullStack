@@ -1,4 +1,5 @@
 import { useState, useRef, type KeyboardEvent } from 'react'
+import { useTranslation } from 'react-i18next'
 
 interface ChatInputProps {
     onSend: (message: string) => void
@@ -6,6 +7,7 @@ interface ChatInputProps {
 }
 
 const ChatInput = ({ onSend, disabled }: ChatInputProps) => {
+    const { t } = useTranslation('chat')
     const [value, setValue] = useState('')
     const textareaRef = useRef<HTMLTextAreaElement>(null)
 
@@ -43,7 +45,7 @@ const ChatInput = ({ onSend, disabled }: ChatInputProps) => {
                     onChange={(e) => setValue(e.target.value)}
                     onKeyDown={handleKeyDown}
                     onInput={handleInput}
-                    placeholder={disabled ? 'Waiting for response...' : 'Type your message...'}
+                    placeholder={disabled ? t('waiting') : t('input')}
                     disabled={disabled}
                     rows={1}
                     className="flex-1 bg-transparent text-sm resize-none outline-none placeholder:text-gray-400 disabled:opacity-50 max-h-[120px]"
@@ -52,7 +54,7 @@ const ChatInput = ({ onSend, disabled }: ChatInputProps) => {
                     onClick={handleSend}
                     disabled={disabled || !value.trim()}
                     className="p-2 rounded-lg bg-secondary text-gray-900 hover:bg-secondary/80 disabled:opacity-30 disabled:cursor-not-allowed transition-colors flex-shrink-0"
-                    aria-label="Send message"
+                    aria-label={t('input')}
                 >
                     <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                         <path d="m22 2-7 20-4-9-9-4Z" /><path d="M22 2 11 13" />

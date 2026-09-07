@@ -1,0 +1,17 @@
+{
+    "errors": {
+        "auth": "Error de autenticación. Inicie sesión nuevamente.",
+        "generic": "Ocurrió un error inesperado"
+    },
+    "actions": {
+        "save": "Guardar",
+        "cancel": "Cancelar",
+        "saving": "Guardando..."
+    },
+    "a11y": {
+        "language": "Idioma"
+    },
+    "ph": {
+        "typeHere": "Escriba aquí..."
+    }
+}

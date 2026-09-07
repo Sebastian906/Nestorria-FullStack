@@ -1,0 +1,23 @@
+{
+    "errors": {
+        "loadFail": "Could not load categories",
+        "nameRequired": "Name is required",
+        "badSlug": "Invalid slug: lowercase, digits and single hyphens only",
+        "auth": "Authentication error. Please log in again.",
+        "generic": "Could not save the category",
+        "agencyExists": "User already has a registered agency"
+    },
+    "form": {
+        "newCategory": "New category",
+        "newSubcategory": "New subcategory",
+        "name": "Name",
+        "slug": "Slug",
+        "description": "Description",
+        "generateFromName": "Generate from name",
+        "slugHint": "Lowercase, digits and single hyphens only"
+    },
+    "success": {
+        "created": "Category created"
+    },
+    "treeEmpty": "No categories yet."
+}

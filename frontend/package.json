@@ -14,14 +14,18 @@
     "coverage": "vitest run --coverage"
   },
   "dependencies": {
+    "@clerk/localizations": "^4.16.0",
     "@clerk/react": "^6.7.1",
     "@stomp/stompjs": "^7.3.0",
     "@tailwindcss/vite": "^4.2.4",
     "axios": "^1.18.0",
+    "i18next": "^26.4.2",
+    "i18next-browser-languagedetector": "^8.2.1",
     "leaflet": "^1.9.4",
     "react": "^19.2.5",
     "react-dom": "^19.2.5",
     "react-hot-toast": "^2.6.0",
+    "react-i18next": "^17.0.13",
     "react-leaflet": "^5.0.0",
     "react-router-dom": "^7.15.1",
     "swiper": "^12.1.4",

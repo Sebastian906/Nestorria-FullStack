@@ -1,0 +1,25 @@
+{
+    "buttons": {
+        "login": "Iniciar sesión",
+        "registerAgency": "Registrar agencia",
+        "dashboard": "Panel"
+    },
+    "search": {
+        "placeholder": "Escribe aquí..."
+    },
+    "a11y": {
+        "language": "Idioma"
+    },
+    "errors": {
+        "loadProperties": "No se pudieron cargar las propiedades",
+        "loadProfile": "No se pudo cargar tu perfil",
+        "updateFavorite": "No se pudo actualizar favorito",
+        "loginForFavorites": "Inicia sesión para agregar favoritos"
+    },
+    "favorites": {
+        "added": "Agregado a favoritos",
+        "removed": "Eliminado de favoritos",
+        "save": "Guardar",
+        "saved": "Guardado"
+    }
+}

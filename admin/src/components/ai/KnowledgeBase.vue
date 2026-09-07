@@ -1,9 +1,12 @@
 <script setup>
 import { ref, onMounted } from 'vue'
 import { useAuth } from '@clerk/vue'
+import { useI18n } from 'vue-i18n'
+import { serverMsg } from '../../utils/serverMsg.js'
 import { aiService } from '../../services/aiService'
 
 const { getToken } = useAuth()
+const { t } = useI18n()
 const documents = ref([])
 const loading = ref(true)
 const uploading = ref(false)
@@ -22,7 +25,7 @@ async function loadDocuments() {
         documents.value = data.documents || []
     } catch (e) {
         console.error('Failed to load documents', e)
-        error.value = 'Failed to load documents'
+        error.value = serverMsg(e, 'ai.kb.loadFail')
     } finally {
         loading.value = false
     }
@@ -39,7 +42,7 @@ async function uploadDocument(event) {
         await loadDocuments()
     } catch (e) {
         console.error('Upload failed', e)
-        error.value = 'Upload failed'
+        error.value = serverMsg(e, 'ai.kb.uploadFail')
     } finally {
         uploading.value = false
     }
@@ -59,15 +62,15 @@ async function deleteDoc(docId) {
 
 <template>
     <div class="border rounded-lg p-4 bg-white shadow-sm">
-        <h3 class="font-semibold mb-3">Knowledge Base</h3>
+        <h3 class="font-semibold mb-3">{{ t('ai.kb.title') }}</h3>
 
-        <div v-if="loading" class="text-gray-500">Loading documents...</div>
+        <div v-if="loading" class="text-gray-500">{{ t('ai.kb.loading') }}</div>
 
         <div v-else-if="error" class="text-red-500 text-sm">{{ error }}</div>
 
         <div v-else>
             <div v-if="documents.length === 0" class="text-gray-400 text-sm">
-                No documents ingested yet.
+                {{ t('ai.kb.empty') }}
             </div>
             <div v-for="doc in documents" :key="doc.id" class="flex justify-between items-center py-2 border-b last:border-0">
                 <div>
@@ -75,12 +78,12 @@ async function deleteDoc(docId) {
                     <span class="text-sm text-gray-500 ml-2">{{ doc.chunks }} chunks</span>
                 </div>
                 <button @click="deleteDoc(doc.id)" class="text-red-500 text-sm hover:underline">
-                    Delete
+                    {{ t('ai.kb.delete') }}
                 </button>
             </div>
 
             <div class="mt-4">
-                <label class="block text-sm text-gray-600 mb-1">Upload document</label>
+                <label class="block text-sm text-gray-600 mb-1">{{ t('ai.kb.upload') }}</label>
                 <input type="file" @change="uploadDocument" class="text-sm" :disabled="uploading" />
             </div>
         </div>

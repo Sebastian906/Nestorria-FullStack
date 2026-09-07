@@ -2,6 +2,8 @@
 import { ref, onMounted, watch } from 'vue'
 import { useAuth } from '@clerk/vue'
 import { useToast } from 'vue-toastification'
+import { useI18n } from 'vue-i18n'
+import { serverMsg } from '../../utils/serverMsg.js'
 import { aiService } from '../../services/aiService'
 
 const props = defineProps({
@@ -10,6 +12,7 @@ const props = defineProps({
 
 const { getToken } = useAuth()
 const toast = useToast()
+const { t } = useI18n()
 
 const versions = ref([])
 const v1 = ref('')
@@ -25,7 +28,7 @@ const fetchVersions = async () => {
         const data = await aiService.getModelVersions(props.modelName, token)
         versions.value = data.versions || []
     } catch (e) {
-        toast.error('Failed to load versions')
+        toast.error(serverMsg(e, 'ai.errors.versionsFail'))
     } finally {
         loadingVersions.value = false
     }
@@ -33,7 +36,7 @@ const fetchVersions = async () => {
 
 const compare = async () => {
     if (!v1.value || !v2.value) {
-        toast.warning('Select two versions to compare')
+        toast.warning(t('ai.errors.versionsFail'))
         return
     }
     loading.value = true
@@ -42,7 +45,7 @@ const compare = async () => {
         const token = await getToken.value()
         result.value = await aiService.compareVersions(props.modelName, v1.value, v2.value, token)
     } catch (e) {
-        toast.error(e.response?.data?.detail || 'Comparison failed')
+        toast.error(serverMsg(e, 'ai.errors.compareFail'))
     } finally {
         loading.value = false
     }
@@ -59,29 +62,29 @@ watch(() => props.modelName, () => {
 
 <template>
     <div class="border rounded-lg p-4 bg-white shadow-sm">
-        <h3 class="font-semibold mb-3">Compare Versions — {{ modelName }}</h3>
+        <h3 class="font-semibold mb-3">{{ t('ai.compare.title') }} — {{ modelName }}</h3>
 
-        <div v-if="loadingVersions" class="text-gray-500 text-sm">Loading versions...</div>
+        <div v-if="loadingVersions" class="text-gray-500 text-sm">{{ t('ai.compare.loading') }}</div>
 
         <template v-else>
             <div class="flex flex-wrap items-end gap-3 mb-4">
                 <div class="flex-1 min-w-[120px]">
-                    <label class="block text-xs text-gray-500 mb-1">Version A</label>
+                    <label class="block text-xs text-gray-500 mb-1">{{ t('ai.compare.versionA') }}</label>
                     <select v-model="v1" class="w-full border rounded px-2 py-1.5 text-sm">
-                        <option value="" disabled>Select</option>
+                        <option value="" disabled>{{ t('ai.compare.select') }}</option>
                         <option v-for="v in versions" :key="'a-' + v.version" :value="v.version">{{ v.version }}</option>
                     </select>
                 </div>
                 <div class="flex-1 min-w-[120px]">
-                    <label class="block text-xs text-gray-500 mb-1">Version B</label>
+                    <label class="block text-xs text-gray-500 mb-1">{{ t('ai.compare.versionB') }}</label>
                     <select v-model="v2" class="w-full border rounded px-2 py-1.5 text-sm">
-                        <option value="" disabled>Select</option>
+                        <option value="" disabled>{{ t('ai.compare.select') }}</option>
                         <option v-for="v in versions" :key="'b-' + v.version" :value="v.version">{{ v.version }}</option>
                     </select>
                 </div>
                 <button @click="compare" :disabled="loading || !v1 || !v2"
                     class="bg-blue-600 text-white text-sm px-4 py-1.5 rounded hover:bg-blue-700 disabled:opacity-50">
-                    {{ loading ? 'Comparing...' : 'Compare' }}
+                    {{ loading ? t('ai.compare.comparing') : t('ai.compare.compare') }}
                 </button>
             </div>
 
@@ -89,10 +92,10 @@ watch(() => props.modelName, () => {
                 <table class="w-full text-sm">
                     <thead>
                         <tr class="text-left text-gray-500 border-b">
-                            <th class="pb-2 font-medium">Metric</th>
+                            <th class="pb-2 font-medium">{{ t('ai.compare.metric') }}</th>
                             <th class="pb-2 font-medium text-right">v{{ result.version_1 }}</th>
                             <th class="pb-2 font-medium text-right">v{{ result.version_2 }}</th>
-                            <th class="pb-2 font-medium text-right">Delta</th>
+                            <th class="pb-2 font-medium text-right">{{ t('ai.compare.delta') }}</th>
                         </tr>
                     </thead>
                     <tbody>

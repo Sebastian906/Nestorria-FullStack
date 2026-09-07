@@ -3,11 +3,14 @@ import { ref, onMounted } from 'vue'
 import axios from 'axios'
 import { useAuth } from '@clerk/vue'
 import { useToast } from 'vue-toastification'
+import { useI18n } from 'vue-i18n'
+import { serverMsg } from '../utils/serverMsg.js'
 import CategoryTree from '../components/CategoryTree.vue'
 import CategoryForm from '../components/CategoryForm.vue'
 
 const toast = useToast()
 const auth = useAuth()
+const { t } = useI18n()
 
 const tree = ref([])
 const loading = ref(false)
@@ -23,7 +26,7 @@ const loadTree = async () => {
         })
         tree.value = data
     } catch (error) {
-        toast.error('No se pudieron cargar las categorías')
+        toast.error(serverMsg(error, 'categories.errors.loadFail'))
     } finally {
         loading.value = false
     }
@@ -45,13 +48,13 @@ onMounted(loadTree)
 <template>
     <div class="px-4 md:px-8 py-6 xl:py-8 m-1 sm:m-3 h-[97vh] overflow-y-scroll lg:w-11/12 bg-white shadow rounded-xl">
         <div class="flex items-center justify-between mb-6">
-            <h1 class="text-2xl font-bold">Categorías</h1>
+            <h1 class="text-2xl font-bold">{{ t('nav.categories') }}</h1>
             <button class="px-4 py-2 bg-secondary text-white rounded hover:opacity-90" @click="openCreate(null)">
-                Nueva categoría
+                {{ t('categories.form.newCategory') }}
             </button>
         </div>
 
-        <p v-if="loading" class="text-gray-500">Cargando...</p>
+        <p v-if="loading" class="text-gray-500">{{ t('common.actions.saving') }}</p>
 
         <CategoryTree v-else :nodes="tree" @create-sub="openCreate" />
 
