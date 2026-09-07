@@ -2,10 +2,14 @@
 import { ref, watch, onMounted } from 'vue'
 import { useAppContext } from '../composables/useAppContext'
 import { useToast } from 'vue-toastification'
+import { useI18n } from 'vue-i18n'
+import { serverMsg } from '../utils/serverMsg.js'
+import { formatCurrency } from '../utils/format.js'
 import axios from 'axios'
 
 const { currency, roleLoaded, auth } = useAppContext()
 const toast = useToast()
+const { t } = useI18n()
 
 const properties = ref([])
 const loading = ref(true)
@@ -22,7 +26,7 @@ const fetchProperties = async () => {
         })
         properties.value = data
     } catch (error) {
-        toast.error('No se pudieron cargar las propiedades')
+        toast.error(serverMsg(error, 'property.list.loadFail'))
         console.error(error)
     } finally {
         loading.value = false
@@ -39,7 +43,7 @@ const toggleAvailability = async (propertyId) => {
         })
         await fetchProperties()
     } catch (error) {
-        toast.error('No se pudo cambiar la disponibilidad')
+        toast.error(serverMsg(error, 'property.list.availabilityFail'))
         console.error(error)
     } finally {
         togglingId.value = null
@@ -63,21 +67,21 @@ onMounted(() => {
 <template>
     <div class="md:px-8 pt-2 md:pt-6 pb-6 xl:py-8 m-1 sm:m-3 h-[97vh] overflow-y-scroll lg:w-11/12 bg-white shadow rounded-xl">
         <div v-if="loading" class="flex justify-center items-center h-40 text-gray-400 text-sm">
-            Loading properties…
+            {{ t('property.list.loading') }}
         </div>
 
         <div v-else-if="properties.length === 0" class="flex justify-center items-center h-40 text-gray-400 text-sm">
-            No properties found. Add your first property.
+            {{ t('property.list.empty') }}
         </div>
 
         <div v-else>
             <div
                 class="flex justify-between flex-wrap gap-2 sm:grid grid-cols-[2fr_2fr_1fr_1fr] lg:grid-cols-[0.5fr_2fr_2fr_1fr_1fr] px-6 py-3 bg-secondary border-b border-slate-900/15 rounded-t-xl">
-                <h5 class="h5 hidden lg:block">Index</h5>
-                <h5 class="h5">Name</h5>
-                <h5 class="h5">Address</h5>
-                <h5 class="h5">Price</h5>
-                <h5 class="h5">Available</h5>
+                <h5 class="h5 hidden lg:block">{{ t('property.list.index') }}</h5>
+                <h5 class="h5">{{ t('property.list.name') }}</h5>
+                <h5 class="h5">{{ t('property.list.address') }}</h5>
+                <h5 class="h5">{{ t('property.list.price') }}</h5>
+                <h5 class="h5">{{ t('property.list.available') }}</h5>
             </div>
 
             <div v-for="(property, index) in properties" :key="property.id"
@@ -93,7 +97,7 @@ onMounted(() => {
 
                 <div class="line-clamp-2">{{ property.address }}</div>
 
-                <div>{{ currency }}{{ property.price?.sale ?? '—' }}</div>
+                <div>{{ formatCurrency(property.price?.sale ?? 0, currency) }}</div>
 
                 <div>
                     <label class="relative inline-flex items-center cursor-pointer text-gray-900 gap-3">

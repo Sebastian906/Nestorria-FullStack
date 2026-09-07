@@ -1,6 +1,8 @@
 import { assets } from "../assets/data"
+import { useTranslation } from "react-i18next"
 
 const Cta = () => {
+    const { t } = useTranslation('home');
     return (
         <section className="bg-[#F0FDF4] pt-16 xl:pt-22">
             <div className="max-padd-container mx-2 md:mx-auto p-px">
@@ -12,17 +14,17 @@ const Cta = () => {
                             width={17}
                             className="invert"
                         />
-                        <span>Trusted by Experts</span>
+                        <span>{t('cta.badge')}</span>
                     </div>
                     <h2 className="h2 mt-2">
-                        Sell or Rent Faster with <br /><span className='text-secondary'>Expert Strategies</span> and Real Support!
+                        {t('cta.title')}
                     </h2>
-                    <p className="text-slate-500 mt-2 max-w-lg max-md:text-sm">Achieve your goals faster with personalized strategies, hands-on support, and results that speak for themselves.</p>
+                    <p className="text-slate-500 mt-2 max-w-lg max-md:text-sm">{t('cta.subtitle')}</p>
                     <button
                         type="button"
                         className="btn-secondary mt-4"
                     >
-                        Get Started
+                        {t('cta.action')}
                     </button>
                 </div>
             </div>

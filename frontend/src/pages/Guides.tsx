@@ -1,18 +1,12 @@
 import { Link } from "react-router-dom"
 import { assets, blogs } from "../assets/data"
+import { useTranslation } from "react-i18next"
 
 // Reordenar las imágenes para mejor flujo visual
 // blog1=Cities, blog2=Rental, blog3=Interior, blog4=Checklist,
 // blog6=Community, blog7=Staging, blog8=Forecast
 // blog5=ROI (redundante con propiedades, se excluye)
-const guideImages = [
-    { image: blogs[7].image, step: "01", title: "Explore Properties", category: "Market Trends" },
-    { image: blogs[1].image, step: "02", title: "Find the Right Fit", category: "Renting Guide" },
-    { image: blogs[2].image, step: "03", title: "Visualize Your Space", category: "Home Improvement" },
-    { image: blogs[3].image, step: "04", title: "Follow the Checklist", category: "Buying Tips" },
-    { image: blogs[5].image, step: "05", title: "Consider the Lifestyle", category: "Lifestyle" },
-    { image: blogs[6].image, step: "06", title: "Prepare & Book", category: "Selling Tips" },
-]
+// NOTE: guideImages se construye dentro del componente con t() para reaccionar al idioma.
 
 const steps = [
     {
@@ -103,14 +97,31 @@ const steps = [
 ]
 
 const Guides = () => {
+    const { t } = useTranslation('guides');
+    const stepText: Record<string, { d: string; l: string | null }> = {
+        "01": { d: t('s1d'), l: t('s1l') },
+        "02": { d: t('s2d'), l: t('s2l') },
+        "03": { d: t('s3d'), l: null },
+        "04": { d: t('s4d'), l: null },
+        "05": { d: t('s5d'), l: null },
+        "06": { d: t('s6d'), l: t('s6l') },
+    };
+    const guideImages = [
+        { image: blogs[7].image, step: "01", title: t('s1t'), category: t('s1c') },
+        { image: blogs[1].image, step: "02", title: t('s2t'), category: t('s2c') },
+        { image: blogs[2].image, step: "03", title: t('s3t'), category: t('s3c') },
+        { image: blogs[3].image, step: "04", title: t('s4t'), category: t('s4c') },
+        { image: blogs[5].image, step: "05", title: t('s5t'), category: t('s5c') },
+        { image: blogs[6].image, step: "06", title: t('s6t'), category: t('s6c') },
+    ];
     return (
         <div className='bg-linear-to-r from-[#F0FDF4] to-white py-16 pt-28'>
             <div className='max-padd-container'>
                 {/* Header */}
                 <div className='text-center mb-12'>
-                    <h2 className='h2 mb-4'>How It Works</h2>
+                    <h2 className='h2 mb-4'>{t('title')}</h2>
                     <p className='text-gray-500 max-w-2xl mx-auto'>
-                        Follow these simple steps to find and book your perfect property with Nestorria.
+                        {t('subtitle')}
                     </p>
                 </div>
 
@@ -139,14 +150,14 @@ const Guides = () => {
                                 </div>
                                 <h3 className='h5 mb-2'>{item.title}</h3>
                                 <p className='text-sm text-gray-500'>
-                                    {steps.find(s => s.number === item.step)?.description}
+                                    {stepText[item.step]?.d}
                                 </p>
                                 {steps.find(s => s.number === item.step)?.link && (
                                     <Link
                                         to={steps.find(s => s.number === item.step)!.link!}
                                         className='inline-flex items-center gap-1 text-sm font-medium text-secondary hover:underline mt-3'
                                     >
-                                        {steps.find(s => s.number === item.step)!.linkText}
+                                        {stepText[item.step]?.l}
                                         <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                                             <path d="M5 12h14" />
                                             <path d="m12 5 7 7-7 7" />
@@ -160,7 +171,7 @@ const Guides = () => {
 
                 {/* Tips Grid - using remaining blog images */}
                 <div className='mb-12'>
-                    <h3 className='h3 mb-6 text-center'>Tips & Resources</h3>
+                    <h3 className='h3 mb-6 text-center'>{t('tips')}</h3>
                     <div className='grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5'>
                         {blogs.filter((_, i) => i !== 4).map((blog, index) => (
                             <div
@@ -186,14 +197,14 @@ const Guides = () => {
 
                 {/* CTA */}
                 <div className='text-center mt-12 p-8 bg-white rounded-xl ring-1 ring-slate-900/5'>
-                    <h3 className='h4 mb-3'>Ready to Get Started?</h3>
-                    <p className='text-gray-500 mb-4'>Browse our available properties and find your next stay.</p>
+                    <h3 className='h4 mb-3'>{t('ctaTitle')}</h3>
+                    <p className='text-gray-500 mb-4'>{t('ctaBody')}</p>
                     <Link
                         to="/listing"
                         className='inline-flex items-center gap-2 btn-dark rounded-lg px-6 py-2'
                     >
                         <img src={assets.search} alt="" width={16} className="invert" />
-                        Browse Properties
+                        {t('ctaAction')}
                     </Link>
                 </div>
             </div>

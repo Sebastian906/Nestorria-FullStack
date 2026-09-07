@@ -6,6 +6,7 @@ import { useSearchParams } from "react-router-dom";
 import PropertyMap from "../components/PropertyMap";
 import NearbySearchPanel from "../components/NearbySearchPanel";
 import { fetchListingPage, type PropertyPage } from "../services/propertyListingService";
+import { useTranslation } from "react-i18next";
 
 const PAGE_SIZE = 9;
 
@@ -23,6 +24,7 @@ const sortMapping: Record<string, { sortBy: "PRICE" | "DATE"; direction: "ASC" |
 };
 
 const Listing = () => {
+    const { t } = useTranslation('listing');
     const { properties, searchQuery, user, favoriteIds } = useAppContext()
     const [selectedFilters, setSelectedFilters] = useState<Filters>({
         propertyType: [],
@@ -49,6 +51,16 @@ const Listing = () => {
     const heroDestination = (searchParams.get("destination") || "").toLowerCase().trim()
 
     const sortOptions = ['Relevant', 'Low to High', 'High to Low', 'Newest', 'Oldest']
+
+    const sortLabels: Record<string, string> = {
+        'Relevant': t('sortRelevant'),
+        'Low to High': t('sortLowHigh'),
+        'High to Low': t('sortHighLow'),
+        'Newest': t('sortNewest'),
+        'Oldest': t('sortOldest'),
+    };
+
+    // Los tipos deben coincidir con el enum del backend — se muestran tal cual (dato, no cromo).
 
     const propertyTypes = [
         'House', 'Apartment', 'Villa', 'Penthouse', 'Townhouse', 'Commercial', 'Land Plot'
@@ -179,20 +191,20 @@ const Listing = () => {
                 <div className='bg-secondary/10 ring-1 ring-slate-900/5 p-5 sm:min-w-52 sm:max-w-60 rounded-xl h-fit'>
                     {/* SORT */}
                     <div className='pb-2 mt-2'>
-                        <h5 className='h5 mb-3'>Sort By</h5>
+                        <h5 className='h5 mb-3'>{t('sortBy')}</h5>
                         <select
                             value={selectedSort ?? ""}
                             onChange={(e) => { setSelectedSort(e.target.value); setPage(0) }}
                             className='bg-secondary/10 border border-slate-900/10 outline-none text-gray-30 medium-14 h-10 w-full rounded px-3 cursor-pointer'
                         >
                             {sortOptions.map((sort, index) => (
-                                <option key={index} value={sort}>{sort}</option>
+                                <option key={index} value={sort}>{sortLabels[sort] ?? sort}</option>
                             ))}
                         </select>
                     </div>
                     {/* PROPERTY TYPE */}
                     <div className='py-4 mt-2'>
-                        <h5 className='h5 mb-4'>Property Type</h5>
+                        <h5 className='h5 mb-4'>{t('propertyType')}</h5>
                         <div className="flex flex-col gap-3">
                             {propertyTypes.map((type) => (
                                 <label key={type} className='flex items-center gap-3 medium-14 cursor-pointer'>
@@ -202,14 +214,14 @@ const Listing = () => {
                                         onChange={(e) => handleFilterChange(e.target.checked, 'propertyType', type)}
                                         className="w-4 h-4 cursor-pointer"
                                     />
-                                    {type}
+                                    {t(`types.${type}`, { defaultValue: type })}
                                 </label>
                             ))}
                         </div>
                     </div>
                     {/* PRICE RANGE */}
                     <div className='py-4 mt-2'>
-                        <h5 className='h5 mb-4'>Price Range</h5>
+                        <h5 className='h5 mb-4'>{t('priceRange')}</h5>
                         <div className="flex flex-col gap-3">
                             {priceRange.map((price) => (
                                 <label key={price} className='flex items-center gap-3 medium-14 cursor-pointer'>
@@ -224,8 +236,8 @@ const Listing = () => {
                             ))}
                         </div>
                         <div className='flex items-center gap-2 mt-5'>
-                            <input type="number" placeholder="Min" className='bg-white border-slate-900/10 outline-none text-gray-30 medium-14 h-10 w-18 rounded px-2 placeholder:opacity-60' />
-                            <input type="number" placeholder="Max" className='bg-white border-slate-900/10 outline-none text-gray-30 medium-14 h-10 w-18 rounded px-2 placeholder:opacity-60' />
+                            <input type="number" placeholder={t('min')} className='bg-white border-slate-900/10 outline-none text-gray-30 medium-14 h-10 w-18 rounded px-2 placeholder:opacity-60' />
+                            <input type="number" placeholder={t('max')} className='bg-white border-slate-900/10 outline-none text-gray-30 medium-14 h-10 w-18 rounded px-2 placeholder:opacity-60' />
                             <button type="button" className='bg-white border hover:bg-secondary/20 border-slate-900/10 outline-none h-10 w-12 rounded flex items-center justify-center cursor-pointer hover:opacity-90 active:scale-95 transition-all shrink-0'>
                                 <img src={assets.search} alt="Search" className='w-4 h-4 invert-[0.4]' />
                             </button>
@@ -269,7 +281,7 @@ const Listing = () => {
                                     }}
                                     className="w-4 h-4 cursor-pointer"
                                 />
-                                Show Favorites Only
+                                {t('favOnly')}
                             </label>
                         </div>
                     )}
@@ -280,28 +292,28 @@ const Listing = () => {
                     <div className="flex items-center justify-between mb-4">
                         {viewMode === "grid" ? (
                             <p className="text-gray-500">
-                                Showing {(nearbyResults ?? pageData?.content ?? []).length} of {nearbyResults ? properties.length : (pageData?.totalElements ?? 0)} properties
+                                {t('showing', { shown: (nearbyResults ?? pageData?.content ?? []).length, total: nearbyResults ? properties.length : (pageData?.totalElements ?? 0) })}
                             </p>
                         ) : (
                             <p className="text-gray-500">
-                                Showing {(nearbyResults ?? mapProperties).length} of {properties.length} properties
+                                {t('showing', { shown: (nearbyResults ?? mapProperties).length, total: properties.length })}
                             </p>
                         )}
                         <div className="flex items-center gap-1 bg-gray-100 rounded-lg p-1">
-                            <button
-                                onClick={() => setViewMode("grid")}
-                                className={`p-2 rounded-md transition ${viewMode === "grid" ? "bg-white shadow-sm text-secondary" : "text-gray-400 hover:text-gray-600"}`}
-                                title="Grid view"
-                            >
+                                <button
+                                    onClick={() => setViewMode("grid")}
+                                    className={`p-2 rounded-md transition ${viewMode === "grid" ? "bg-white shadow-sm text-secondary" : "text-gray-400 hover:text-gray-600"}`}
+                                    title={t('gridView')}
+                                >
                                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" />
                                 </svg>
                             </button>
-                            <button
-                                onClick={() => setViewMode("map")}
-                                className={`p-2 rounded-md transition ${viewMode === "map" ? "bg-white shadow-sm text-secondary" : "text-gray-400 hover:text-gray-600"}`}
-                                title="Map view"
-                            >
+                                <button
+                                    onClick={() => setViewMode("map")}
+                                    className={`p-2 rounded-md transition ${viewMode === "map" ? "bg-white shadow-sm text-secondary" : "text-gray-400 hover:text-gray-600"}`}
+                                    title={t('mapView')}
+                                >
                                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7" />
                                 </svg>
@@ -312,7 +324,7 @@ const Listing = () => {
                     {viewMode === "grid" && (
                         <>
                             {loading && (
-                                <p className="text-gray-500 text-center py-10">Loading properties...</p>
+                                <p className="text-gray-500 text-center py-10">{t('loading')}</p>
                             )}
                             {!loading && error && (
                                 <div className="text-center py-10">
@@ -321,7 +333,7 @@ const Listing = () => {
                                         onClick={() => setReloadCount(c => c + 1)}
                                         className="px-5 py-2 rounded-lg border border-slate-900/10 bg-white hover:bg-secondary/10 transition"
                                     >
-                                        Retry
+                                        {t('retry')}
                                     </button>
                                 </div>
                             )}
@@ -333,7 +345,7 @@ const Listing = () => {
                                 </div>
                             )}
                             {!loading && !error && (nearbyResults ?? pageData?.content ?? []).length === 0 && (
-                                <p className="text-gray-500 text-center py-10">No matches found</p>
+                                <p className="text-gray-500 text-center py-10">{t('noMatches')}</p>
                             )}
                             {/* Paginación */}
                             {!nearbyResults && pageData && pageData.totalPages > 1 && !loading && !error && (
@@ -343,17 +355,17 @@ const Listing = () => {
                                         disabled={page === 0}
                                         className="px-5 py-2 rounded-lg border border-slate-900/10 bg-white hover:bg-secondary/10 disabled:opacity-40 disabled:cursor-not-allowed transition"
                                     >
-                                        ← Previous
+                                        ← {t('prev')}
                                     </button>
                                     <span className="text-gray-600 medium-14">
-                                        Page {page + 1} of {pageData.totalPages}
+                                        {t('page', { cur: page + 1, total: pageData.totalPages })}
                                     </span>
                                     <button
                                         onClick={() => goToPage(page + 1)}
                                         disabled={page >= pageData.totalPages - 1}
                                         className="px-5 py-2 rounded-lg border border-slate-900/10 bg-white hover:bg-secondary/10 disabled:opacity-40 disabled:cursor-not-allowed transition"
                                     >
-                                        Next →
+                                        {t('next')} →
                                     </button>
                                 </div>
                             )}

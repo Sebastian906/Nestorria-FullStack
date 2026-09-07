@@ -3,8 +3,11 @@ import { useAppContext } from "../context/AppContext";
 import PropertyMap from "../components/PropertyMap";
 import { assets, type Property } from "../assets/data";
 import { Link } from "react-router-dom";
+import { formatNumber } from "../utils/format";
+import { useTranslation } from "react-i18next";
 
 const MapExplorer = () => {
+    const { t } = useTranslation('listing');
     const { properties, currency } = useAppContext();
     const [selectedProperty, setSelectedProperty] = useState<Property | null>(null);
     const [cityFilter, setCityFilter] = useState<string>("");
@@ -76,9 +79,9 @@ const MapExplorer = () => {
                 {/* Header */}
                 <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 py-6">
                     <div>
-                        <h1 className="h2">Explore properties on the map</h1>
+                        <h1 className="h2">{t('explore')}</h1>
                         <p className="text-gray-500 mt-1">
-                            {propertiesWithCoords.length} properties with location
+                            {t('map.count', { n: propertiesWithCoords.length })}
                             {cityFilter && ` in ${cityFilter}`}
                         </p>
                     </div>
@@ -92,7 +95,7 @@ const MapExplorer = () => {
                             }}
                             className="bg-white border border-slate-900/10 rounded-lg px-4 py-2 text-sm outline-none cursor-pointer"
                         >
-                            <option value="">All cities</option>
+                            <option value="">{t('allCities')}</option>
                             {cities.map((city) => (
                                 <option key={city} value={city}>
                                     {city}
@@ -112,13 +115,13 @@ const MapExplorer = () => {
                                     : "bg-white border-slate-900/10 hover:bg-gray-50"
                                 }`}
                         >
-                            {routeMode ? "Exit Route" : "Find Route"}
+                            {routeMode ? t('map.exitRoute') : t('map.findRoute')}
                         </button>
                         <Link
                             to="/listing"
                             className="btn-outline px-4 py-2 text-sm rounded-lg"
                         >
-                            Check listing
+                            {t('map.checkListing')}
                         </Link>
                     </div>
                 </div>
@@ -146,10 +149,10 @@ const MapExplorer = () => {
                             <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 mb-4">
                                 <p className="text-sm font-medium text-blue-800">
                                     {!routeFrom
-                                        ? "Click on the origin property"
+                                        ? t('map.origin')
                                         : !routeTo
-                                            ? "Now click on the destination property"
-                                            : "Route calculated"}
+                                            ? t('map.destination')
+                                            : t('map.calculated')}
                                 </p>
                                 {(routeFrom || routeTo) && (
                                     <button
@@ -159,7 +162,7 @@ const MapExplorer = () => {
                                         }}
                                         className="text-xs text-blue-600 hover:underline mt-1"
                                     >
-                                        Reset route
+                                        {t('map.reset')}
                                     </button>
                                 )}
                             </div>
@@ -188,14 +191,14 @@ const MapExplorer = () => {
                                 )}
                                 <div className="flex items-center justify-between mt-4">
                                     <div>
-                                        <p className="text-xs text-gray-400">Sale price</p>
+                                        <p className="text-xs text-gray-400">{t('salePrice')}</p>
                                         <p className="font-bold text-lg text-secondary">
                                             {currency}
-                                            {selectedProperty.price.sale.toLocaleString()}
+                                            {formatNumber(selectedProperty.price.sale)}
                                         </p>
                                     </div>
                                     <div className="text-right">
-                                        <p className="text-xs text-gray-400">Type</p>
+                                        <p className="text-xs text-gray-400">{t('type')}</p>
                                         <p className="font-medium text-sm">
                                             {selectedProperty.propertyType}
                                         </p>
@@ -227,11 +230,11 @@ const MapExplorer = () => {
                                     className="w-16 h-16 mx-auto opacity-30 mb-3"
                                 />
                                 <p className="text-gray-400 text-sm">
-                                    Click on a map marker to view the details of the property
+                                    {t('map.hint')}
                                 </p>
                                 <div className="mt-6 space-y-2 text-left">
                                     <p className="text-xs font-medium text-gray-500">
-                                        Properties per city:
+                                        {t('map.perCity')}
                                     </p>
                                     {cities.map((city) => {
                                         const count = propertiesWithCoords.filter(

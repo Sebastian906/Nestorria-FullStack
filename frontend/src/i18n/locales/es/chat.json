@@ -1,0 +1,17 @@
+{
+    "assistant": "Asistente IA",
+    "open": "Abrir chat",
+    "close": "Cerrar chat",
+    "input": "Escriba su mensaje...",
+    "waiting": "Esperando respuesta...",
+    "newConversation": "Nueva conversación",
+    "empty": "Hola. Pregúnteme sobre propiedades, contratos o reglas del negocio.",
+    "msgSuffix": "msg",
+    "sources": "Fuentes",
+    "errors": {
+        "rateLimited": "Usted alcanzó el límite de mensajes. Inténtelo más tarde.",
+        "service": "Error del servicio IA",
+        "connection": "Error de conexión",
+        "generic": "No se pudo enviar el mensaje"
+    }
+}

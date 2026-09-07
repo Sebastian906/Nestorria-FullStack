@@ -1,31 +1,17 @@
 import { useState } from "react"
 import { assets } from "../assets/data"
 import Title from "./Title"
+import { useTranslation } from "react-i18next"
 
 const Faq = () => {
-
+    const { t } = useTranslation('home');
     const [openIndex, setOpenIndex] = useState<number | null>(null)
     const faqsData = [
-        {
-            question: 'Lightning-Fast Booking',
-            answer: 'Designed for speed — instant search and seamless property viewing.'
-        },
-        {
-            question: 'Fully Customizable Homes',
-            answer: 'Easily change layouts, features, and designs to fit your lifestyle.'
-        },
-        {
-            question: 'Responsive by Location',
-            answer: 'Every property is accessible by area — no extra effort required.'
-        },
-        {
-            question: 'Real Estate Powered',
-            answer: 'Backed using trusted property data — no extra agents or steps needed.'
-        },
-        {
-            question: 'Smart Home Support',
-            answer: 'All houses come ready with modern smart living features included.'
-        }
+        { question: t('faq.q1'), answer: t('faq.a1') },
+        { question: t('faq.q2'), answer: t('faq.a2') },
+        { question: t('faq.q3'), answer: t('faq.a3') },
+        { question: t('faq.q4'), answer: t('faq.a4') },
+        { question: t('faq.q5'), answer: t('faq.a5') },
     ]
 
     return (
@@ -47,8 +33,8 @@ const Faq = () => {
                                 width={55}
                             />
                             <div>
-                                <h5 className='bold-16'>Trusted Real Estate Experts</h5>
-                                <p>Trust, clarity, and simplicity are at the core of everything we do to make your property journey easy.</p>
+                                <h5 className='bold-16'>{t('faq.experts')}</h5>
+                                <p>{t('faq.expertsBody')}</p>
                             </div>
                         </div>
                     </div>
@@ -56,9 +42,9 @@ const Faq = () => {
                 {/* FAQs - RIGHT SIDE */}
                 <div className='flex-1 flex flex-col justify-center'>
                     <Title
-                        title1={'Homes Made for Living'}
-                        title2={'Simplifying Your Property Search Every Step'}
-                        para={'From finding the right location to finalizing the deal, we ensure your real estate journey is smooth, efficient, and fullfilling.'}
+                        title1={t('faq.title1')}
+                        title2={t('faq.title2')}
+                        para={t('faq.para')}
                         titleStyles={'mb-10'}
                     />
                     <div className='max-w-xl w-full flex flex-col gap-4 items-start text-left'>

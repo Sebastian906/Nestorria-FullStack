@@ -23,6 +23,7 @@ from app.middleware.auth import ApiKeyAuthMiddleware
 from app.middleware.audit import AuditLogMiddleware
 from app.routers import health
 from app.routers import metrics
+from app.routers import translate
 from app.utils.logging import setup_logging
 from app.routers.admin import router as admin_router
 
@@ -176,6 +177,8 @@ def create_app() -> FastAPI:
         )
 
     application.include_router(admin_router, prefix="/ai")
+
+    application.include_router(translate.router)
 
     return application
 

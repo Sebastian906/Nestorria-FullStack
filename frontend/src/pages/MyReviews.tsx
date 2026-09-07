@@ -5,6 +5,9 @@ import { assets } from "../assets/data"
 import axios from "axios"
 import toast from "react-hot-toast"
 import { Link } from "react-router-dom"
+import { useTranslation } from "react-i18next"
+import { serverMsg } from "../services/serverMsg"
+import { formatDate } from "../utils/format"
 
 interface UserReview {
     id: string
@@ -18,6 +21,7 @@ interface UserReview {
 const MyReviews = () => {
     const { user } = useAppContext()
     const { getToken } = useAuth()
+    const { t } = useTranslation(["property", "user"])
     const [reviews, setReviews] = useState<UserReview[]>([])
     const [loading, setLoading] = useState(true)
     const [editingId, setEditingId] = useState<string | null>(null)
@@ -37,7 +41,7 @@ const MyReviews = () => {
             })
             setReviews(data)
         } catch (error: any) {
-            toast.error("Error loading reviews")
+            toast.error(serverMsg(error, "user:reviews.loadFail"))
         } finally {
             setLoading(false)
         }
@@ -50,25 +54,25 @@ const MyReviews = () => {
                 rating: editRating,
                 comment: editComment.trim()
             }, { headers: { Authorization: `Bearer ${token}` } })
-            toast.success("Review updated")
+            toast.success(t("property:success.reviewUpdated"))
             setEditingId(null)
             fetchMyReviews()
         } catch (error: any) {
-            toast.error(error.response?.data?.message || "Error updating review")
+            toast.error(serverMsg(error, "property:errors.generic"))
         }
     }
 
     const handleDelete = async (reviewId: string) => {
-        if (!confirm("Are you sure you want to delete this review?")) return
+        if (!confirm(t("user:reviews.confirmDelete"))) return
         try {
             const token = await getToken()
             await axios.delete(`/api/reviews/${reviewId}`, {
                 headers: { Authorization: `Bearer ${token}` }
             })
-            toast.success("Review deleted")
+            toast.success(t("property:success.reviewDeleted"))
             fetchMyReviews()
         } catch (error: any) {
-            toast.error(error.response?.data?.message || "Error deleting review")
+            toast.error(serverMsg(error, "property:errors.generic"))
         }
     }
 
@@ -83,7 +87,7 @@ const MyReviews = () => {
         return (
             <div className='bg-linear-to-r from-[#F0FDF4] to-white py-16 pt-28'>
                 <div className='max-padd-container text-center py-10'>
-                    <p className="text-gray-500">Please log in to see your reviews.</p>
+                    <p className="text-gray-500">{t("user:reviews.login")}</p>
                 </div>
             </div>
         )
@@ -92,17 +96,17 @@ const MyReviews = () => {
     return (
         <div className='bg-linear-to-r from-[#F0FDF4] to-white py-16 pt-28'>
             <div className='max-padd-container'>
-                <h2 className='h2 mb-6'>My Reviews</h2>
-                {loading && <p className="text-gray-500 text-center py-10">Loading reviews...</p>}
+                <h2 className='h2 mb-6'>{t("user:reviews.title")}</h2>
+                {loading && <p className="text-gray-500 text-center py-10">{t("user:reviews.loading")}</p>}
                 {!loading && reviews.length === 0 && (
-                    <p className="text-gray-500 text-center py-10">You haven't written any reviews yet.</p>
+                    <p className="text-gray-500 text-center py-10">{t("user:reviews.empty")}</p>
                 )}
                 {reviews.map((review) => (
                     <div key={review.id} className='bg-white ring-1 ring-slate-900/5 p-4 rounded-lg mt-3'>
                         {editingId === review.id ? (
                             <div className="space-y-3">
                                 <div className="flex items-center gap-2">
-                                    <span className="text-sm">Rating:</span>
+                                    <span className="text-sm">{t("user:reviews.rating")}:</span>
                                     {Array.from({ length: 5 }, (_, i) => (
                                         <button
                                             key={i}
@@ -119,9 +123,9 @@ const MyReviews = () => {
                                     rows={3} maxLength={2000} className="w-full p-2 border rounded text-sm" />
                                 <div className="flex gap-2">
                                     <button onClick={() => handleUpdate(review.id)}
-                                        className="btn-secondary py-1 px-4 rounded text-sm">Save</button>
+                                        className="btn-secondary py-1 px-4 rounded text-sm">{t("user:reviews.save")}</button>
                                     <button onClick={() => setEditingId(null)}
-                                        className="py-1 px-4 rounded text-sm border">Cancel</button>
+                                        className="py-1 px-4 rounded text-sm border">{t("user:reviews.cancel")}</button>
                                 </div>
                             </div>
                         ) : (
@@ -135,15 +139,15 @@ const MyReviews = () => {
                                             setEditingId(review.id)
                                             setEditRating(review.rating)
                                             setEditComment(review.comment || "")
-                                        }} className="text-xs text-secondary hover:underline">Edit</button>
+                                        }} className="text-xs text-secondary hover:underline">{t("user:reviews.edit")}</button>
                                         <button onClick={() => handleDelete(review.id)}
-                                            className="text-xs text-red-500 hover:underline">Delete</button>
+                                            className="text-xs text-red-500 hover:underline">{t("user:reviews.delete")}</button>
                                     </div>
                                 </div>
                                 <div className="flex items-center gap-2 mt-1">
                                     <div className="flex">{renderStars(review.rating)}</div>
                                     <span className="text-xs text-gray-400">
-                                        {new Date(review.createdAt).toLocaleDateString()}
+                                        {formatDate(review.createdAt)}
                                     </span>
                                 </div>
                                 {review.comment && <p className="text-sm text-gray-600 mt-2">{review.comment}</p>}

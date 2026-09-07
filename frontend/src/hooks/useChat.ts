@@ -1,6 +1,7 @@
 import { useState, useRef, useCallback, useEffect } from 'react'
 import { useAuth } from '@clerk/react'
 import { streamChat } from '../services/chatService'
+import { t } from 'i18next';
 
 export interface Message {
     id: string
@@ -112,7 +113,7 @@ export function useChat() {
                 return prev
             })
             if (blocked) {
-                setState(prev => ({ ...prev, error: 'Message limit reached. Try again later.' }))
+                setState(prev => ({ ...prev, error: t('chat:errors.rateLimited') }))
                 return
             }
 
@@ -209,7 +210,7 @@ export function useChat() {
                         case 'error':
                             setState(prev => ({
                                 ...prev,
-                                error: event.content ?? 'AI service error',
+                                error: event.content ?? t('chat:errors.service'),
                                 isStreaming: false,
                                 // Remove empty assistant message on error
                                 messages: prev.messages.filter(
@@ -223,9 +224,9 @@ export function useChat() {
                 const error = err instanceof Error ? err : new Error(String(err))
                 if (error.name === 'AbortError') return
 
-                let errorMsg = 'Connection error'
+                let errorMsg = t('chat:errors.connection')
                 if (error.message.includes('503') || error.message.includes('limit')) {
-                    errorMsg = 'Message limit reached. Try again later.'
+                    errorMsg = t('chat:errors.rateLimited')
                 }
 
                 setState(prev => ({

@@ -1,0 +1,19 @@
+{
+    "title": "Notificaciones",
+    "empty": "Usted no tiene notificaciones",
+    "markAll": "Marcar todas como leídas",
+    "loading": "Cargando...",
+    "loadMore": "Cargar más",
+    "now": "Ahora",
+    "minAgo": "hace {{n}} min",
+    "hourAgo": "hace {{n}} h",
+    "dayAgo": "hace {{n}} d",
+    "typeConfirmed": "Reserva confirmada",
+    "typeCancelled": "Reserva cancelada",
+    "typePayment": "Pago recibido",
+    "typeSigned": "Contrato firmado",
+    "typeExpired": "Contrato vencido",
+    "typeReview": "Reseña recibida",
+    "typeInquiry": "Consulta de propiedad",
+    "typeDefault": "Notificación"
+}

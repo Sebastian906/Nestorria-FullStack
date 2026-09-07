@@ -3,10 +3,13 @@ import { reactive, ref, onBeforeUnmount } from 'vue'
 import { useAuth } from '@clerk/vue'
 import axios from 'axios'
 import { useToast } from 'vue-toastification'
+import { useI18n } from 'vue-i18n'
+import { serverMsg } from '../utils/serverMsg.js'
 import LocationPicker from '../components/LocationPicker.vue'
 
 const toast = useToast()
 const auth = useAuth()
+const { t } = useI18n()
 
 const imageKeys = [1, 2, 3, 4]
 
@@ -103,13 +106,13 @@ const handleSubmit = async () => {
         !inputs.propertyType || (isBlank(inputs.priceRent) && isBlank(inputs.priceSale)) ||
         isBlank(inputs.bedrooms) || isBlank(inputs.bathrooms)
     ) {
-        toast.error('Please fill all required fields')
+        toast.error(t('property.add.required'))
         return
     }
 
     const hasImage = imageKeys.some((key) => images[key] !== null)
     if (!hasImage) {
-        toast.error('Please upload at least one image')
+        toast.error(t('property.add.imageRequired'))
         return
     }
 
@@ -117,7 +120,7 @@ const handleSubmit = async () => {
     try {
         const token = await auth.getToken.value()
         if (!token) {
-            toast.error('Authentication error. Please log in again.')
+            toast.error(t('property.add.auth'))
             return
         }
 
@@ -165,12 +168,10 @@ const handleSubmit = async () => {
             // Do NOT set Content-Type manually — let the browser set multipart boundary
         })
 
-        toast.success('Property added successfully')
+        toast.success(t('property.add.success'))
         resetForm()
     } catch (error) {
-        const message =
-            error.response?.data?.message || error.message || 'Something went wrong'
-        toast.error(message)
+        toast.error(serverMsg(error, 'common.errors.generic'))
     } finally {
         loading.value = false
     }
@@ -182,33 +183,33 @@ const handleSubmit = async () => {
         <form @submit.prevent="handleSubmit" class="flex flex-col gap-y-3.5 px-2 text-sm xl:max-w-3xl">
 
             <div class="w-full">
-                <h5 class="h5">Property Name</h5>
-                <input v-model="inputs.title" type="text" placeholder="Type here..."
+                <h5 class="h5">{{ t('property.add.name') }}</h5>
+                        <input v-model="inputs.title" type="text" :placeholder="t('common.ph.typeHere')"
                     class="px-3 py-1.5 ring-1 ring-slate-900/10 rounded-lg bg-secondary/5 mt-1 w-full" />
             </div>
 
             <div class="w-full">
-                <h5 class="h5">Property Description</h5>
-                <textarea v-model="inputs.description" rows="5" placeholder="Type here..."
+                <h5 class="h5">{{ t('property.add.description') }}</h5>
+                <textarea v-model="inputs.description" rows="5" :placeholder="t('common.ph.typeHere')"
                     class="px-3 py-1.5 ring-1 ring-slate-900/10 rounded-lg bg-secondary/5 mt-1 w-full" />
             </div>
 
             <div class="flex gap-4">
                 <div class="w-full">
-                    <h5 class="h5">City</h5>
-                    <input v-model="inputs.city" type="text" placeholder="Type here..."
+                    <h5 class="h5">{{ t('property.add.city') }}</h5>
+                    <input v-model="inputs.city" type="text" :placeholder="t('common.ph.typeHere')"
                         class="px-3 py-1.5 ring-1 ring-slate-900/10 rounded-lg bg-secondary/5 mt-1 w-full" />
                 </div>
                 <div class="w-full">
-                    <h5 class="h5">Country</h5>
-                    <input v-model="inputs.country" type="text" placeholder="Type here..."
+                    <h5 class="h5">{{ t('property.add.country') }}</h5>
+                    <input v-model="inputs.country" type="text" :placeholder="t('common.ph.typeHere')"
                         class="px-3 py-1.5 ring-1 ring-slate-900/10 rounded-lg bg-secondary/5 mt-1 w-full" />
                 </div>
                 <div>
-                    <h5 class="h5">Property Type</h5>
+                    <h5 class="h5">{{ t('property.add.type') }}</h5>
                     <select v-model="inputs.propertyType"
                         class="w-36 px-3 py-2 ring-1 ring-slate-900/10 rounded-lg bg-secondary/5 mt-1">
-                        <option value="">Select Type</option>
+                        <option value="">{{ t('property.add.selectType') }}</option>
                         <option v-for="type in propertyTypes" :key="type.value" :value="type.value">
                             {{ type.label }}
                         </option>
@@ -218,21 +219,21 @@ const handleSubmit = async () => {
 
             <div class="flex gap-4 flex-wrap w-full">
                 <div class="flex-1">
-                    <h5 class="h5">Address</h5>
-                    <input v-model="inputs.address" type="text" placeholder="Type here..."
+                    <h5 class="h5">{{ t('property.add.address') }}</h5>
+                    <input v-model="inputs.address" type="text" :placeholder="t('common.ph.typeHere')"
                         class="px-3 py-1.5 ring-1 ring-slate-900/10 rounded-lg bg-secondary/5 mt-1 w-full" />
                 </div>
                 <div class="w-32">
-                    <h5 class="h5">Area</h5>
-                    <input v-model.number="inputs.area" type="number" placeholder="Area (sq ft)" min="1"
+                    <h5 class="h5">{{ t('property.add.area') }}</h5>
+                    <input v-model.number="inputs.area" type="number" :placeholder="t('property.add.areaPh')" min="1"
                         class="px-3 py-1.5 ring-1 ring-slate-900/10 rounded-lg bg-secondary/5 mt-1 w-full" />
                 </div>
             </div>
 
             <!-- LOCATION MAP -->
             <div>
-                <h5 class="h5">Map Location</h5>
-                <p class="text-xs text-gray-400 mb-1">Click on the map to select the exact location of the property</p>
+                <h5 class="h5">{{ t('property.add.map') }}</h5>
+                <p class="text-xs text-gray-400 mb-1">{{ t('property.add.mapHint') }}</p>
                 <LocationPicker
                     v-model:latitude="inputs.latitude"
                     v-model:longitude="inputs.longitude"
@@ -241,13 +242,13 @@ const handleSubmit = async () => {
                 />
                 <div class="flex gap-4 mt-2">
                     <div class="flex-1">
-                        <label class="text-xs text-gray-500">Neighborhood</label>
-                        <input v-model="inputs.neighborhood" type="text" placeholder="Se completa automáticamente"
+                        <label class="text-xs text-gray-500">{{ t('property.add.neighborhood') }}</label>
+                        <input v-model="inputs.neighborhood" type="text" :placeholder="t('property.add.autoPh')"
                             class="px-3 py-1.5 ring-1 ring-slate-900/10 rounded-lg bg-secondary/5 mt-1 w-full text-sm" />
                     </div>
                     <div class="w-32">
-                        <label class="text-xs text-gray-500">Postal Code</label>
-                        <input v-model="inputs.postalCode" type="text" placeholder="Se completa automáticamente"
+                        <label class="text-xs text-gray-500">{{ t('property.add.postal') }}</label>
+                        <input v-model="inputs.postalCode" type="text" :placeholder="t('property.add.autoPh')"
                             class="px-3 py-1.5 ring-1 ring-slate-900/10 rounded-lg bg-secondary/5 mt-1 w-full text-sm" />
                     </div>
                 </div>
@@ -255,27 +256,27 @@ const handleSubmit = async () => {
 
             <div class="flex gap-4 flex-wrap">
                 <div>
-                    <h5 class="h5">Rent Price <span class="text-xs">/night</span></h5>
+                    <h5 class="h5">{{ t('property.add.rent') }} <span class="text-xs">{{ t('property.add.perNight') }}</span></h5>
                     <input v-model.number="inputs.priceRent" type="number" placeholder="100" min="0"
                         class="px-3 py-1.5 ring-1 ring-slate-900/10 rounded-lg bg-secondary/5 mt-1 w-28" />
                 </div>
                 <div>
-                    <h5 class="h5">Sale Price</h5>
+                    <h5 class="h5">{{ t('property.add.sale') }}</h5>
                     <input v-model.number="inputs.priceSale" type="number" placeholder="9999" min="0"
                         class="px-3 py-1.5 ring-1 ring-slate-900/10 rounded-lg bg-secondary/5 mt-1 w-28" />
                 </div>
                 <div>
-                    <h5 class="h5">Bedrooms</h5>
+                    <h5 class="h5">{{ t('property.add.bedrooms') }}</h5>
                     <input v-model.number="inputs.bedrooms" type="number" placeholder="1" min="0"
                         class="px-3 py-1.5 ring-1 ring-slate-900/10 rounded-lg bg-secondary/5 mt-1 w-20" />
                 </div>
                 <div>
-                    <h5 class="h5">Bathrooms</h5>
+                    <h5 class="h5">{{ t('property.add.bathrooms') }}</h5>
                     <input v-model.number="inputs.bathrooms" type="number" placeholder="1" min="0"
                         class="px-3 py-1.5 ring-1 ring-slate-900/10 rounded-lg bg-secondary/5 mt-1 w-20" />
                 </div>
                 <div>
-                    <h5 class="h5">Garages</h5>
+                    <h5 class="h5">{{ t('property.add.garages') }}</h5>
                     <input v-model.number="inputs.garages" type="number" placeholder="0" min="0"
                         class="px-3 py-1.5 ring-1 ring-slate-900/10 rounded-lg bg-secondary/5 mt-1 w-20" />
                 </div>
@@ -283,7 +284,7 @@ const handleSubmit = async () => {
 
             <!-- AMENITIES -->
             <div>
-                <h5 class="h5">Amenities</h5>
+                <h5 class="h5">{{ t('property.add.amenities') }}</h5>
                 <div class="flex gap-3 flex-wrap mt-1">
                     <div v-for="(_, amenity) in inputs.amenities" :key="amenity" class="flex gap-1">
                         <input :id="`amenity-${amenity}`" v-model="inputs.amenities[amenity]" type="checkbox" />

@@ -1,10 +1,16 @@
 import { Link } from "react-router-dom"
 import { assets } from "../assets/data"
 import { useAppContext } from "../context/AppContext"
+import { useTranslation } from "react-i18next"
+import { formatCurrency } from "../utils/format"
+import { useDisplayText } from "../hooks/useDisplayText"
 
 {/* @ts-ignore */ }
 const Item = ({ property }) => {
 
+    const { t } = useTranslation('listing');
+    const title = useDisplayText(property.title);
+    const description = useDisplayText(property.description);
     const { currency, user, favoriteIds, toggleFavorite } = useAppContext()
 
     const handleFavoriteClick = async (e: React.MouseEvent) => {
@@ -98,10 +104,10 @@ const Item = ({ property }) => {
                 <div className='flexBetween'>
                     <h5 className='bold-16 my-1'>{property.propertyType}</h5>
                     <div className='bold-15 text-secondary'>
-                        {currency}{property.price.sale} | {currency}{property.price.rent}.00 <span className='text-xs'>/night</span>
+                        {formatCurrency(property.price.sale, currency)} | {formatCurrency(property.price.rent, currency)}<span className='text-xs'>{t('perNight')}</span>
                     </div>
                 </div>
-                <h4 className='h4 line-clamp-1'>{property.title}</h4>
+                <h4 className='h4 line-clamp-1'>{title}</h4>
                 {/* RATING - Solo se muestra si hay reviews */}
                 {property.reviewCount > 0 && property.averageRating != null && (
                     <div className='flex items-center gap-1.5 mt-1.5'>
@@ -112,7 +118,7 @@ const Item = ({ property }) => {
                             {property.averageRating.toFixed(1)}
                         </span>
                         <span className='text-xs text-gray-400'>
-                            ({property.reviewCount} {property.reviewCount === 1 ? 'review' : 'reviews'})
+                            ({property.reviewCount} {property.reviewCount === 1 ? t('review') : t('reviews')})
                         </span>
                     </div>
                 )}
@@ -151,7 +157,7 @@ const Item = ({ property }) => {
                     </p>
                 </div>
                 <p className='pt-2 mb-4 line-clamp-2'>
-                    {property.description}
+                    {description}
                 </p>
             </div>
         </Link>

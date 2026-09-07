@@ -132,7 +132,7 @@ class ReviewServiceCacheTest {
         newReview.setId("review-2");
         when(reviewRepository.save(any(Review.class))).thenReturn(newReview);
 
-        reviewService.createReview("user-2", "prop-1", new CreateReviewRequest(5, "Excellent"));
+        reviewService.createReview("user-2", "prop-1", new CreateReviewRequest(5, "Excellent", null));
 
         // After eviction: next call misses
         reviewService.getAverageRatings(propertyIds);

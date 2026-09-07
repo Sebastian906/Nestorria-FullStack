@@ -1,0 +1,9 @@
+{
+    "dashboard": "Panel",
+    "addProperty": "Agregar propiedad",
+    "listProperty": "Ver propiedades",
+    "reports": "Reportes",
+    "categories": "Categorías",
+    "ai": "Panel IA",
+    "mlops": "MLOps"
+}

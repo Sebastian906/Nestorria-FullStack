@@ -1,0 +1,30 @@
+{
+    "title": "Reports",
+    "subtitle": "Download booking and property reports in Excel or PDF format",
+    "type": "Report Type",
+    "bookings": "Bookings",
+    "properties": "Properties",
+    "period": "Period",
+    "pCurrentMonth": "Current Month",
+    "pPreviousMonth": "Previous Month",
+    "pCurrentYear": "Current Year",
+    "pPreviousYear": "Previous Year",
+    "pLast3": "Last 3 Months",
+    "pLast6": "Last 6 Months",
+    "pCustom": "Custom",
+    "from": "Start Date",
+    "to": "End Date",
+    "downloadXlsx": "Download XLSX",
+    "downloadPdf": "Download PDF",
+    "downloading": "Downloading...",
+    "info": "Report Information",
+    "includesBookings": "The report includes: ID, date, client, property, contract, stay dates, nights, amount and status",
+    "includesProperties": "The report includes: ID, title, city, country, type, prices, contracts, revenue and availability",
+    "selectedPeriod": "Selected period:",
+    "range": "From {{from}} to {{to}}",
+    "downloaded": "Report {{format}} downloaded successfully",
+    "errors": {
+        "generic": "Could not generate the report",
+        "badFormat": "Unsupported format. Use: xlsx or pdf"
+    }
+}

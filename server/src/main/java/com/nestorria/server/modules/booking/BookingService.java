@@ -78,7 +78,7 @@ public class BookingService {
         validateDateRange(request.checkInDate(), request.checkOutDate());
 
         if (!propertyRepository.existsById(request.propertyId())) {
-            throw new ResourceNotFoundException("Propiedad no encontrada: " + request.propertyId());
+            throw new ResourceNotFoundException("booking.property-not-found");
         }
 
         return isPropertyAvailable(request.propertyId(), request.checkInDate(), request.checkOutDate());
@@ -89,23 +89,23 @@ public class BookingService {
         validateDateRange(request.checkInDate(), request.checkOutDate());
 
         Property property = bookingRepository.findPropertyForUpdate(request.propertyId())
-            .orElseThrow(() -> new ResourceNotFoundException("Propiedad no encontrada: " + request.propertyId()));
+            .orElseThrow(() -> new ResourceNotFoundException("booking.property-not-found"));
 
         if (!isPropertyAvailable(request.propertyId(), request.checkInDate(), request.checkOutDate())) {
-            throw new ConflictException("La propiedad no está disponible en las fechas seleccionadas");
+            throw new ConflictException("booking.not-available");
         }
 
         Integer rentPrice = property.getPrice().getRent();
         if (rentPrice == null) {
-            throw new BadRequestException("La propiedad no tiene un precio de renta configurado");
+            throw new BadRequestException("booking.no-rent-price");
         }
 
         User user = userRepository.findById(userId)
-            .orElseThrow(() -> new ResourceNotFoundException("Usuario no encontrado: " + userId));
+            .orElseThrow(() -> new ResourceNotFoundException("not-found"));
 
         long nights = ChronoUnit.DAYS.between(request.checkInDate(), request.checkOutDate());
         if (nights <= 0) {
-            throw new BadRequestException("La reserva debe ser de al menos una noche");
+            throw new BadRequestException("booking.min-one-night");
         }
         long totalPrice = (long) rentPrice * nights;
 
@@ -185,7 +185,7 @@ public class BookingService {
 
     private void validateDateRange(LocalDate checkInDate, LocalDate checkOutDate) {
         if (!checkOutDate.isAfter(checkInDate)) {
-            throw new BadRequestException("La fecha de salida debe ser posterior a la fecha de entrada");
+            throw new BadRequestException("booking.checkout-after-checkin");
         }
     }
 

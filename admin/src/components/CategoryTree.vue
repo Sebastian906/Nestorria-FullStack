@@ -1,4 +1,8 @@
 <script setup>
+import { useI18n } from 'vue-i18n'
+
+const { t } = useI18n()
+
 defineProps({ nodes: { type: Array, default: () => [] } })
 defineEmits(['create-sub'])
 </script>
@@ -12,12 +16,12 @@ defineEmits(['create-sub'])
                     <span class="ml-2 text-xs text-gray-400">{{ node.slug }}</span>
                 </div>
                 <button class="text-sm text-secondary hover:underline" @click="$emit('create-sub', node.id)">
-                    + Subcategoría
+                    + {{ t('categories.form.newSubcategory') }}
                 </button>
             </div>
             <CategoryTree v-if="node.children && node.children.length" :nodes="node.children"
                 class="mt-2 pl-4 border-l border-gray-200" @create-sub="(id) => $emit('create-sub', id)" />
         </li>
     </ul>
-    <p v-else class="text-sm text-gray-400">Sin categorías todavía.</p>
+    <p v-else class="text-sm text-gray-400">{{ t('categories.treeEmpty') }}</p>
 </template>

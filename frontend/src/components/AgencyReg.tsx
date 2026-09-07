@@ -4,11 +4,14 @@ import { useAuth } from "@clerk/react"
 import { assets, cities } from "../assets/data"
 import axios from "axios"
 import toast from "react-hot-toast"
+import { useTranslation } from "react-i18next"
+import { serverMsg } from "../services/serverMsg"
 
 const AgencyReg = () => {
 
     const { setShowAgencyReg, refreshProfile } = useAppContext()
     const { getToken } = useAuth()
+    const { t } = useTranslation("user")
     const [name, setName] = useState("")
     const [email, setEmail] = useState("")
     const [contact, setContact] = useState("")
@@ -20,18 +23,18 @@ const AgencyReg = () => {
         try {
             const token = await getToken()
             if (!token) {
-                toast.error('Failed to register agency')
+                toast.error(t("user:agency.fail"))
                 return
             }
             await axios.post('/api/agencies',
                 { name, contact, email, address, city },
                 { headers: { Authorization: `Bearer ${token}` } }
             )
-            toast.success('Agency registered successfully')
+            toast.success(t("user:agency.success"))
             await refreshProfile()
             setShowAgencyReg(false)
         } catch (error: any) {
-            toast.error(error?.response?.data?.message ?? 'Failed to register agency')
+            toast.error(serverMsg(error, "user:agency.fail"))
         }
     }
 
@@ -57,21 +60,21 @@ const AgencyReg = () => {
                         alt="close img"
                         className='absolute top-4 right-4 h-6 w-6 p-1 cursor-pointer bg-secondary/50 rounded-full shadow-emerald-400'
                     />
-                    <h3 className='h3 mb-6'>Register Agency</h3>
+                    <h3 className='h3 mb-6'>{t('user:agency.title')}</h3>
                     <div className='flex gap-2 xl:gap-3'>
                         <div>
                             <label
                                 htmlFor="name"
                                 className='medium-14'
                             >
-                                Agency Name
+                                {t('user:agency.name')}
                             </label>
                             <input
                                 onChange={(e) => setName(e.target.value)}
                                 value={name}
                                 id='name'
                                 type="text"
-                                placeholder='Type here...'
+                                placeholder={t('common:search.placeholder')}
                                 className='regular-14 border bg-secondary/10 border-slate-900/10 rounded-lg w-full px-3 py-1.5 mt-1 outline-none'
                                 required
                             />
@@ -81,14 +84,14 @@ const AgencyReg = () => {
                                 htmlFor="contact"
                                 className='medium-14'
                             >
-                                Contact
+                                {t('user:agency.contact')}
                             </label>
                             <input
                                 onChange={(e) => setContact(e.target.value)}
                                 value={contact}
                                 id='contact'
                                 type="text"
-                                placeholder='Type here...'
+                                placeholder={t('common:search.placeholder')}
                                 className='regular-14 border bg-secondary/10 border-slate-900/10 rounded-lg w-full px-3 py-1.5 mt-1 outline-none'
                                 required
                             />
@@ -99,14 +102,14 @@ const AgencyReg = () => {
                             htmlFor="email"
                             className='medium-14'
                         >
-                            Email
+                            {t('user:agency.email')}
                         </label>
                         <input
                             onChange={(e) => setEmail(e.target.value)}
                             value={email}
                             id='email'
                             type="email"
-                            placeholder='Type here...'
+                            placeholder={t('common:search.placeholder')}
                             className='regular-14 border bg-secondary/10 border-slate-900/10 rounded-lg w-full px-3 py-1.5 mt-1 outline-none'
                             required
                         />
@@ -116,14 +119,14 @@ const AgencyReg = () => {
                             htmlFor="city"
                             className='medium-14'
                         >
-                            Address
+                            {t('user:agency.address')}
                         </label>
                         <input
                             onChange={(e) => setAddress(e.target.value)}
                             value={address}
                             id='address'
                             type="text"
-                            placeholder='Type here...'
+                            placeholder={t('common:search.placeholder')}
                             className='regular-14 border bg-secondary/10 border-slate-900/10 rounded-lg w-full px-3 py-1.5 mt-1 outline-none'
                             required
                         />
@@ -133,7 +136,7 @@ const AgencyReg = () => {
                             htmlFor="city"
                             className='medium-14'
                         >
-                            City
+                            {t('user:agency.city')}
                         </label>
                         <select
                             onChange={(e) => setCity(e.target.value)}
@@ -142,7 +145,7 @@ const AgencyReg = () => {
                             className='regular-14 border bg-secondary/10 border-slate-900/10 rounded-lg w-full px-3 py-2.5 mt-1 outline-none'
                             required
                         >
-                            <option value=''>Select City</option>
+                            <option value=''>{t('user:agency.selectCity')}</option>
                             {cities.map((city) => (
                                 <option
                                     key={city}
@@ -151,7 +154,7 @@ const AgencyReg = () => {
                             ))}
                         </select>
                     </div>
-                    <button className='btn-dark py-2 rounded-lg w-32 mt-6'>Register</button>
+                    <button className='btn-dark py-2 rounded-lg w-32 mt-6'>{t('user:agency.register')}</button>
                 </div>
             </form>
         </div>

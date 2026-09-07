@@ -2,6 +2,7 @@ package com.nestorria.server.modules.report;
 
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
+import java.util.Locale;
 
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpHeaders;
@@ -46,22 +47,20 @@ public class ReportController {
      */
     @GetMapping("/bookings/{format}")
     public ResponseEntity<byte[]> generateBookingsReport(
-            @AuthenticationPrincipal Jwt jwt,
-            @PathVariable String format,
-            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) 
-                LocalDate startDate,
-            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) 
-                LocalDate endDate) {
-        
+        @AuthenticationPrincipal Jwt jwt,
+        @PathVariable String format,
+        @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
+        @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate,
+        java.util.Locale locale) {
         // Validar formato
         if (!"xlsx".equals(format) && !"pdf".equals(format)) {
-            throw new IllegalArgumentException("Formato no soportado. Use: xlsx o pdf");
+            throw new IllegalArgumentException("report.unsupported-format");
         }
         
         // Obtener agencia del usuario
         String userId = jwt.getSubject();
         Agency agency = agencyRepository.findByOwnerId(userId)
-            .orElseThrow(() -> new ResourceNotFoundException("No se encontró una agencia para este usuario"));
+            .orElseThrow(() -> new ResourceNotFoundException("not-found"));
         
         // Fechas por defecto: mes actual
         LocalDate now = LocalDate.now();
@@ -73,8 +72,7 @@ public class ReportController {
         }
         
         // Generar reporte
-        byte[] reportBytes = reportService.generateBookingsReport(
-            agency.getId(), startDate, endDate, format);
+        byte[] reportBytes = reportService.generateBookingsReport(agency.getId(), startDate, endDate, format, locale);
         
         // Construir respuesta
         String contentType = "xlsx".equals(format) 
@@ -97,21 +95,22 @@ public class ReportController {
     @GetMapping("/properties/{format}")
     public ResponseEntity<byte[]> generatePropertiesReport(
             @AuthenticationPrincipal Jwt jwt,
-            @PathVariable String format) {
+            @PathVariable String format,
+            Locale locale) {
         
         // Validar formato
         if (!"xlsx".equals(format) && !"pdf".equals(format)) {
-            throw new IllegalArgumentException("Formato no soportado. Use: xlsx o pdf");
+            throw new IllegalArgumentException("report.unsupported-format");
         }
         
         // Obtener agencia del usuario
         String userId = jwt.getSubject();
         Agency agency = agencyRepository.findByOwnerId(userId)
-            .orElseThrow(() -> new ResourceNotFoundException("No se encontró una agencia para este usuario"));
+            .orElseThrow(() -> new ResourceNotFoundException("not-found"));
         
         // Generar reporte
         byte[] reportBytes = reportService.generatePropertiesReport(
-            agency.getId(), format);
+            agency.getId(), format, locale);
         
         // Construir respuesta
         String contentType = "xlsx".equals(format) 

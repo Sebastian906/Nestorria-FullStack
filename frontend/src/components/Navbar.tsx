@@ -1,5 +1,6 @@
 import type { Dispatch, SetStateAction } from "react";
 import { NavLink } from "react-router-dom";
+import { useTranslation } from 'react-i18next';
 
 interface NavbarProps {
     setMenuOpened: Dispatch<SetStateAction<boolean>>;
@@ -7,13 +8,14 @@ interface NavbarProps {
 }
 
 const Navbar: React.FC<NavbarProps> = ({ setMenuOpened, containerStyles }) => {
+    const { t } = useTranslation('nav');
     const navLinks = [
-        { path: '/', title: 'Home' },
-        { path: '/listing', title: 'Listing' },
-        { path: '/map', title: 'Map' },
-        { path: '/guides', title: 'Guides' },
-        { path: '/agencies', title: 'Agencies' },
-        { path: '/contact', title: 'Contact' }
+        { path: '/', key: 'home' },
+        { path: '/listing', key: 'listing' },
+        { path: '/map', key: 'map' },
+        { path: '/guides', key: 'guides' },
+        { path: '/agencies', key: 'agencies' },
+        { path: '/contact', key: 'contact' }
     ];
 
     return <nav className={`${containerStyles}`}>
@@ -23,11 +25,11 @@ const Navbar: React.FC<NavbarProps> = ({ setMenuOpened, containerStyles }) => {
                     setMenuOpened(false);
                     scrollTo(0, 0);
                 }}
-                key={link.title}
+                key={link.key}
                 to={link.path}
                 className={({ isActive }) => `${isActive ? 'active-link' : ''} px-3 py-2 rounded-full uppercase text-sm font-bold `}
             >
-                {link.title}
+                {t(link.key)}
             </NavLink>
         ))}
     </nav>

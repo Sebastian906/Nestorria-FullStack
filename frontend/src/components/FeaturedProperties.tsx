@@ -4,19 +4,21 @@ import { Swiper, SwiperSlide } from 'swiper/react'
 import 'swiper/css'
 import { Autoplay } from 'swiper/modules'
 import { useAppContext } from "../context/AppContext"
+import { useTranslation } from "react-i18next"
 import Item from "./Item"
 
 const FeaturedProperties = () => {
 
+    const { t } = useTranslation('home');
     const { properties } = useAppContext()
 
     return (
         <section className='max-padd-container py-16 xl:py-22'>
-            <span className='medium-18'>Your New Home Awaits!</span>
-            <h2 className='h2'>Discover Your Place Here</h2>
+            <span className='medium-18'>{t('featured.eyebrow')}</span>
+            <h2 className='h2'>{t('featured.title')}</h2>
             <div className='flexBetween mt-8 mb-6'>
                 <h5>
-                    <span className='font-bold'>Displaying 1-9</span> from 3k listings
+                    <span className='font-bold'>{t('featured.showing')}</span> {t('featured.from')}
                 </h5>
                 <Link
                     to={'/listing'}

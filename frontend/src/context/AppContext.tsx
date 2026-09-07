@@ -4,6 +4,7 @@ import { type Property } from "../assets/data"
 import { useAuth, useUser } from "@clerk/react"
 import axios from "axios"
 import toast from "react-hot-toast"
+import { t } from 'i18next';
 
 const backendUrl = (import.meta.env.VITE_BACKEND_URL || 'http://127.0.0.1:4000').replace(/\/$/, '')
 axios.defaults.baseURL = backendUrl
@@ -67,7 +68,7 @@ export const AppContextProvider = ({ children }: { children: ReactNode }) => {
             if (error.code === 'ERR_NETWORK') {
                 console.warn('Network error loading properties');
             } else {
-                toast.error('No se pudieron cargar las propiedades');
+                toast.error(t('common:errors.loadProperties'));
             }
         }
     };
@@ -89,7 +90,7 @@ export const AppContextProvider = ({ children }: { children: ReactNode }) => {
                 }))
             )
         } catch (error: any) {
-            toast.error(error?.response?.data?.message ?? 'No se pudo cargar tu perfil')
+            toast.error(error?.response?.data?.message ?? t('common:errors.loadProfile'))
         }
     }
 
@@ -117,7 +118,7 @@ export const AppContextProvider = ({ children }: { children: ReactNode }) => {
         try {
             const token = await getToken()
             if (!token) {
-                toast.error('Inicia sesión para agregar favoritos')
+                toast.error(t('common:errors.loginForFavorites'))
                 return false
             }
             const { data } = await axios.post(`/api/properties/${propertyId}/favorite`, {}, {
@@ -135,10 +136,10 @@ export const AppContextProvider = ({ children }: { children: ReactNode }) => {
                 return next
             })
 
-            toast.success(favorited ? 'Agregado a favoritos' : 'Eliminado de favoritos')
+            toast.success(favorited ? t('common:favorites.added') : t('common:favorites.removed'))
             return favorited
         } catch (error: any) {
-            toast.error(error.response?.data?.message || 'No se pudo actualizar favorito')
+            toast.error(error.response?.data?.message || t('common:errors.updateFavorite'))
             return false
         }
     }

@@ -1,0 +1,19 @@
+{
+    "title": "Notifications",
+    "empty": "You don't have notifications",
+    "markAll": "Mark all as read",
+    "loading": "Loading...",
+    "loadMore": "Load more",
+    "now": "Now",
+    "minAgo": "{{n}}m ago",
+    "hourAgo": "{{n}}h ago",
+    "dayAgo": "{{n}}d ago",
+    "typeConfirmed": "Booking Confirmed",
+    "typeCancelled": "Booking Cancelled",
+    "typePayment": "Payment Received",
+    "typeSigned": "Contract Signed",
+    "typeExpired": "Contract Expired",
+    "typeReview": "Review Received",
+    "typeInquiry": "Property Inquiry",
+    "typeDefault": "Notification Alert"
+}

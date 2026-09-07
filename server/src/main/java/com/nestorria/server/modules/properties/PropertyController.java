@@ -163,7 +163,7 @@ public class PropertyController {
     @GetMapping("/nearby")
     public List<PropertySummaryResponse> findNearby(@Valid NearbySearchRequest request) {
         if (request.lat() == null || request.lng() == null) {
-            throw new BadRequestException("Los parámetros lat y lng son obligatorios para la búsqueda cercana");
+            throw new BadRequestException("property.nearby-required");
         }
         return propertySearchService.findNearby(request.lat(), request.lng(), request.radiusKm());
     }

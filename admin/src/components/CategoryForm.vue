@@ -3,12 +3,15 @@ import { reactive, ref, computed } from 'vue'
 import axios from 'axios'
 import { useAuth } from '@clerk/vue'
 import { useToast } from 'vue-toastification'
+import { useI18n } from "vue-i18n";
+import { serverMsg } from "../utils/serverMsg.js";
 
 const props = defineProps({ parentId: { type: Number, default: null } })
 const emit = defineEmits(['close', 'created'])
 
 const toast = useToast()
 const auth = useAuth()
+const { t } = useI18n()
 
 // Mismo patrón que el autómata del backend: ^[a-z0-9]+(?:-[a-z0-9]+)*$
 // (UX en el form; la garantía real la da el FiniteAutomaton en CategoryService)
@@ -31,11 +34,11 @@ const generateSlug = () => {
 const handleSubmit = async () => {
     serverError.value = ''
     if (!form.name.trim()) {
-        toast.error('El nombre es obligatorio')
+        toast.error(t("categories.errors.nameRequired"));
         return
     }
     if (!SLUG_RE.test(form.slug)) {
-        toast.error('Slug inválido: solo minúsculas, dígitos y guiones simples')
+        toast.error(t("categories.errors.badSlug"));
         return
     }
 
@@ -43,7 +46,7 @@ const handleSubmit = async () => {
     try {
         const token = await auth.getToken.value()
         if (!token) {
-            toast.error('Error de autenticación. Inicia sesión nuevamente.')
+            toast.error(t("common.errors.auth"));
             return
         }
         await axios.post(
@@ -56,12 +59,12 @@ const handleSubmit = async () => {
             },
             { headers: { Authorization: `Bearer ${token}` } }
         )
-        toast.success('Categoría creada')
+        toast.success(t("categories.success.created"));
         emit('created')
     } catch (error) {
         // El backend rechaza con 400 si el slug no lo acepta el autómata
-        serverError.value = error?.response?.data?.message || 'No se pudo crear la categoría'
-        toast.error(serverError.value)
+        serverError.value = error?.response?.data?.message || t("common.errors.generic")
+        toast.error(serverMsg(error, "common.errors.generic"));
     } finally {
         loading.value = false
     }
@@ -73,7 +76,7 @@ const handleSubmit = async () => {
         <form class="bg-white rounded-lg shadow-lg p-6 w-full max-w-md space-y-4" @submit.prevent="handleSubmit">
             <div class="flex justify-between items-center">
                 <h2 class="text-lg font-bold">
-                    {{ parentId ? 'Nueva subcategoría' : 'Nueva categoría' }}
+                    {{ parentId ? t('categories.form.newSubcategory') : t('categories.form.newCategory') }}
                 </h2>
                 <button type="button" class="text-gray-400 hover:text-gray-600" @click="emit('close')">
                     ✕
@@ -81,27 +84,27 @@ const handleSubmit = async () => {
             </div>
 
             <div>
-                <label class="block text-sm font-medium mb-1">Nombre *</label>
+                <label class="block text-sm font-medium mb-1">{{ t('categories.form.name') }} *</label>
                 <input v-model="form.name" class="w-full border border-gray-300 rounded px-3 py-2"
                     placeholder="Ej: Apartamento" />
             </div>
 
             <div>
                 <div class="flex items-center justify-between">
-                    <label class="block text-sm font-medium mb-1">Slug *</label>
+                    <label class="block text-sm font-medium mb-1">{{ t('categories.form.slug') }} *</label>
                     <button type="button" class="text-xs text-secondary hover:underline" @click="generateSlug">
-                        Generar del nombre
+                        {{ t('categories.form.generateFromName') }}
                     </button>
                 </div>
                 <input v-model="form.slug" class="w-full border border-gray-300 rounded px-3 py-2"
                     :class="form.slug && !slugValid ? 'border-red-500' : ''" placeholder="Ej: apartamento" />
                 <p v-if="form.slug && !slugValid" class="text-xs text-red-500 mt-1">
-                    Solo minúsculas, dígitos y guiones simples entre segmentos
+                    {{ t('categories.form.slugHint') }}
                 </p>
             </div>
 
             <div>
-                <label class="block text-sm font-medium mb-1">Descripción</label>
+                <label class="block text-sm font-medium mb-1">{{ t('categories.form.description') }}</label>
                 <textarea v-model="form.description" class="w-full border border-gray-300 rounded px-3 py-2"
                     rows="2"></textarea>
             </div>
@@ -110,12 +113,12 @@ const handleSubmit = async () => {
 
             <div class="flex justify-end gap-2">
                 <button type="button" class="px-4 py-2 border border-gray-300 rounded" @click="emit('close')">
-                    Cancelar
+                    {{ t('common.actions.cancel') }}
                 </button>
                 <button type="submit"
                     class="px-4 py-2 bg-secondary text-white rounded hover:opacity-90 disabled:opacity-50"
                     :disabled="loading">
-                    {{ loading ? 'Guardando...' : 'Guardar' }}
+                    {{ loading ? t('common.actions.saving') : t('common.actions.save') }}
                 </button>
             </div>
         </form>

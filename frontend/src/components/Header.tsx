@@ -2,11 +2,15 @@ import { Link, useLocation } from "react-router-dom"
 import { assets } from "../assets/data"
 import Navbar from "./Navbar"
 import NotificationBell from "./NotificationBell"
+import LanguageSwitcher from "./LanguageSwitcher"
 import { useEffect, useState } from "react"
 import { useClerk, UserButton } from "@clerk/react"
 import { useAppContext } from "../context/AppContext"
+import { useTranslation } from "react-i18next"
 
 const Header = () => {
+
+    const { t } = useTranslation(['common', 'user']);
 
     const [active, setActive] = useState<boolean>(false)
     const [menuOpened, setMenuOpened] = useState<boolean>(false)
@@ -142,7 +146,7 @@ const Header = () => {
                                         ? window.location.assign(import.meta.env.VITE_ADMIN_URL)
                                         : setShowAgencyReg(true)}
                                     className={`btn-outline px-2 py-1 text-xs font-semibold ${!active && 'text-primary ring-primary bg-transparent hover:text-black'} bg-secondary/10 hover:bg-white`}>
-                                    {isOwner ? "Dashboard" : "Register Agency"}
+                                    {isOwner ? t('common:buttons.dashboard') : t('common:buttons.registerAgency')}
                                 </button>
                             )}
                         </div>
@@ -157,7 +161,7 @@ const Header = () => {
                                     onChange={handleSearchChange}
                                     value={searchQuery}
                                     type="text"
-                                    placeholder='Type here...'
+                                    placeholder={t('common:search.placeholder')}
                                     className='w-full text-sm outline-none pr-10 placeholder:text-slate-400'
                                 />
                             </div>
@@ -178,6 +182,10 @@ const Header = () => {
                                 <NotificationBell />
                             </div>
                         )}
+                        {/* LANGUAGE SWITCHER */}
+                        <div className={`${!active ? 'text-white' : 'text-gray-700'}`}>
+                            <LanguageSwitcher />
+                        </div>
                         {/* MENU TOGGLE */}
                         <>
                             {menuOpened ? (
@@ -213,22 +221,22 @@ const Header = () => {
                                     >
                                         <UserButton.MenuItems>
                                             <UserButton.Action
-                                                label='My Bookings'
+                                                label={t('user:menu.bookings')}
                                                 labelIcon={<BookingIcon />}
                                                 onClick={() => navigate('/my-bookings')}
                                             />
                                             <UserButton.Action
-                                                label='My Favorites'
+                                                label={t('user:menu.favorites')}
                                                 labelIcon={<FavoriteIcon />}
                                                 onClick={() => navigate('/listing?favorites=true')}
                                             />
                                             <UserButton.Action
-                                                label='My Reviews'
+                                                label={t('user:menu.reviews')}
                                                 labelIcon={<ReviewIcon />}
                                                 onClick={() => navigate('/my-reviews')}
                                             />
                                             <UserButton.Action
-                                                label='My History'
+                                                label={t('user:menu.history')}
                                                 labelIcon={<HistoryIcon />}
                                                 onClick={() => navigate('/my-history')}
                                             />
@@ -239,7 +247,7 @@ const Header = () => {
                                         onClick={() => openSignIn()}
                                         className='btn-secondary flexCenter gap-2 rounded-full'
                                     >
-                                        Login
+                                        {t('common:buttons.login')}
                                         <img src={assets.user} alt='user' />
                                     </button>
                                 )}

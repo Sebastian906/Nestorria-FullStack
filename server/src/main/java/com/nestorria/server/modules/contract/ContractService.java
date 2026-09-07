@@ -2,7 +2,6 @@ package com.nestorria.server.modules.contract;
 
 import java.util.List;
 
-import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -134,12 +133,12 @@ public class ContractService {
 
         // Check not already signed
         if (digitalSignatureRepository.existsByContractIdAndUserId(contractId, userId)) {
-            throw new ConflictException("Ya has firmado este contrato");
+            throw new ConflictException("contract.already-signed");
         }
 
         User user = userRepository.findById(userId)
             .orElseThrow(() -> new ResourceNotFoundException(
-                "Usuario no encontrado: " + userId));
+                "not-found"));
 
         DigitalSignature signature = new DigitalSignature(
             contract, user, actualRole, ipAddress, userAgent);

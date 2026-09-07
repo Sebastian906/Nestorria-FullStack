@@ -1,6 +1,8 @@
 import { useEffect, useState } from "react"
 import axios from "axios"
 import { assets } from "../assets/data"
+import { useTranslation } from "react-i18next"
+import { serverMsg } from "../services/serverMsg"
 
 interface AgencyData {
     id: string
@@ -14,6 +16,7 @@ interface AgencyData {
 }
 
 const Agencies = () => {
+    const { t } = useTranslation('user');
     const [agencies, setAgencies] = useState<AgencyData[]>([])
     const [loading, setLoading] = useState(true)
     const [error, setError] = useState<string | null>(null)
@@ -25,7 +28,7 @@ const Agencies = () => {
             const { data } = await axios.get("/api/agencies")
             setAgencies(data)
         } catch (err: any) {
-            setError(err.response?.data?.message || "Failed to load agencies")
+            setError(serverMsg(err, "user:agencies.loadFail"))
         } finally {
             setLoading(false)
         }
@@ -38,18 +41,18 @@ const Agencies = () => {
     return (
         <div className='bg-linear-to-r from-[#F0FDF4] to-white py-16 pt-28'>
             <div className='max-padd-container'>
-                <h2 className='h2 mb-6'>Agencies</h2>
-                {loading && <p className="text-gray-500 text-center py-10">Loading agencies...</p>}
+                <h2 className='h2 mb-6'>{t('user:agencies.title')}</h2>
+                {loading && <p className="text-gray-500 text-center py-10">{t('user:agencies.loading')}</p>}
                 {!loading && error && (
                     <div className="text-center py-10">
                         <p className="text-red-500 mb-3">{error}</p>
                         <button onClick={fetchAgencies} className="px-4 py-2 rounded-lg border border-slate-900/10 bg-white hover:bg-secondary/10 transition text-sm">
-                            Retry
+                            {t('user:agencies.retry')}
                         </button>
                     </div>
                 )}
                 {!loading && !error && agencies.length === 0 && (
-                    <p className="text-gray-500 text-center py-10">No agencies found.</p>
+                    <p className="text-gray-500 text-center py-10">{t('user:agencies.empty')}</p>
                 )}
                 {!loading && !error && agencies.length > 0 && (
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">

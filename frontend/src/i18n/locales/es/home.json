@@ -1,0 +1,80 @@
+{
+    "hero": {
+        "eyebrow": "Descubra cómo simplificamos estadías y espacios",
+        "titleA": "Explore",
+        "titleB": "propiedades excepcionales",
+        "titleC": "ubicadas en entornos impresionantes.",
+        "search": "Buscar",
+        "destination": "Destino",
+        "checkIn": "Llegada",
+        "checkOut": "Salida",
+        "guests": "Huéspedes"
+    },
+    "featured": {
+        "eyebrow": "Su nuevo hogar le espera.",
+        "title": "Descubra su lugar aquí",
+        "showing": "Mostrando 1-9",
+        "from": "de 3 mil anuncios"
+    },
+    "cta": {
+        "badge": "Respaldado por expertos",
+        "title": "Venda o rente más rápido con estrategias expertas y soporte real.",
+        "subtitle": "Logre sus objetivos más rápido con estrategias personalizadas y soporte dedicado.",
+        "action": "Comenzar"
+    },
+    "faq": {
+        "experts": "Expertos inmobiliarios de confianza",
+        "expertsBody": "La confianza, la claridad y la simplicidad están en el centro de todo lo que hacemos para facilitar su búsqueda.",
+        "title1": "Hogares hechos para vivir",
+        "title2": "Simplificamos su búsqueda en cada paso",
+        "para": "Desde encontrar la ubicación ideal hasta cerrar el trato, su proceso será fluido y eficiente.",
+        "q1": "Reserva ultrarrápida",
+        "a1": "Diseñado para la velocidad: búsqueda instantánea y visitas sin fricción.",
+        "q2": "Hogares totalmente personalizables",
+        "a2": "Adapte distribución, características y diseño a su estilo de vida.",
+        "q3": "Respuesta por ubicación",
+        "a3": "Cada propiedad es accesible por zona, sin esfuerzo adicional.",
+        "q4": "Respaldo inmobiliario",
+        "a4": "Datos confiables, sin agentes ni pasos innecesarios.",
+        "q5": "Soporte para hogar inteligente",
+        "a5": "Todas las casas incluyen funciones modernas de vida inteligente."
+    },
+    "about": {
+        "title1": "Su aliado inmobiliario de confianza",
+        "title2": "Le acompañamos en cada paso",
+        "para": "La confianza, la claridad y la simplicidad están en el centro de todo lo que hacemos.",
+        "f1": "Agenda de visitas dentro de la app",
+        "f2": "Actualización de precios en tiempo real",
+        "f3": "Interfaz amable para navegar sin fricción",
+        "f4": "Acceso a propiedades fuera del mercado",
+        "trustedBy": "Respaldado por",
+        "users": "usuarios"
+    },
+    "testimonial": {
+        "postedOn": "Publicado en",
+        "quote": "Radiant nos permitió superar a la competencia con total facilidad."
+    },
+    "footer": {
+        "tagline": "Viva la modernidad con propiedades bien presentadas, soporte profesional y espacios diseñados con cuidado.",
+        "company": "EMPRESA",
+        "support": "SOPORTE",
+        "stayUpdated": "MANTÉNGASE AL DÍA",
+        "newsletter": "Suscríbase para inspiración y ofertas especiales.",
+        "emailPh": "Su correo",
+        "subscribe": "Suscribirse",
+        "rights": "Todos los derechos reservados.",
+        "about": "Nosotros",
+        "careers": "Empleo",
+        "press": "Prensa",
+        "blog": "Blog",
+        "partners": "Socios",
+        "help": "Ayuda",
+        "safety": "Seguridad",
+        "cancellation": "Cancelaciones",
+        "contactUs": "Contáctenos",
+        "accessibility": "Accesibilidad",
+        "privacy": "Privacidad",
+        "terms": "Términos",
+        "sitemap": "Mapa del sitio"
+    }
+}

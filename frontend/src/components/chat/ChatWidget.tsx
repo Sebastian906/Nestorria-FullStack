@@ -3,8 +3,10 @@ import { useChat } from '../../hooks/useChat'
 import { assets } from '../../assets/data'
 import ChatMessage from './ChatMessage'
 import ChatInput from './ChatInput'
+import { useTranslation } from 'react-i18next'
 
 const ChatWidget = () => {
+    const { t } = useTranslation('chat')
     const {
         messages,
         isStreaming,
@@ -31,7 +33,7 @@ const ChatWidget = () => {
                     ? 'bg-gray-800 text-white rotate-0'
                     : 'bg-secondary text-gray-900 hover:scale-105'
                     }`}
-                aria-label={isOpen ? 'Close chat' : 'Open chat'}
+                aria-label={isOpen ? t('close') : t('open')}
             >
                 {isOpen ? (
                     <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -50,17 +52,17 @@ const ChatWidget = () => {
                     <div className="flex items-center justify-between px-4 py-3 bg-gray-800 text-white">
                         <div className="flex items-center gap-2">
                             <img src={assets.chat} alt="" className="w-5 h-5" />
-                            <span className="font-semibold text-sm">AI Assistant</span>
+                            <span className="font-semibold text-sm">{t('assistant')}</span>
                         </div>
                         <div className="flex items-center gap-3">
                             <span className="text-xs text-gray-400">
-                                {remainingMessages}/20 msg
+                                {remainingMessages}/20 {t('msgSuffix')}
                             </span>
                             {messages.length > 0 && (
                                 <button
                                     onClick={clearMessages}
                                     className="text-xs text-gray-400 hover:text-white transition-colors"
-                                    title="New conversation"
+                                    title={t('newConversation')}
                                 >
                                     <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                                         <path d="M21 12a9 9 0 0 0-9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" />
@@ -77,7 +79,7 @@ const ChatWidget = () => {
                     <div className="flex-1 overflow-y-auto px-4 py-4 space-y-4">
                         {messages.length === 0 && (
                             <div className="text-center text-gray-400 py-8">
-                                <p className="text-sm">Hi! Ask me about properties, contracts, or business rules.</p>
+                                <p className="text-sm">{t('empty')}</p>
                             </div>
                         )}
                         {messages.map((msg) => (

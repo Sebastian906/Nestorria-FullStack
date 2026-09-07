@@ -2,11 +2,15 @@
 import { ref, watch, onMounted } from 'vue'
 import { useAppContext } from '../composables/useAppContext'
 import { useToast } from 'vue-toastification'
+import { useI18n } from 'vue-i18n'
+import { serverMsg } from '../utils/serverMsg.js'
+import { formatCurrency, formatDate } from '../utils/format.js'
 import { assets } from '../assets/assets'
 import axios from 'axios'
 
 const { auth, roleLoaded, currency } = useAppContext()
 const toast = useToast()
+const { t } = useI18n()
 
 const dashboardData = ref({
     bookings: [],
@@ -22,7 +26,7 @@ const getDashboardData = async () => {
         })
         dashboardData.value = data
     } catch (error) {
-        toast.error(error.response?.data?.message ?? 'No se pudieron cargar los datos del dashboard')
+        toast.error(serverMsg(error, 'dashboard.errors.loadFail'))
         console.error(error)
     }
 }
@@ -49,14 +53,14 @@ onMounted(() => {
                 <img :src="assets.house" alt="" class="hidden sm:flex w-8" />
                 <div>
                     <h4 class="h4">{{ String(dashboardData.totalBookings).padStart(2, '0') }}</h4>
-                    <h5 class="h5 text-secondary">Total Sales</h5>
+                    <h5 class="h5 text-secondary">{{ t('dashboard.totalSales') }}</h5>
                 </div>
             </div>
             <div class="flexStart gap-7 p-5 bg-[#d1e8ff] lg:min-w-56 rounded-xl">
                 <img :src="assets.dollar" alt="" class="hidden sm:flex w-8" />
                 <div>
-                    <h4 class="h4">{{ currency }}{{ dashboardData.totalRevenue }}</h4>
-                    <h5 class="h5 text-secondary">Total Earnings</h5>
+                    <h4 class="h4">{{ formatCurrency(dashboardData.totalRevenue, currency) }}</h4>
+                    <h5 class="h5 text-secondary">{{ t('dashboard.totalEarnings') }}</h5>
                 </div>
             </div>
         </div>
@@ -64,16 +68,16 @@ onMounted(() => {
         <div class="mt-4">
             <div
                 class="flex justify-between flex-wrap gap-2 sm:grid grid-cols-[2fr_2fr_1fr_1fr] lg:grid-cols-[0.5fr_2fr_2fr_1fr_1fr] px-6 py-3 bg-secondary border-b border-slate-900/15 rounded-t-xl">
-                <h5 class="h5 hidden lg:block">Index</h5>
-                <h5 class="h5">Property</h5>
-                <h5 class="h5">Booking dates</h5>
-                <h5 class="h5">Amount</h5>
-                <h5 class="h5">Status</h5>
+                <h5 class="h5 hidden lg:block">{{ t('dashboard.table.index') }}</h5>
+                <h5 class="h5">{{ t('dashboard.table.property') }}</h5>
+                <h5 class="h5">{{ t('dashboard.table.dates') }}</h5>
+                <h5 class="h5">{{ t('dashboard.table.amount') }}</h5>
+                <h5 class="h5">{{ t('dashboard.table.status') }}</h5>
             </div>
 
             <div v-if="dashboardData.bookings.length === 0"
                 class="flex justify-center items-center h-24 text-gray-400 text-sm">
-                No bookings yet.
+                {{ t('dashboard.table.empty') }}
             </div>
 
             <div v-for="(booking, index) in dashboardData.bookings" :key="booking.id"
@@ -89,18 +93,18 @@ onMounted(() => {
                 </div>
 
                 <div>
-                    {{ new Date(booking.checkInDate + 'T00:00:00').toLocaleDateString() }}
-                    to
-                    {{ new Date(booking.checkOutDate + 'T00:00:00').toLocaleDateString() }}
+                    {{ formatDate(booking.checkInDate) }}
+                    →
+                    {{ formatDate(booking.checkOutDate) }}
                 </div>
 
-                <div>{{ currency }}{{ booking.totalPrice }}</div>
+                <div>{{ formatCurrency(booking.totalPrice, currency) }}</div>
 
                 <button :class="(booking.paid ?? booking.isPaid)
                     ? 'bg-green-400/80 text-white border-green-500/30'
                     : 'bg-amber-100 text-red-500 border-amber-500/30'"
                     class="w-22 py-0.5 rounded-full text-xs border">
-                    {{ (booking.paid ?? booking.isPaid) ? 'Completed' : 'Pending' }}
+                    {{ (booking.paid ?? booking.isPaid) ? t('dashboard.table.completed') : t('dashboard.table.pending') }}
                 </button>
             </div>
         </div>

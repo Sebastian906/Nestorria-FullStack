@@ -7,6 +7,7 @@ import java.time.LocalDate;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
+import java.util.Locale;
 
 import org.apache.poi.ss.usermodel.BorderStyle;
 import org.apache.poi.ss.usermodel.CellStyle;
@@ -18,6 +19,7 @@ import org.apache.poi.ss.usermodel.Row;
 import org.apache.poi.ss.usermodel.Sheet;
 import org.apache.poi.ss.usermodel.Workbook;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
+import org.springframework.context.MessageSource;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -51,6 +53,7 @@ public class ReportService {
     private final BookingRepository bookingRepository;
     private final PropertyRepository propertyRepository;
     private final ContractRepository contractRepository;
+    private final MessageSource messages;
 
     private static final DateTimeFormatter DATE_FORMAT = 
         DateTimeFormatter.ofPattern("dd/MM/yyyy");
@@ -58,27 +61,36 @@ public class ReportService {
     // Zona horaria del servidor
     private static final ZoneId ZONE = ZoneId.systemDefault();
 
+    private static DateTimeFormatter formatter(Locale locale) {
+        boolean es = locale != null && "es".equals(locale.getLanguage());
+        return DateTimeFormatter.ofPattern(es ? "dd/MM/yyyy" : "MM/dd/yyyy");
+    }
+
+    private static Locale safe(Locale locale) {
+        return locale != null ? locale : Locale.ENGLISH;
+    }
+
     @Transactional(readOnly = true)
     public byte[] generateBookingsReport(String agencyId, LocalDate startDate, 
-                                          LocalDate endDate, String format) {
+                                          LocalDate endDate, String format, Locale locale) {
         
         Instant startInstant = startDate.atStartOfDay(ZONE).toInstant();
         Instant endInstant = endDate.plusDays(1).atStartOfDay(ZONE).toInstant();
         
         List<Booking> bookings = bookingRepository.findByAgencyIdAndDateRange(
             agencyId, startInstant, endInstant);
-        
-        BookingsReportData reportData = accumulateBookingsData(bookings);
-        
+
+        BookingsReportData reportData = accumulateBookingsData(bookings, safe(locale));
+
         if ("xlsx".equals(format)) {
-            return generateBookingsExcel(reportData);
+            return generateBookingsExcel(reportData, safe(locale));
         } else {
-            return generateBookingsPdf(reportData);
+            return generateBookingsPdf(reportData, safe(locale));
         }
     }
 
     @Transactional(readOnly = true)
-    public byte[] generatePropertiesReport(String agencyId, String format) {
+    public byte[] generatePropertiesReport(String agencyId, String format, Locale locale) {
         
         List<Property> properties = propertyRepository.findByAgencyId(agencyId);
         
@@ -91,7 +103,7 @@ public class ReportService {
         }
     }
 
-    private BookingsReportData accumulateBookingsData(List<Booking> bookings) {
+    private BookingsReportData accumulateBookingsData(List<Booking> bookings, Locale locale) {
         List<BookingsReportData.BookingRow> rows = new java.util.ArrayList<>();
         long totalRevenue = 0;
         int totalNights = 0;
@@ -192,7 +204,7 @@ public class ReportService {
     }
 
     // GENERACIÓN EXCEL
-    private byte[] generateBookingsExcel(BookingsReportData data) {
+    private byte[] generateBookingsExcel(BookingsReportData data, Locale locale) {
         try (Workbook workbook = new XSSFWorkbook();
              ByteArrayOutputStream out = new ByteArrayOutputStream()) {
             
@@ -260,7 +272,7 @@ public class ReportService {
         }
     }
 
-    private byte[] generateBookingsPdf(BookingsReportData data) {
+    private byte[] generateBookingsPdf(BookingsReportData data, Locale locale) {
         try (ByteArrayOutputStream out = new ByteArrayOutputStream()) {
             
             PdfWriter writer = new PdfWriter(out);

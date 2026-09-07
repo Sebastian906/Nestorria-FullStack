@@ -5,46 +5,49 @@ import { UserButton } from '@clerk/vue'
 import { useAppContext } from '../composables/useAppContext'
 import { assets } from '../assets/assets'
 import NotificationBell from './NotificationBell.vue'
+import { useI18n } from 'vue-i18n'
+import LanguageSwitcher from './LanguageSwitcher.vue'
 
 const router = useRouter()
 const route = useRoute()
 const { isOwner, isAdmin, roleLoaded, user } = useAppContext()
+const { t } = useI18n()
 
 const navItems = [
     {
         path: '/dashboard',
-        label: 'Dashboard',
+        key: 'dashboard',
         icon: assets.dashboard
     },
     {
         path: '/add-property',
-        label: 'Add Property',
+        key: 'addProperty',
         icon: assets.housePlus
     },
     {
         path: '/list-property',
-        label: 'List Property',
+        key: 'listProperty',
         icon: assets.list
     },
     {
         path: '/reports',
-        label: 'Reports',
+        key: 'reports',
         icon: assets.clipboard
     },
     {
         path: '/categories',
-        label: 'Categories',
+        key: 'categories',
         icon: assets.network
     },
     {
         path: '/ai',
-        label: 'AI Dashboard',
+        key: 'ai',
         icon: assets.brain,
         adminOnly: true
     },
     {
         path: '/mlops',
-        label: 'MLOps',
+        key: 'mlops',
         icon: assets.brainCog,
         adminOnly: true
     },
@@ -93,17 +96,18 @@ const userButtonAppearance = {
                         {{ user?.firstName }} {{ user?.lastName }}
                     </div>
                     <NotificationBell />
+                    <LanguageSwitcher />
                 </div>
             </div>
 
             <div class="flex md:flex-col md:gap-x-5 gap-y-8 md:mt-4">
-                <RouterLink v-for="link in navItems.filter(item => !item.adminOnly || isAdmin)" :key="link.label" :to="link.path" custom
+                <RouterLink v-for="link in navItems.filter(item => !item.adminOnly || isAdmin)" :key="link.key" :to="link.path" custom
                     v-slot="{ isActive, navigate }">
                     <div @click="navigate" :class="isActive
                         ? 'flexStart gap-x-2 p-5 lg:pl-12 bold-13 sm:text-sm! cursor-pointer h-10 bg-secondary/10 max-md:border-b-4 md:border-r-4 border-secondary'
                         : 'flexStart gap-x-2 lg:pl-12 p-5 bold-13 sm:text-sm! cursor-pointer h-10 rounded-xl'">
-                        <img :src="link.icon" :alt="link.label" class="hidden md:block" width="18" />
-                        <div>{{ link.label }}</div>
+                        <img :src="link.icon" :alt="t(`nav.${link.key}`)" class="hidden md:block" width="18" />
+                        <div>{{ t(`nav.${link.key}`) }}</div>
                     </div>
                 </RouterLink>
             </div>
@@ -116,6 +120,7 @@ const userButtonAppearance = {
                 {{ user?.firstName }} {{ user?.lastName }}
             </div>
             <NotificationBell />
+            <LanguageSwitcher />
         </div>
     </div>
 </template>

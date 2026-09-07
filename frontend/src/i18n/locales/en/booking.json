@@ -1,0 +1,48 @@
+{
+    "errors": {
+        "notAvailable": "The property is not available for the selected dates",
+        "badDates": "Check-out must be after check-in",
+        "alreadySigned": "You have already signed this contract",
+        "pickDates": "Please select check-in and check-out dates",
+        "generic": "Something went wrong"
+    },
+    "success": {
+        "created": "Booking and contract created successfully",
+        "confirmed": "Booking confirmed",
+        "contractGenerated": "Contract generated successfully"
+    },
+    "empty": {
+        "noBookings": "You have no bookings.",
+        "loading": "Loading your bookings..."
+    },
+    "actions": {
+        "book": "Book now",
+        "sign": "Sign contract"
+    },
+    "page": {
+        "title": "My Bookings",
+        "agencyTitle": "Agency Bookings",
+        "loading": "Loading bookings...",
+        "empty": "No bookings found."
+    },
+    "status": {
+        "pending": "Pending Signature",
+        "signed": "Signed",
+        "draft": "Draft",
+        "expired": "Expired"
+    },
+    "card": {
+        "guests": "Guests",
+        "total": "Total",
+        "bookingId": "Booking ID",
+        "checkIn": "Check In",
+        "checkOut": "Check Out",
+        "payment": "Payment",
+        "paid": "Paid",
+        "unpaid": "Unpaid",
+        "payNow": "Pay Now",
+        "generating": "Generating...",
+        "generate": "Generate Contract",
+        "view": "View Contract"
+    }
+}

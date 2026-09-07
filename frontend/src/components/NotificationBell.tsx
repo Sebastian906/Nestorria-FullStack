@@ -3,6 +3,8 @@ import { useAuth } from "@clerk/react"
 import axios from "axios"
 import toast from "react-hot-toast"
 import { useWebSocket } from "../hooks/useWebSocket"
+import { useTranslation } from "react-i18next"
+import { serverMsg } from "../services/serverMsg"
 
 export interface Notification {
     id: string
@@ -34,6 +36,7 @@ interface NotificationResponse {
 
 const NotificationBell = () => {
     const { getToken } = useAuth()
+    const { t } = useTranslation("user")
     const { connected, notifications: wsNotifications, unreadCount: wsUnreadCount } = useWebSocket()
     const [notifications, setNotifications] = useState<Notification[]>([])
     const [unreadCount, setUnreadCount] = useState(0)
@@ -100,7 +103,7 @@ const NotificationBell = () => {
                 return
             }
             console.error("Error fetching notifications", error)
-            toast.error("Error fetching notifications")
+            toast.error(serverMsg(error, "user:notifications.fetchFail"))
         } finally {
             setLoading(false)
         }
@@ -124,7 +127,7 @@ const NotificationBell = () => {
                 return
             }
             console.error("Error marking as read", error)
-            toast.error("Error at marking as read")
+            toast.error(serverMsg(error, "user:notifications.markFail"))
         }
     }
 
@@ -139,12 +142,12 @@ const NotificationBell = () => {
 
             setNotifications(prev => prev.map(n => ({ ...n, isRead: true })))
             setUnreadCount(0)
-            toast.success("All notifications marked as read")
+            toast.success(t("user:notifications.markAllOk"))
         } catch (error) {
             if (isNetworkError(error)) {
                 return
             }
-            toast.error("Error at marking notifications as read")
+            toast.error(serverMsg(error, "user:notifications.markFail"))
         }
     }
 
@@ -167,21 +170,21 @@ const NotificationBell = () => {
     const getNotificationIcon = (type: NotificationType) => {
         switch (type) {
             case "BOOKING_CONFIRMED":
-                return "Booking Confirmed"
+                return t("user:notifications.typeConfirmed")
             case "BOOKING_CANCELLED":
-                return "Booking Cancelled"
+                return t("user:notifications.typeCancelled")
             case "PAYMENT_RECEIVED":
-                return "Payment Received"
+                return t("user:notifications.typePayment")
             case "CONTRACT_SIGNED":
-                return "Contract Signed"
+                return t("user:notifications.typeSigned")
             case "CONTRACT_EXPIRED":
-                return "Contract Expired"
+                return t("user:notifications.typeExpired")
             case "REVIEW_RECEIVED":
-                return "Review Received"
+                return t("user:notifications.typeReview")
             case "PROPERTY_INQUIRY":
-                return "Property Inquiry"
+                return t("user:notifications.typeInquiry")
             default:
-                return "Notification Alert"
+                return t("user:notifications.typeDefault")
         }
     }
 
@@ -193,10 +196,10 @@ const NotificationBell = () => {
         const diffHours = Math.floor(diffMs / 3600000)
         const diffDays = Math.floor(diffMs / 86400000)
 
-        if (diffMins < 1) return "Now"
-        if (diffMins < 60) return `${diffMins}m ago`
-        if (diffHours < 24) return `${diffHours}h ago`
-        if (diffDays < 7) return `${diffDays}d ago`
+        if (diffMins < 1) return t("user:notifications.now")
+        if (diffMins < 60) return t("user:notifications.minAgo", { n: diffMins })
+        if (diffHours < 24) return t("user:notifications.hourAgo", { n: diffHours })
+        if (diffDays < 7) return t("user:notifications.dayAgo", { n: diffDays })
         return date.toLocaleDateString(undefined, { day: "numeric", month: "short" })
     }
 
@@ -262,7 +265,7 @@ const NotificationBell = () => {
                 className={`relative p-2 rounded-full transition-all duration-200 ${
                     isOpen ? 'bg-secondary/20' : 'hover:bg-secondary/10'
                 }`}
-                aria-label="Notifications"
+                aria-label={t("user:notifications.title")}
             >
                 <svg
                     xmlns="http://www.w3.org/2000/svg"
@@ -290,13 +293,13 @@ const NotificationBell = () => {
                 <div className="absolute right-0 top-full mt-2 w-80 sm:w-96 bg-white rounded-xl shadow-lg ring-1 ring-slate-900/10 z-50 overflow-hidden">
                     {/* Header */}
                     <div className="flex items-center justify-between px-4 py-3 border-b border-slate-100">
-                        <h3 className="font-semibold text-gray-800">Notifications</h3>
+                        <h3 className="font-semibold text-gray-800">{t("user:notifications.title")}</h3>
                         {unreadCount > 0 && (
                             <button
                                 onClick={markAllAsRead}
                                 className="text-xs text-secondary hover:text-secondary/80 font-medium"
                             >
-                                Mark all as read
+                                {t("user:notifications.markAll")}
                             </button>
                         )}
                     </div>
@@ -305,7 +308,7 @@ const NotificationBell = () => {
                     <div className="max-h-96 overflow-y-auto">
                         {notifications.length === 0 ? (
                             <div className="py-8 text-center text-gray-400">
-                                <p className="text-sm">You don't have any notifications</p>
+                                <p className="text-sm">{t("user:notifications.empty")}</p>
                             </div>
                         ) : (
                             notifications.map(notification => (
@@ -352,7 +355,7 @@ const NotificationBell = () => {
                                 disabled={loading}
                                 className="w-full py-2 text-sm text-secondary hover:text-secondary/80 font-medium disabled:opacity-50"
                             >
-                                {loading ? "Loading..." : "Load more"}
+                                {loading ? t("user:notifications.loading") : t("user:notifications.loadMore")}
                             </button>
                         </div>
                     )}

@@ -43,6 +43,7 @@ public class ReviewController {
             @AuthenticationPrincipal Jwt jwt,
             @PathVariable String propertyId,
             @Valid @RequestBody CreateReviewRequest request) {
+        // uiLocale ya viene en body (FE envía getLocale()); alternativamente leer Accept-Language — body manda por decisión 1
         ReviewResponse response = reviewService.createReview(jwt.getSubject(), propertyId, request);
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }

@@ -26,11 +26,11 @@ public class AgencyService {
     @Transactional
     public AgencyResponse register(String userId, AgencyRegistrationRequest request) {
         if (agencyRepository.existsByOwnerId(userId)) {
-            throw new ConflictException("El usuario ya tiene una agencia registrada");
+            throw new ConflictException("agency.already-exists");
         }
 
         User owner = userRepository.findById(userId)
-            .orElseThrow(() -> new ResourceNotFoundException("Usuario no encontrado: " + userId));
+            .orElseThrow(() -> new ResourceNotFoundException("not-found"));
 
         Agency agency = new Agency(
             request.name(),
@@ -48,14 +48,14 @@ public class AgencyService {
             Agency saved = agencyRepository.saveAndFlush(agency);
             return AgencyResponse.fromEntity(saved);
         } catch (org.springframework.dao.DataIntegrityViolationException e) {
-            throw new ConflictException("El usuario ya tiene una agencia registrada");
+            throw new ConflictException("agency.already-exists");
         }
     }
 
     @Transactional(readOnly = true)
     public AgencyResponse getMyAgency(String userId) {
         Agency agency = agencyRepository.findByOwnerId(userId)
-                .orElseThrow(() -> new ResourceNotFoundException("El usuario no tiene una agencia registrada"));
+                .orElseThrow(() -> new ResourceNotFoundException("not-found"));
         return AgencyResponse.fromEntity(agency);
     }
 

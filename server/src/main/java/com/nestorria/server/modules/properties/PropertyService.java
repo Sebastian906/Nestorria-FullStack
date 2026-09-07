@@ -250,11 +250,11 @@ public class PropertyService {
     @SuppressWarnings("unchecked")
     private UploadResult uploadSingle(MultipartFile file) {
         if (file == null || file.isEmpty()) {
-            throw new BadRequestException("El archivo de imagen está vacío");
+            throw new BadRequestException("property.image-empty");
         }
         String contentType = file.getContentType();
         if (contentType == null || !contentType.startsWith("image/")) {
-            throw new BadRequestException("Solo se permiten archivos de imagen");
+            throw new BadRequestException("property.image-only");
         }
         try {
             Map<String, Object> result = cloudinary.uploader().upload(
@@ -266,7 +266,7 @@ public class PropertyService {
                     (String) result.get("secure_url"),
                     (String) result.get("public_id"));
         } catch (IOException e) {
-            throw new ConflictException("Error al subir imagen a Cloudinary: " + e.getMessage());
+            throw new ConflictException("property.image-upload-failed");
         }
     }
 

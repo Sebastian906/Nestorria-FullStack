@@ -8,11 +8,15 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executor;
 
 import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.cache.Cache;
+import org.springframework.cache.CacheManager;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;
+import org.springframework.context.i18n.LocaleContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.nestorria.server.common.ai.AiServiceClient;
 import com.nestorria.server.common.exception.ConflictException;
 import com.nestorria.server.common.exception.ResourceNotFoundException;
 import com.nestorria.server.modules.properties.Property;
@@ -29,16 +33,22 @@ public class ReviewService {
     private final ReviewRepository reviewRepository;
     private final UserRepository userRepository;
     private final PropertyRepository propertyRepository;
+    private final AiServiceClient aiServiceClient;
+    private final Cache translateCache;
     private final Executor notificationTaskExecutor;
 
     public ReviewService(
             ReviewRepository reviewRepository,
             UserRepository userRepository,
             PropertyRepository propertyRepository,
-            @Qualifier("notificationTaskExecutor") Executor notificationTaskExecutor) {
+            AiServiceClient aiServiceClient,
+            CacheManager cacheManager,
+            @Qualifier("notificationTaskExecutor") java.util.concurrent.Executor notificationTaskExecutor) {
         this.reviewRepository = reviewRepository;
         this.userRepository = userRepository;
         this.propertyRepository = propertyRepository;
+        this.aiServiceClient = aiServiceClient;
+        this.translateCache = cacheManager.getCache("reviewTranslations");
         this.notificationTaskExecutor = notificationTaskExecutor;
     }
 
@@ -46,33 +56,82 @@ public class ReviewService {
     @Transactional
     public ReviewResponse createReview(String userId, String propertyId, CreateReviewRequest request) {
         if (reviewRepository.existsByUserIdAndPropertyId(userId, propertyId)) {
-            throw new ConflictException("Ya has publicado una reseña para esta propiedad");
+            throw new ConflictException("review.already-exists");
         }
 
         User user = userRepository.findById(userId)
-            .orElseThrow(() -> new ResourceNotFoundException("Usuario no encontrado: " + userId));
+            .orElseThrow(() -> new ResourceNotFoundException("not-found"));
 
         Property property = propertyRepository.findById(propertyId)
-            .orElseThrow(() -> new ResourceNotFoundException("Propiedad no encontrada: " + propertyId));
+            .orElseThrow(() -> new ResourceNotFoundException("not-found"));
 
         Review review = new Review(user, property, request.rating(), request.comment());
+
+        String uiLocale = request.uiLocale() != null
+            ? request.uiLocale()
+            : LocaleContextHolder.getLocale().getLanguage();
+        review.setOriginalLang(normalize(uiLocale));
+
         return ReviewResponse.fromEntity(reviewRepository.save(review));
     }
 
     @Transactional(readOnly = true)
     public List<ReviewResponse> getPropertyReviews(String propertyId) {
+        String target = target();
         return reviewRepository.findByPropertyIdOrderByCreatedAtDesc(propertyId)
-                .stream()
-                .map(ReviewResponse::fromEntity)
-                .toList();
+            .stream()
+            .map(r -> ReviewResponse.of(r, display(r, target)))
+            .toList();
     }
 
     @Transactional(readOnly = true)
     public List<ReviewResponse> getUserReviews(String userId) {
+        String target = target();
         return reviewRepository.findByUserIdOrderByCreatedAtDesc(userId)
             .stream()
-            .map(ReviewResponse::fromEntity)
+            .map(r -> ReviewResponse.of(r, display(r, target)))
             .toList();
+    }
+
+    private String target() {
+        String lang = LocaleContextHolder.getLocale().getLanguage();
+        return normalize(lang);
+    }
+
+    private String normalize(String lang) {
+        if (lang != null && lang.toLowerCase().startsWith("es")) {
+            return "es";
+        }
+        return "en";
+    }
+
+    private String display(Review review, String target) {
+        if (review.getComment() == null) {
+            return null;
+        }
+        if (target.equals(review.getOriginalLang())) {
+            return review.getComment();
+        }
+        String key = review.getId() + ":" + target;
+        try {
+            if (translateCache != null) {
+                String cached = translateCache.get(key, String.class);
+                if (cached != null) {
+                    return cached;
+                }
+            }
+            String translated = aiServiceClient.translate(
+                review.getComment(),
+                review.getOriginalLang(),
+                target
+            );
+            if (translateCache != null && translated != null) {
+                translateCache.put(key, translated);
+            }
+            return translated;
+        } catch (Exception e) {
+            return review.getComment();
+        }
     }
 
     @CacheEvict(cacheNames = {"ratingAggregates", "propertyListings", "ownerProperties"}, allEntries = true)
@@ -159,8 +218,7 @@ public class ReviewService {
      * Versión paralela para listas grandes.
      * Divide-and-conquer: divide propertyIds en chunks, procesa cada chunk
      * en un thread separado, y combina los resultados.
-     * 
-     * Complejidad: O(n/p) donde p = número de chunks (理想mente).
+     * Complejidad: O(n/p) donde p = número de chunks.
      * En la práctica: O(n) pero con mejor latencia porque los chunks se procesan en paralelo.
      */
     private Map<String, RatingAggregate> getAverageRatingsParallel(List<String> propertyIds) {

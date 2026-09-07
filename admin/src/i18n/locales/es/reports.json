@@ -1,0 +1,30 @@
+{
+    "title": "Reportes",
+    "subtitle": "Descargue informes de reservas y propiedades en Excel o PDF",
+    "type": "Tipo de reporte",
+    "bookings": "Reservas",
+    "properties": "Propiedades",
+    "period": "Período",
+    "pCurrentMonth": "Mes actual",
+    "pPreviousMonth": "Mes anterior",
+    "pCurrentYear": "Año actual",
+    "pPreviousYear": "Año anterior",
+    "pLast3": "Últimos 3 meses",
+    "pLast6": "Últimos 6 meses",
+    "pCustom": "Personalizado",
+    "from": "Fecha de inicio",
+    "to": "Fecha de fin",
+    "downloadXlsx": "Descargar XLSX",
+    "downloadPdf": "Descargar PDF",
+    "downloading": "Descargando...",
+    "info": "Información del reporte",
+    "includesBookings": "El reporte incluye: ID, fecha, cliente, propiedad, contrato, fechas de estadía, noches, monto y estado",
+    "includesProperties": "El reporte incluye: ID, título, ciudad, país, tipo, precios, contratos, ingresos y disponibilidad",
+    "selectedPeriod": "Período seleccionado:",
+    "range": "Desde {{from}} hasta {{to}}",
+    "downloaded": "Reporte {{format}} descargado correctamente",
+    "errors": {
+        "generic": "No se pudo generar el reporte",
+        "badFormat": "Formato no soportado. Use: xlsx o pdf"
+    }
+}
