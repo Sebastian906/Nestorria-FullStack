@@ -86,5 +86,7 @@
         "timeout": "Tiempo agotado",
         "generic": "Error al obtener la ubicación",
         "searchFail": "Error al buscar lugares cercanos"
-    }
+    },
+    "compareCta": "Comparar propiedades",
+    "compareCtaHint": "Compara hasta 4 propiedades lado a lado"
 }
