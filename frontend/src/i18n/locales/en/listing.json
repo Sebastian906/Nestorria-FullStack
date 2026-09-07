@@ -84,5 +84,7 @@
         "timeout": "Timeout exceeded",
         "generic": "Error obtaining location",
         "searchFail": "Error looking for close locations"
-    }
+    },
+    "compareCta": "Compare properties",
+    "compareCtaHint": "Side-by-side up to 4"
 }

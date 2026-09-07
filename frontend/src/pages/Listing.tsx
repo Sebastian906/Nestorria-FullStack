@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { assets, type Property } from "../assets/data";
 import Item from "../components/Item";
 import { useAppContext } from "../context/AppContext";
-import { useSearchParams } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import PropertyMap from "../components/PropertyMap";
 import NearbySearchPanel from "../components/NearbySearchPanel";
 import { fetchListingPage, type PropertyPage } from "../services/propertyListingService";
@@ -262,6 +262,21 @@ const Listing = () => {
                                 ← Clean nearby search results
                             </button>
                         )}
+                    </div>
+                    {/* COMPARE */}
+                    <div className="border-t border-gray-200 pt-4 mt-4">
+                        <Link
+                            to="/compare"
+                            aria-label={t('compareCta')}
+                            title={t('compareCtaHint')}
+                            className="w-full flex items-center justify-center gap-2 bg-white border border-slate-900/10 rounded-lg px-4 py-2.5 text-sm font-medium hover:bg-secondary/10 hover:border-secondary/40 hover:text-secondary transition-all active:scale-[0.98]"
+                        >
+                            <svg className="w-4 h-4 shrink-0" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M9 3H4v18h5V3zm11 0h-5v18h5V3zM9 12h6" />
+                            </svg>
+                            {t('compareCta')}
+                        </Link>
+                        <p className="text-xs text-gray-500 mt-1.5 text-center">{t('compareCtaHint')}</p>
                     </div>
                     {/* FAVORITES */}
                     {user && (
