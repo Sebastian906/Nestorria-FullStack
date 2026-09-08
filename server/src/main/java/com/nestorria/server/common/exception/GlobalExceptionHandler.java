@@ -139,4 +139,15 @@ public class GlobalExceptionHandler {
         body.put("message", message);
         return body;
     }
+
+    @ExceptionHandler(IllegalArgumentException.class)
+    public ResponseEntity<Map<String, Object>> handleIllegalArgument(IllegalArgumentException ex) {
+        String raw = ex.getMessage();
+        boolean isCode = raw != null && raw.matches("[a-z0-9.\\-]+");
+        String code = isCode ? raw : "bad-request";
+        String message = isCode ? text(code, null, raw) : (raw != null ? raw : "Bad request");
+        return ResponseEntity
+            .status(HttpStatus.BAD_REQUEST)
+            .body(errorBody(HttpStatus.BAD_REQUEST, code, message));
+    }
 }

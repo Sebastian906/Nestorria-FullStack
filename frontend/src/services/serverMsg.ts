@@ -1,4 +1,4 @@
-import { t } from "i18next";
+import i18n from "../i18n";
 
 const CODE_MAP: Record<string, string> = {
   "booking.not-available": "booking:errors.notAvailable",
@@ -14,10 +14,10 @@ export function serverMsg(error: unknown, fallbackKey: string): string {
     .response?.data;
 
   if (data?.code && CODE_MAP[data.code]) {
-    return t(CODE_MAP[data.code]);
+    return i18n.t(CODE_MAP[data.code]);
   }
   if (data?.message) {
     return data.message;
   }
-  return t(fallbackKey);
+  return i18n.t(fallbackKey);
 }

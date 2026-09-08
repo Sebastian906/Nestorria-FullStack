@@ -3,6 +3,7 @@ package com.nestorria.server.common.ai;
 import java.io.InputStream;
 import java.time.Duration;
 import java.util.List;
+import java.util.Objects;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.ParameterizedTypeReference;
@@ -11,6 +12,7 @@ import org.springframework.http.MediaType;
 import org.springframework.http.client.ClientHttpRequestInterceptor;
 import org.springframework.http.client.SimpleClientHttpRequestFactory;
 import org.springframework.stereotype.Service;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.web.client.RestClient;
 
 import com.nestorria.server.common.ai.dto.AiChatRequest;
@@ -22,6 +24,7 @@ import com.nestorria.server.modules.properties.dto.PropertySummaryResponse;
 
 import io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker;
 import io.github.resilience4j.retry.annotation.Retry;
+import jakarta.validation.constraints.NotNull;
 import lombok.extern.slf4j.Slf4j;
 
 /**
@@ -42,6 +45,7 @@ import lombok.extern.slf4j.Slf4j;
  */
 @Service
 @Slf4j
+@Validated 
 public class AiServiceClient {
 
     private final RestClient restClient;
@@ -202,10 +206,14 @@ public class AiServiceClient {
         return fallbackHandler.recommendationsFallback(userId, limit);
     }
 
+    @NotNull 
     @CircuitBreaker(name = "ai-service")
     @Retry(name = "ai-service", fallbackMethod = "translateFallback")
     public String translate(String text, String source, String target) {
-        if (text == null || source.equals(target)) {
+        if (text == null || text.isBlank() || Objects.equals(source, target)) {
+            return text;
+        }
+        if (source == null || target == null) {
             return text;
         }
 

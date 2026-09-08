@@ -56,8 +56,8 @@ public class Review extends Auditable {
     @Column(columnDefinition = "TEXT")
     private String comment;
 
-    @Column(name = "original_lang", length = 5)
-    private String originalLang = "es";
+    @Column(name = "original_lang", length = 5, nullable = false)
+    private String originalLang = "en";
 
     @Column(name = "is_verified", nullable = false)
     private boolean isVerified = false;
@@ -67,6 +67,5 @@ public class Review extends Auditable {
         this.property = property;
         this.rating = rating;
         this.comment = comment;
-        this.originalLang = "es";
     }
 }

@@ -75,22 +75,55 @@ public class ReviewService {
         return ReviewResponse.fromEntity(reviewRepository.save(review));
     }
 
-    @Transactional(readOnly = true)
     public List<ReviewResponse> getPropertyReviews(String propertyId) {
         String target = target();
-        return reviewRepository.findByPropertyIdOrderByCreatedAtDesc(propertyId)
-            .stream()
-            .map(r -> ReviewResponse.of(r, display(r, target)))
-            .toList();
+        List<Review> reviews = findPropertyReviews(propertyId);
+        return reviews.stream().map(r -> ReviewResponse.of(r, display(r, target))).toList();
     }
 
     @Transactional(readOnly = true)
+    protected List<Review> findPropertyReviews(String propertyId) {
+        return reviewRepository.findByPropertyIdOrderByCreatedAtDesc(propertyId);
+    }
+
+    private String display(Review review, String target) {
+        if (review.getComment() == null || review.getComment().isBlank()) {
+            return review.getComment();
+        }
+        String orig = review.getOriginalLang() != null ? review.getOriginalLang() : "es";
+        if (target.equals(orig)) {
+            return review.getComment();
+        }
+        String key = review.getId() + ":" + target;
+        try {
+            if (translateCache != null) {
+                String cached = translateCache.get(key, String.class);
+                if (cached != null) {
+                    return cached;
+                }
+            }
+            String translated = aiServiceClient.translate(review.getComment(), orig, target);
+            if (translated == null || translated.isBlank()) {
+                return review.getComment();
+            }
+            if (translateCache != null) {
+                translateCache.put(key, translated);
+            }
+            return translated;
+        } catch (Exception e) {
+            return review.getComment();
+        }
+    }
+
     public List<ReviewResponse> getUserReviews(String userId) {
         String target = target();
-        return reviewRepository.findByUserIdOrderByCreatedAtDesc(userId)
-            .stream()
-            .map(r -> ReviewResponse.of(r, display(r, target)))
-            .toList();
+        List<Review> reviews = findUserReviews(userId);
+        return reviews.stream().map(r -> ReviewResponse.of(r, display(r, target))).toList();
+    }
+
+    @Transactional(readOnly = true)
+    protected List<Review> findUserReviews(String userId) {
+        return reviewRepository.findByUserIdOrderByCreatedAtDesc(userId);
     }
 
     private String target() {
@@ -103,35 +136,6 @@ public class ReviewService {
             return "es";
         }
         return "en";
-    }
-
-    private String display(Review review, String target) {
-        if (review.getComment() == null) {
-            return null;
-        }
-        if (target.equals(review.getOriginalLang())) {
-            return review.getComment();
-        }
-        String key = review.getId() + ":" + target;
-        try {
-            if (translateCache != null) {
-                String cached = translateCache.get(key, String.class);
-                if (cached != null) {
-                    return cached;
-                }
-            }
-            String translated = aiServiceClient.translate(
-                review.getComment(),
-                review.getOriginalLang(),
-                target
-            );
-            if (translateCache != null && translated != null) {
-                translateCache.put(key, translated);
-            }
-            return translated;
-        } catch (Exception e) {
-            return review.getComment();
-        }
     }
 
     @CacheEvict(cacheNames = {"ratingAggregates", "propertyListings", "ownerProperties"}, allEntries = true)

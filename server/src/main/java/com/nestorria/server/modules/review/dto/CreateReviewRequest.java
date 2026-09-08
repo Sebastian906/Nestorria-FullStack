@@ -2,10 +2,11 @@ package com.nestorria.server.modules.review.dto;
 
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
+import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
 
 public record CreateReviewRequest(
     @Min(1) @Max(5) int rating,
     @Size(max = 2000) String comment,
-    String uiLocale
+    @Pattern(regexp = "en|es|en-US|en-GB|es-ES|es-MX") String uiLocale
 ) {}

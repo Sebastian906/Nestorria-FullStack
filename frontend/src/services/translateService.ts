@@ -1,9 +1,18 @@
 import axios from "axios";
 import { getLocale } from "../i18n";
 
+const MAX_CACHE = 500;
 const cache = new Map<string, string>();
-
 const inflight = new Map<string, Promise<string>>();
+
+function setBounded(key: string, value: string) {
+    if (cache.has(key)) cache.delete(key); // refresh LRU order
+    cache.set(key, value);
+    if (cache.size > MAX_CACHE) {
+        const oldest = cache.keys().next().value as string;
+        cache.delete(oldest);
+    }
+}
 
 export async function displayText(original: string | null | undefined): Promise<string> {
     if (!original) return "";
@@ -25,10 +34,9 @@ export async function displayText(original: string | null | undefined): Promise<
             const out = typeof data?.translated === "string" && data.translated.trim()
                 ? data.translated
                 : original;
-            cache.set(key, out);
+            setBounded(key, out);
             return out;
         } catch {
-            cache.set(key, original);
             return original;
         } finally {
             inflight.delete(key);
@@ -41,4 +49,5 @@ export async function displayText(original: string | null | undefined): Promise<
 
 export function clearDisplayCache() {
     cache.clear();
+    inflight.clear();
 }

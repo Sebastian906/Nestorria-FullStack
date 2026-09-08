@@ -29,8 +29,8 @@ public class SecurityConfig {
     @Value("${clerk.issuer-uri}")
     private String issuerUri;
 
-    @Value("${stripe.webhook-secret:}")
-    private String stripeWebhookSecret;
+    // @Value("${stripe.webhook-secret:}")
+    // private String stripeWebhookSecret;
 
     SecurityConfig(ToolEndpointAuthFilter toolEndpointAuthFilter) {
         this.toolEndpointAuthFilter = toolEndpointAuthFilter;
@@ -61,12 +61,11 @@ public class SecurityConfig {
                     .requestMatchers(HttpMethod.GET, "/api/agencies").permitAll()
                     // Actuator: health público para load balancers, el resto autenticado
                     .requestMatchers("/actuator/health", "/actuator/health/**").permitAll()
-                    .requestMatchers("/actuator/prometheus").permitAll()
-                    // WebSocket: auth manejada por WebSocketAuthInterceptor, no por BearerTokenAuthenticationFilter
-                    // Stripe webhook debe ir ANTES de anyRequest (si no, IllegalStateException)
+                    // Stripe webhook debe ir ANTES de anyRequest (si no, IllegalStateException).
+                    // Debe ser público para que Stripe llame, la firma se verifica en el controller con stripe.webhook-secret.
                     .requestMatchers(HttpMethod.POST, "/api/payments/stripe/webhook").permitAll()
                     .requestMatchers("/ws").permitAll()
-                    // Translate público (solo lectura, rate-limit ai por IP, max 2000 chars, fallback a original)
+                    // Translate público temporal: exige Bucket4j por IP (ej. 30/min) + max 2000 chars. Si ves abuso, cambia a .authenticated().
                     .requestMatchers(HttpMethod.POST, "/api/ai/translate").permitAll()
                     // /api/ai/admin/**: role check done in AdminAiController (DB-stored role, not JWT claim)
                     .anyRequest().authenticated();
