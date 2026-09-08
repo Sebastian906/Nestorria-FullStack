@@ -24,22 +24,26 @@ export async function displayText(original: string | null | undefined): Promise<
     const pending = inflight.get(key);
     if (pending) return pending;
 
-    const job = (async () => {
+    let job!: Promise<string>;
+    job = (async () => {
         try {
             const { data } = await axios.post(
                 "/api/ai/translate",
                 { text: original, source: "auto", target },
                 { timeout: 8000 }
             );
-            const out = typeof data?.translated === "string" && data.translated.trim()
-                ? data.translated
-                : original;
-            setBounded(key, out);
-            return out;
+            const translated = typeof data?.translated === "string" ? data.translated.trim() : "";
+            if (translated) {
+                setBounded(key, translated);
+                return translated;
+            }
+            return original;
         } catch {
             return original;
         } finally {
-            inflight.delete(key);
+            if (inflight.get(key) === job) {
+                inflight.delete(key);
+            }
         }
     })();
 
@@ -49,5 +53,4 @@ export async function displayText(original: string | null | undefined): Promise<
 
 export function clearDisplayCache() {
     cache.clear();
-    inflight.clear();
 }

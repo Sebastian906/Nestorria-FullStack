@@ -24,7 +24,6 @@ import com.nestorria.server.modules.properties.dto.PropertySummaryResponse;
 
 import io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker;
 import io.github.resilience4j.retry.annotation.Retry;
-import jakarta.validation.constraints.NotNull;
 import lombok.extern.slf4j.Slf4j;
 
 /**
@@ -206,7 +205,6 @@ public class AiServiceClient {
         return fallbackHandler.recommendationsFallback(userId, limit);
     }
 
-    @NotNull 
     @CircuitBreaker(name = "ai-service")
     @Retry(name = "ai-service", fallbackMethod = "translateFallback")
     public String translate(String text, String source, String target) {

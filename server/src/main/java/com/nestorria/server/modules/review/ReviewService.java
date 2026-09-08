@@ -75,6 +75,7 @@ public class ReviewService {
         return ReviewResponse.fromEntity(reviewRepository.save(review));
     }
 
+    @Transactional(readOnly = true)
     public List<ReviewResponse> getPropertyReviews(String propertyId) {
         String target = target();
         List<Review> reviews = findPropertyReviews(propertyId);
@@ -115,6 +116,7 @@ public class ReviewService {
         }
     }
 
+    @Transactional(readOnly = true)
     public List<ReviewResponse> getUserReviews(String userId) {
         String target = target();
         List<Review> reviews = findUserReviews(userId);

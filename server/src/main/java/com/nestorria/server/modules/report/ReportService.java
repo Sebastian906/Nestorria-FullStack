@@ -227,16 +227,16 @@ public class ReportService {
             
             // Headers
             String[] headers = {
-                messages.getMessage("report.col.id", null, "ID", locale),
-                messages.getMessage("report.col.date", null, "Date", locale),
-                messages.getMessage("report.col.client", null, "Client", locale),
-                messages.getMessage("report.col.property", null, "Property", locale),
-                messages.getMessage("report.col.contract", null, "Contract", locale),
-                messages.getMessage("report.col.checkin", null, "Check-in", locale),
-                messages.getMessage("report.col.checkout", null, "Check-out", locale),
-                messages.getMessage("report.col.nights", null, "Nights", locale),
-                messages.getMessage("report.col.amount", null, "Amount", locale),
-                messages.getMessage("report.col.status", null, "Status", locale)
+                messages.getMessage("report.bookings.h.id", null, "ID", locale),
+                messages.getMessage("report.bookings.h.date", null, "Date", locale),
+                messages.getMessage("report.bookings.h.client", null, "Client", locale),
+                messages.getMessage("report.bookings.h.property", null, "Property", locale),
+                messages.getMessage("report.bookings.h.contract", null, "Contract", locale),
+                messages.getMessage("report.bookings.h.checkin", null, "Check-in", locale),
+                messages.getMessage("report.bookings.h.checkout", null, "Check-out", locale),
+                messages.getMessage("report.bookings.h.nights", null, "Nights", locale),
+                messages.getMessage("report.bookings.h.amount", null, "Amount", locale),
+                messages.getMessage("report.bookings.h.status", null, "Status", locale)
             };
 
             Row headerRow = sheet.createRow(3);
@@ -304,16 +304,16 @@ public class ReportService {
                     .useAllAvailableWidth();
                 
                 String[] headers = {
-                    messages.getMessage("report.col.id", null, "ID", locale),
-                    messages.getMessage("report.col.date", null, "Date", locale),
-                    messages.getMessage("report.col.client", null, "Client", locale),
-                    messages.getMessage("report.col.property", null, "Property", locale),
-                    messages.getMessage("report.col.contract", null, "Contract", locale),
-                    messages.getMessage("report.col.checkin", null, "Check-in", locale),
-                    messages.getMessage("report.col.checkout", null, "Check-out", locale),
-                    messages.getMessage("report.col.nights", null, "Nights", locale),
-                    messages.getMessage("report.col.amount", null, "Amount", locale),
-                    messages.getMessage("report.col.status", null, "Status", locale)
+                    messages.getMessage("report.bookings.h.id", null, "ID", locale),
+                    messages.getMessage("report.bookings.h.date", null, "Date", locale),
+                    messages.getMessage("report.bookings.h.client", null, "Client", locale),
+                    messages.getMessage("report.bookings.h.property", null, "Property", locale),
+                    messages.getMessage("report.bookings.h.contract", null, "Contract", locale),
+                    messages.getMessage("report.bookings.h.checkin", null, "Check-in", locale),
+                    messages.getMessage("report.bookings.h.checkout", null, "Check-out", locale),
+                    messages.getMessage("report.bookings.h.nights", null, "Nights", locale),
+                    messages.getMessage("report.bookings.h.amount", null, "Amount", locale),
+                    messages.getMessage("report.bookings.h.status", null, "Status", locale)
                 };
                 
                 DeviceRgb headerColor = new DeviceRgb(52, 152, 219);
@@ -387,16 +387,16 @@ public class ReportService {
             Sheet sheet = workbook.createSheet(messages.getMessage("report.properties.title", null, "Properties Report", locale));
             
             String[] headers = {
-                messages.getMessage("report.col.id", null, "ID", locale),
-                messages.getMessage("report.col.title", null, "Title", locale),
-                messages.getMessage("report.col.city", null, "City", locale),
-                messages.getMessage("report.col.country", null, "Country", locale),
-                messages.getMessage("report.col.type", null, "Type", locale),
-                messages.getMessage("report.col.rent", null, "Rent Price", locale),
-                messages.getMessage("report.col.sale", null, "Sale Price", locale),
-                messages.getMessage("report.col.contracts", null, "Contracts", locale),
-                messages.getMessage("report.col.revenue", null, "Revenue", locale),
-                messages.getMessage("report.col.available", null, "Available", locale)
+                messages.getMessage("report.properties.h.id", null, "ID", locale),
+                messages.getMessage("report.properties.h.title", null, "Title", locale),
+                messages.getMessage("report.properties.h.city", null, "City", locale),
+                messages.getMessage("report.properties.h.country", null, "Country", locale),
+                messages.getMessage("report.properties.h.type", null, "Type", locale),
+                messages.getMessage("report.properties.h.rent", null, "Rent Price", locale),
+                messages.getMessage("report.properties.h.sale", null, "Sale Price", locale),
+                messages.getMessage("report.properties.h.contracts", null, "Contracts", locale),
+                messages.getMessage("report.properties.h.revenue", null, "Revenue", locale),
+                messages.getMessage("report.properties.h.available", null, "Available", locale)
             };
             
             Row headerRow = sheet.createRow(0);
@@ -420,8 +420,8 @@ public class ReportService {
                 dataRow.createCell(6).setCellValue(row.salePrice());
                 dataRow.createCell(7).setCellValue(row.totalContracts());
                 dataRow.createCell(8).setCellValue(row.totalRevenue());
-                String yes = messages.getMessage("report.yes", null, "Yes", locale);
-                String no = messages.getMessage("report.no", null, "No", locale);
+                String yes = messages.getMessage("report.available.yes", null, "Yes", locale);
+                String no = messages.getMessage("report.available.no", null, "No", locale);
                 dataRow.createCell(9).setCellValue(row.isAvailable() ? yes : no);
             }
             
@@ -452,16 +452,16 @@ public class ReportService {
                     .useAllAvailableWidth();
                 
                 String[] headers = {
-                    messages.getMessage("report.col.id", null, "ID", locale),
-                    messages.getMessage("report.col.title", null, "Title", locale),
-                    messages.getMessage("report.col.city", null, "City", locale),
-                    messages.getMessage("report.col.country", null, "Country", locale),
-                    messages.getMessage("report.col.type", null, "Type", locale),
-                    messages.getMessage("report.col.rent", null, "Rent", locale),
-                    messages.getMessage("report.col.sale", null, "Sale", locale),
-                    messages.getMessage("report.col.contracts", null, "Contracts", locale),
-                    messages.getMessage("report.col.revenue", null, "Revenue", locale),
-                    messages.getMessage("report.col.available", null, "Available", locale)
+                    messages.getMessage("report.properties.h.id", null, "ID", locale),
+                    messages.getMessage("report.properties.h.title", null, "Title", locale),
+                    messages.getMessage("report.properties.h.city", null, "City", locale),
+                    messages.getMessage("report.properties.h.country", null, "Country", locale),
+                    messages.getMessage("report.properties.h.type", null, "Type", locale),
+                    messages.getMessage("report.properties.h.rent", null, "Rent", locale),
+                    messages.getMessage("report.properties.h.sale", null, "Sale", locale),
+                    messages.getMessage("report.properties.h.contracts", null, "Contracts", locale),
+                    messages.getMessage("report.properties.h.revenue", null, "Revenue", locale),
+                    messages.getMessage("report.properties.h.available", null, "Available", locale)
                 };
                 
                 DeviceRgb headerColor = new DeviceRgb(46, 204, 113);
@@ -483,8 +483,8 @@ public class ReportService {
                     table.addCell(createPdfCell(String.valueOf(row.salePrice())));
                     table.addCell(createPdfCell(String.valueOf(row.totalContracts())));
                     table.addCell(createPdfCell(String.format("$%,d", row.totalRevenue())));
-                    String yes = messages.getMessage("report.yes", null, "Yes", locale);
-                    String no = messages.getMessage("report.no", null, "No", locale);
+                    String yes = messages.getMessage("report.available.yes", null, "Yes", locale);
+                    String no = messages.getMessage("report.available.no", null, "No", locale);
                     table.addCell(createPdfCell(row.isAvailable() ? yes : no));
                 }
                 
