@@ -16,6 +16,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.nestorria.server.common.exception.BadRequestException;
 import com.nestorria.server.common.exception.ResourceNotFoundException;
 import com.nestorria.server.modules.agency.Agency;
 import com.nestorria.server.modules.agency.AgencyRepository;
@@ -54,7 +55,7 @@ public class ReportController {
         java.util.Locale locale) {
         // Validar formato
         if (!"xlsx".equals(format) && !"pdf".equals(format)) {
-            throw new IllegalArgumentException("report.unsupported-format");
+            throw new BadRequestException("report.unsupported-format");
         }
         
         // Obtener agencia del usuario
@@ -100,7 +101,7 @@ public class ReportController {
         
         // Validar formato
         if (!"xlsx".equals(format) && !"pdf".equals(format)) {
-            throw new IllegalArgumentException("report.unsupported-format");
+            throw new BadRequestException("report.unsupported-format");
         }
         
         // Obtener agencia del usuario

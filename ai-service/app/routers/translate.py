@@ -3,6 +3,8 @@ from fastapi import APIRouter
 
 from app.rag.llm import LLMClient
 
+import re
+
 router = APIRouter(tags=["translate"])
 
 
@@ -62,5 +64,5 @@ async def _detect(text: str) -> str:
             {"role": "user", "content": text[:500]},
         ]
     )
-    guess = out.strip().lower()
-    return "es" if "es" in guess else "en"
+    guess = re.sub(r"[^a-z]", "", out.strip().lower())
+    return guess if guess in ("en", "es") else "en"

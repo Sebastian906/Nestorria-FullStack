@@ -55,7 +55,7 @@ public class ReportService {
     private final ContractRepository contractRepository;
     private final MessageSource messages;
 
-    private static final DateTimeFormatter DATE_FORMAT = 
+    private static final DateTimeFormatter DATE_FORMAT =
         DateTimeFormatter.ofPattern("dd/MM/yyyy");
     
     // Zona horaria del servidor
@@ -89,17 +89,14 @@ public class ReportService {
         }
     }
 
-    @Transactional(readOnly = true)
     public byte[] generatePropertiesReport(String agencyId, String format, Locale locale) {
-        
+        Locale safeLocale = safe(locale);
         List<Property> properties = propertyRepository.findByAgencyId(agencyId);
-        
         PropertiesReportData reportData = accumulatePropertiesData(properties);
-        
         if ("xlsx".equals(format)) {
-            return generatePropertiesExcel(reportData);
+            return generatePropertiesExcel(reportData, safeLocale);
         } else {
-            return generatePropertiesPdf(reportData);
+            return generatePropertiesPdf(reportData, safeLocale);
         }
     }
 
@@ -126,7 +123,7 @@ public class ReportService {
 
             Contract contract = contractsByBookingId.get(booking.getId());  // O(1), null si no hay
 
-            String createdAtStr = formatInstant(booking.getCreatedAt());
+            String createdAtStr = formatInstant(booking.getCreatedAt(), locale);
 
             rows.add(new BookingsReportData.BookingRow(
                 booking.getId(),
@@ -134,8 +131,8 @@ public class ReportService {
                 booking.getUser().getEmail(),
                 booking.getProperty().getTitle(),
                 contract != null ? contract.getId() : "N/A",
-                booking.getCheckInDate().format(DATE_FORMAT),
-                booking.getCheckOutDate().format(DATE_FORMAT),
+                booking.getCheckInDate().format(formatter(locale)),
+                booking.getCheckOutDate().format(formatter(locale)),
                 nights,
                 booking.getTotalPrice(),
                 booking.getStatus().name(),
@@ -153,11 +150,11 @@ public class ReportService {
     }
 
     // Convierte Instant a String de forma segura.
-    private String formatInstant(Instant instant) {
+    private String formatInstant(Instant instant, Locale locale) {
         if (instant == null) {
             return "N/A";
         }
-        return instant.atZone(ZONE).format(DATE_FORMAT);
+        return instant.atZone(ZONE).format(formatter(locale));
     }
 
     private PropertiesReportData accumulatePropertiesData(List<Property> properties) {
@@ -208,7 +205,7 @@ public class ReportService {
         try (Workbook workbook = new XSSFWorkbook();
              ByteArrayOutputStream out = new ByteArrayOutputStream()) {
             
-            Sheet sheet = workbook.createSheet("Bookings Report");
+            Sheet sheet = workbook.createSheet(messages.getMessage("report.bookings.title", null, "Bookings Report", locale));
             
             CellStyle headerStyle = createHeaderStyle(workbook);
             CellStyle currencyStyle = createCurrencyStyle(workbook);
@@ -216,21 +213,32 @@ public class ReportService {
             // Título
             Row titleRow = sheet.createRow(0);
             org.apache.poi.ss.usermodel.Cell titleCell = titleRow.createCell(0);
-            titleCell.setCellValue("Bookings Report");
+            titleCell.setCellValue(messages.getMessage("report.bookings.title", null, "Bookings Report", locale));
             titleCell.setCellStyle(headerStyle);
             
             // Resumen
             Row summaryRow = sheet.createRow(1);
-            summaryRow.createCell(0).setCellValue("Total Bookings:");
+            summaryRow.createCell(0).setCellValue(messages.getMessage("report.bookings.total", null, "Total Bookings:", locale));
             summaryRow.createCell(1).setCellValue(data.totalBookings());
-            summaryRow.createCell(3).setCellValue("Total Revenue:");
+            summaryRow.createCell(3).setCellValue(messages.getMessage("report.bookings.revenue", null, "Total Revenue:", locale));
             org.apache.poi.ss.usermodel.Cell revenueCell = summaryRow.createCell(4);
             revenueCell.setCellValue(data.totalRevenue());
             revenueCell.setCellStyle(currencyStyle);
             
             // Headers
-            String[] headers = {"ID", "Date", "Client", "Property", "Contract", 
-                              "Check-in", "Check-out", "Nights", "Amount", "Status"};
+            String[] headers = {
+                messages.getMessage("report.bookings.h.id", null, "ID", locale),
+                messages.getMessage("report.bookings.h.date", null, "Date", locale),
+                messages.getMessage("report.bookings.h.client", null, "Client", locale),
+                messages.getMessage("report.bookings.h.property", null, "Property", locale),
+                messages.getMessage("report.bookings.h.contract", null, "Contract", locale),
+                messages.getMessage("report.bookings.h.checkin", null, "Check-in", locale),
+                messages.getMessage("report.bookings.h.checkout", null, "Check-out", locale),
+                messages.getMessage("report.bookings.h.nights", null, "Nights", locale),
+                messages.getMessage("report.bookings.h.amount", null, "Amount", locale),
+                messages.getMessage("report.bookings.h.status", null, "Status", locale)
+            };
+
             Row headerRow = sheet.createRow(3);
             for (int i = 0; i < headers.length; i++) {
                 org.apache.poi.ss.usermodel.Cell cell = headerRow.createCell(i);
@@ -279,21 +287,34 @@ public class ReportService {
             PdfDocument pdfDoc = new PdfDocument(writer);
             Document document = new Document(pdfDoc, PageSize.A4);
             try {
-                document.add(new Paragraph("Bookings Report")
-                    .setFontSize(20)
-                    .setBold()
-                    .setTextAlignment(TextAlignment.CENTER));
+                document.add(new Paragraph(messages.getMessage("report.bookings.title", null, "Bookings Report", locale))
+                    .setFontSize(20).setBold().setTextAlignment(TextAlignment.CENTER));
                 
                 document.add(new Paragraph(
-                    String.format("Total Bookings: %d | Total Revenue: $%,d | Average: $%,.2f",
-                        data.totalBookings(), data.totalRevenue(), data.averageBookingValue()))
+                    String.format("%s: %d | %s: $%,d | %s: $%,.2f",
+                        messages.getMessage("report.bookings.total", null, "Total Bookings", locale),
+                        data.totalBookings(),
+                        messages.getMessage("report.bookings.revenue", null, "Total Revenue", locale),
+                        data.totalRevenue(),
+                        messages.getMessage("report.bookings.average", null, "Average", locale),
+                        data.averageBookingValue()))
                     .setFontSize(12));
                 
                 Table table = new Table(UnitValue.createPercentArray(10))
                     .useAllAvailableWidth();
                 
-                String[] headers = {"ID", "Date", "Client", "Property", "Contract", 
-                                  "Check-in", "Check-out", "Nights", "Amount", "Status"};
+                String[] headers = {
+                    messages.getMessage("report.bookings.h.id", null, "ID", locale),
+                    messages.getMessage("report.bookings.h.date", null, "Date", locale),
+                    messages.getMessage("report.bookings.h.client", null, "Client", locale),
+                    messages.getMessage("report.bookings.h.property", null, "Property", locale),
+                    messages.getMessage("report.bookings.h.contract", null, "Contract", locale),
+                    messages.getMessage("report.bookings.h.checkin", null, "Check-in", locale),
+                    messages.getMessage("report.bookings.h.checkout", null, "Check-out", locale),
+                    messages.getMessage("report.bookings.h.nights", null, "Nights", locale),
+                    messages.getMessage("report.bookings.h.amount", null, "Amount", locale),
+                    messages.getMessage("report.bookings.h.status", null, "Status", locale)
+                };
                 
                 DeviceRgb headerColor = new DeviceRgb(52, 152, 219);
                 
@@ -359,14 +380,24 @@ public class ReportService {
     }
 
     // PROPIEDADES
-    private byte[] generatePropertiesExcel(PropertiesReportData data) {
+    private byte[] generatePropertiesExcel(PropertiesReportData data, Locale locale) {
         try (Workbook workbook = new XSSFWorkbook();
              ByteArrayOutputStream out = new ByteArrayOutputStream()) {
             
-            Sheet sheet = workbook.createSheet("Properties Report");
+            Sheet sheet = workbook.createSheet(messages.getMessage("report.properties.title", null, "Properties Report", locale));
             
-            String[] headers = {"ID", "Title", "City", "Country", "Type", 
-                              "Rent Price", "Sale Price", "Contracts", "Revenue", "Available"};
+            String[] headers = {
+                messages.getMessage("report.properties.h.id", null, "ID", locale),
+                messages.getMessage("report.properties.h.title", null, "Title", locale),
+                messages.getMessage("report.properties.h.city", null, "City", locale),
+                messages.getMessage("report.properties.h.country", null, "Country", locale),
+                messages.getMessage("report.properties.h.type", null, "Type", locale),
+                messages.getMessage("report.properties.h.rent", null, "Rent Price", locale),
+                messages.getMessage("report.properties.h.sale", null, "Sale Price", locale),
+                messages.getMessage("report.properties.h.contracts", null, "Contracts", locale),
+                messages.getMessage("report.properties.h.revenue", null, "Revenue", locale),
+                messages.getMessage("report.properties.h.available", null, "Available", locale)
+            };
             
             Row headerRow = sheet.createRow(0);
             CellStyle headerStyle = createHeaderStyle(workbook);
@@ -389,7 +420,9 @@ public class ReportService {
                 dataRow.createCell(6).setCellValue(row.salePrice());
                 dataRow.createCell(7).setCellValue(row.totalContracts());
                 dataRow.createCell(8).setCellValue(row.totalRevenue());
-                dataRow.createCell(9).setCellValue(row.isAvailable() ? "Yes" : "No");
+                String yes = messages.getMessage("report.available.yes", null, "Yes", locale);
+                String no = messages.getMessage("report.available.no", null, "No", locale);
+                dataRow.createCell(9).setCellValue(row.isAvailable() ? yes : no);
             }
             
             for (int i = 0; i < headers.length; i++) {
@@ -405,23 +438,31 @@ public class ReportService {
         }
     }
 
-    private byte[] generatePropertiesPdf(PropertiesReportData data) {
+    private byte[] generatePropertiesPdf(PropertiesReportData data, Locale locale) {
         try (ByteArrayOutputStream out = new ByteArrayOutputStream()) {
             
             PdfWriter writer = new PdfWriter(out);
             PdfDocument pdfDoc = new PdfDocument(writer);
             Document document = new Document(pdfDoc, PageSize.A4);
             try {
-                document.add(new Paragraph("Properties Report")
-                    .setFontSize(20)
-                    .setBold()
-                    .setTextAlignment(TextAlignment.CENTER));
+                document.add(new Paragraph(messages.getMessage("report.properties.title", null, "Properties Report", locale))
+                    .setFontSize(20).setBold().setTextAlignment(TextAlignment.CENTER));
                 
                 Table table = new Table(UnitValue.createPercentArray(10))
                     .useAllAvailableWidth();
                 
-                String[] headers = {"ID", "Title", "City", "Country", "Type", 
-                                  "Rent", "Sale", "Contracts", "Revenue", "Available"};
+                String[] headers = {
+                    messages.getMessage("report.properties.h.id", null, "ID", locale),
+                    messages.getMessage("report.properties.h.title", null, "Title", locale),
+                    messages.getMessage("report.properties.h.city", null, "City", locale),
+                    messages.getMessage("report.properties.h.country", null, "Country", locale),
+                    messages.getMessage("report.properties.h.type", null, "Type", locale),
+                    messages.getMessage("report.properties.h.rent", null, "Rent", locale),
+                    messages.getMessage("report.properties.h.sale", null, "Sale", locale),
+                    messages.getMessage("report.properties.h.contracts", null, "Contracts", locale),
+                    messages.getMessage("report.properties.h.revenue", null, "Revenue", locale),
+                    messages.getMessage("report.properties.h.available", null, "Available", locale)
+                };
                 
                 DeviceRgb headerColor = new DeviceRgb(46, 204, 113);
                 
@@ -442,7 +483,9 @@ public class ReportService {
                     table.addCell(createPdfCell(String.valueOf(row.salePrice())));
                     table.addCell(createPdfCell(String.valueOf(row.totalContracts())));
                     table.addCell(createPdfCell(String.format("$%,d", row.totalRevenue())));
-                    table.addCell(createPdfCell(row.isAvailable() ? "Yes" : "No"));
+                    String yes = messages.getMessage("report.available.yes", null, "Yes", locale);
+                    String no = messages.getMessage("report.available.no", null, "No", locale);
+                    table.addCell(createPdfCell(row.isAvailable() ? yes : no));
                 }
                 
                 document.add(table);

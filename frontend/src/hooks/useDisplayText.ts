@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { displayText, clearDisplayCache } from "../services/translateService";
+import { getLocale } from "../i18n";
 
 /** Traduce un texto del backend al idioma UI. Sin idioma -> original (sin parpadeo). */
 export function useDisplayText(original: string | null | undefined): string {
@@ -10,10 +11,11 @@ export function useDisplayText(original: string | null | undefined): string {
 
     useEffect(() => {
         let alive = true;
+        const wanted = locale;
         setValue(original ?? "");
         if (!original) return;
         displayText(original).then((out) => {
-            if (alive) setValue(out);
+            if (alive && getLocale() === wanted) setValue(out);
         });
         return () => {
             alive = false;

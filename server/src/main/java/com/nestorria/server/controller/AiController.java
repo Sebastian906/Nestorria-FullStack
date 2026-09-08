@@ -140,9 +140,9 @@ public class AiController {
     }
 
     public record TranslateRequest(
-        @jakarta.validation.constraints.Size(max = 2000) String text,
-        @jakarta.validation.constraints.Pattern(regexp = "en|es|auto") String source,
-        @jakarta.validation.constraints.Pattern(regexp = "en|es") String target) {}
+        @jakarta.validation.constraints.NotBlank @jakarta.validation.constraints.Size(max = 2000) String text,
+        @jakarta.validation.constraints.NotNull @jakarta.validation.constraints.Pattern(regexp = "en|es|auto") String source,
+        @jakarta.validation.constraints.NotNull @jakarta.validation.constraints.Pattern(regexp = "en|es") String target) {}
 
     public record TranslateResponse(String translated) {}
 }

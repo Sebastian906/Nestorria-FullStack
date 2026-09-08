@@ -1,4 +1,2 @@
-import axios from "axios";
-
-axios.defaults.headers.common["Accept-Language"] =
-    localStorage.getItem("nestorria-lang") ?? "en";
+import "../i18n";
+export { };

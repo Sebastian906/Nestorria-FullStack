@@ -32,14 +32,14 @@ await i18n
     .use(initReactI18next)
     .init({
         lng: stored ?? 'en',
-        fallbackLng: ['es', 'en'],
+        fallbackLng: 'en',
         defaultNS: 'common',
         resources: {
             en: { common: enCommon, nav: enNav, booking: enBooking, property: enProperty, user: enUser, chat: enChat, home: enHome, listing: enListing, guides: enGuides },
             es: { common: esCommon, nav: esNav, booking: esBooking, property: esProperty, user: esUser, chat: esChat, home: esHome, listing: esListing, guides: esGuides },
         },
         detection: { order: ['localStorage'], caches: ['localStorage'], lookupLocalStorage: LANG_KEY },
-        interpolation: { escapeValue: true },
+        interpolation: { escapeValue: false },
     });
 
 i18n.on('languageChanged', (lng) => {

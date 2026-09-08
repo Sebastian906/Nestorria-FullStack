@@ -33,9 +33,17 @@ public record ReviewResponse(
     }
 
     public static ReviewResponse of(Review r, String display) {
-        var b = fromEntity(r);
-        return new ReviewResponse(b.id(), b.propertyId(), b.userId(), b.userName(), b.userImage(), b.rating(),
-                b.comment(), b.originalLang(), display, b.isVerified(), b.createdAt());
-        
+        return new ReviewResponse(
+            r.getId(),
+            r.getProperty().getId(),
+            r.getUser().getId(),
+            r.getUser().getUsername(),
+            r.getUser().getImage(),
+            r.getRating(),
+            r.getComment(),
+            r.getOriginalLang(),
+            display,
+            r.isVerified(),
+            r.getCreatedAt());
     }
 }
