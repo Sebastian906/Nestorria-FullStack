@@ -99,6 +99,8 @@ public class AiController {
             ? request.conversationId()
             : java.util.UUID.randomUUID().toString();
 
+        // Emitter ceiling 120s; upstream cutoff 60s (app.ai-service.chat-stream-read-timeout).
+        // Streams longer than 60s end with an SSE error event via AiChatStreamingService.
         SseEmitter emitter = new SseEmitter(120_000L);
 
         // Set SSE headers (no-buffer para que Render/Railway no retengan el stream)
