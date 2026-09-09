@@ -10,11 +10,9 @@ from app.main import app
 # Explicit dev settings: no API key configured, middleware allows through
 _DEV_SETTINGS = Settings(environment="development", api_key=None)
 
-
 @pytest.fixture
 def anyio_backend():
     return "asyncio"
-
 
 @pytest.fixture
 async def client():
@@ -22,13 +20,11 @@ async def client():
     async with AsyncClient(transport=transport, base_url="http://test") as ac:
         yield ac
 
-
 @pytest.fixture
 def dev_no_auth():
     """Patch auth middleware to use dev settings (no API key required)."""
     with patch("app.middleware.auth.get_settings", return_value=_DEV_SETTINGS):
         yield
-
 
 @pytest.mark.anyio
 async def test_price_endpoint_no_double_auth(client, dev_no_auth):
@@ -50,7 +46,6 @@ async def test_price_endpoint_no_double_auth(client, dev_no_auth):
     # Should not be 401 (auth) — may be 422 (validation) or 503 (model not loaded)
     assert response.status_code != 401
 
-
 @pytest.mark.anyio
 async def test_cancellation_endpoint_no_double_auth(client, dev_no_auth):
     """Cancellation endpoint should only be protected by middleware."""
@@ -67,10 +62,10 @@ async def test_cancellation_endpoint_no_double_auth(client, dev_no_auth):
     )
     assert response.status_code != 401
 
-
 @pytest.mark.anyio
 async def test_admin_endpoint_protected_by_middleware(client, dev_no_auth):
     """Admin endpoints should be protected by the auth middleware."""
     response = await client.get("/ai/admin/status")
-    # In dev without API key configured, middleware passes through
-    assert response.status_code in (200, 404)
+    # Fail-closed: no API key configured -> 500, never pass-through
+    assert response.status_code == 500
+    assert response.json()["detail"] == "API key not configured"

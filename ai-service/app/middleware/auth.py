@@ -36,7 +36,7 @@ class ApiKeyAuthMiddleware(BaseHTTPMiddleware):
 
         settings = get_settings()
 
-        # If no API key configured: allow in dev, reject in prod
+        # Fail-closed: missing API key is 500 in any environment
         if not settings.api_key:
             logger.error("api_key_not_configured", path=request.url.path)
             return JSONResponse(
