@@ -99,11 +99,13 @@ public class AiController {
             ? request.conversationId()
             : java.util.UUID.randomUUID().toString();
 
-        SseEmitter emitter = new SseEmitter(30_000L);
+        SseEmitter emitter = new SseEmitter(120_000L);
 
-        // Set SSE headers
+        // Set SSE headers (no-buffer para que Render/Railway no retengan el stream)
         response.setContentType(MediaType.TEXT_EVENT_STREAM_VALUE);
         response.setCharacterEncoding(StandardCharsets.UTF_8.name());
+        response.setHeader("X-Accel-Buffering", "no");
+        response.setHeader("Cache-Control", "no-cache");
 
         AiChatRequest enriched = new AiChatRequest(
             request.message(),
