@@ -32,6 +32,9 @@ public class SecurityConfig {
     // @Value("${stripe.webhook-secret:}")
     // private String stripeWebhookSecret;
 
+    @Value("${springdoc.swagger-ui.enabled:false}")
+    private boolean swaggerEnabled;
+
     SecurityConfig(ToolEndpointAuthFilter toolEndpointAuthFilter) {
         this.toolEndpointAuthFilter = toolEndpointAuthFilter;
     }
@@ -53,9 +56,15 @@ public class SecurityConfig {
             .csrf(csrf -> csrf.disable())
             .authorizeHttpRequests(auth -> {
                 auth.requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
-                    .requestMatchers("/").permitAll()
-                    .requestMatchers("/swagger-ui/**", "/swagger-ui.html", "/v3/api-docs/**").permitAll()
-                    .requestMatchers(HttpMethod.GET, "/api/properties/me").permitAll()
+                    .requestMatchers("/").permitAll();
+
+                    if (swaggerEnabled) {
+                        auth.requestMatchers("/swagger-ui/**", "/swagger-ui.html", "/v3/api-docs/**").permitAll();
+                    } else {
+                        auth.requestMatchers("/swagger-ui/**", "/swagger-ui.html", "/v3/api-docs/**").denyAll();
+                    }
+
+                    auth.requestMatchers(HttpMethod.GET, "/api/properties/me").permitAll()
                     .requestMatchers(HttpMethod.GET, "/api/properties/nearby").permitAll()
                     .requestMatchers(HttpMethod.GET, "/api/properties/*/reviews").permitAll()
                     .requestMatchers(HttpMethod.GET, "/api/agencies").permitAll()
@@ -66,7 +75,7 @@ public class SecurityConfig {
                     .requestMatchers(HttpMethod.POST, "/api/payments/stripe/webhook").permitAll()
                     .requestMatchers("/ws").permitAll()
                     // Translate público temporal: exige Bucket4j por IP (ej. 30/min) + max 2000 chars. Si ves abuso, cambia a .authenticated().
-                    .requestMatchers(HttpMethod.POST, "/api/ai/translate").permitAll()
+                    .requestMatchers(HttpMethod.POST, "/api/ai/translate").authenticated()
                     // /api/ai/admin/**: role check done in AdminAiController (DB-stored role, not JWT claim)
                     .anyRequest().authenticated();
                 // Only permit webhook endpoint if STRIPE_WEBHOOK_SECRET is configured
@@ -83,12 +92,12 @@ public class SecurityConfig {
                 .authenticationEntryPoint((request, response, authException) -> {
                     response.setStatus(401);
                     response.setContentType("application/json");
-                    response.getWriter().write("{\"timestamp\":\"" + java.time.Instant.now() + "\",\"message\":\"No autenticado: " + authException.getMessage() + "\"}");
+                    response.getWriter().write("{\"timestamp\":\"" + java.time.Instant.now() + "\",\"message\":\"No autenticado\"}");
                 })
                 .accessDeniedHandler((request, response, accessDeniedException) -> {
                     response.setStatus(403);
                     response.setContentType("application/json");
-                    response.getWriter().write("{\"timestamp\":\"" + java.time.Instant.now() + "\",\"message\":\"Acceso denegado: " + accessDeniedException.getMessage() + "\"}");
+                    response.getWriter().write("{\"timestamp\":\"" + java.time.Instant.now() + "\",\"message\":\"Acceso denegado\"}");
                 })
             );
         return http.build();

@@ -51,7 +51,7 @@ class RateLimitFilterTest {
     void setUp() {
         meterRegistry = new SimpleMeterRegistry();
         RateLimitProperties props = new RateLimitProperties(
-            true, 100, 10, 5, 10, 60, 30, 30, 150, ""
+            true, 100, 10, 5, 10, 60, 30, 30, 10, 150, ""
         );
         AppProperties appProps = new AppProperties(
             null, "$", null, null, props, null
@@ -245,7 +245,7 @@ class RateLimitFilterTest {
     @Test
     void trustedProxy_ParsesXForwardedFor() throws ServletException, IOException {
         RateLimitProperties props = new RateLimitProperties(
-            true, 100, 10, 5, 10, 60, 30, 30, 150, "192.168.1.100"
+            true, 100, 10, 5, 10, 60, 30, 30, 10, 150, "192.168.1.100"
         );
         AppProperties appProps = new AppProperties(
             null, "$", null, null, props, null
@@ -267,7 +267,7 @@ class RateLimitFilterTest {
     @Test
     void whenDisabled_AllRequestsAllowed() throws ServletException, IOException {
         RateLimitProperties props = new RateLimitProperties(
-            false, 100, 10, 5, 10, 60, 30, 30, 150, ""
+            false, 100, 10, 5, 10, 60, 30, 30, 10, 150, ""
         );
         AppProperties appProps = new AppProperties(
             null, "$", null, null, props, null

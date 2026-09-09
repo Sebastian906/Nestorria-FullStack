@@ -38,13 +38,11 @@ class ApiKeyAuthMiddleware(BaseHTTPMiddleware):
 
         # If no API key configured: allow in dev, reject in prod
         if not settings.api_key:
-            if settings.environment == "production":
-                logger.error("api_key_not_configured", path=request.url.path)
-                return JSONResponse(
-                    status_code=500,
-                    content={"detail": "API key not configured"},
-                )
-            return await call_next(request)
+            logger.error("api_key_not_configured", path=request.url.path)
+            return JSONResponse(
+                status_code=500,
+                content={"detail": "API key not configured"},
+            )
 
         # Validate API key with constant-time comparison
         provided = request.headers.get("X-API-Key", "")

@@ -25,6 +25,9 @@ router = APIRouter(prefix="/dl/visual", tags=["visual-search"])
 _engine = None
 _engine_lock = asyncio.Lock()
 
+Image.MAX_IMAGE_PIXELS = 25_000_000  # ~25MP, anti decompression-bomb
+MAX_IMAGE_PIXELS = 25_000_000
+
 async def get_engine():
     """Get or initialize the visual similarity engine."""
     global _engine
@@ -85,6 +88,9 @@ async def search_by_image(
         pil_image.load()
     except Exception as e:
         raise HTTPException(status_code=422, detail="Invalid image file") from e
+
+    if pil_image.width * pil_image.height > MAX_IMAGE_PIXELS:
+        raise HTTPException(status_code=422, detail="Image dimensions too large")
 
     if pil_image.format not in ("JPEG", "PNG"):
         raise HTTPException(

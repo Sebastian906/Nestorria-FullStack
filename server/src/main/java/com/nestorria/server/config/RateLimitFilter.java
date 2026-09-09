@@ -102,11 +102,10 @@ public class RateLimitFilter extends OncePerRequestFilter {
     }
 
     private boolean isExcluded(String uri) {
-        return uri.equals("/api/health/")
-            || uri.equals("/api/health")
+        return uri.equals("/api/health")
+            || uri.equals("/api/health/")
             || uri.equals("/actuator/health")
             || uri.startsWith("/actuator/health/")
-            || uri.equals("/actuator/prometheus")
             || uri.startsWith("/api/payments/stripe/webhook");
     }
 
@@ -137,6 +136,9 @@ public class RateLimitFilter extends OncePerRequestFilter {
     }
 
     private int resolveLimit(String uri) {
+        if (uri.equals("/api/ai/translate")) {
+            return rateLimitProps.translatePerMinute();
+        }
         if (uri.startsWith("/api/bookings")) return rateLimitProps.writePerMinute();
         if (uri.contains("/reviews")) return rateLimitProps.reviewPerMinute();
         if (uri.startsWith("/api/invoices") || uri.startsWith("/api/payments/invoices")) {
@@ -154,7 +156,6 @@ public class RateLimitFilter extends OncePerRequestFilter {
         if (uri.contains("/search") || uri.contains("/nearby")) {
             return rateLimitProps.searchPerMinute();
         }
-        // Default: read operations for authenticated users
         return rateLimitProps.readPerMinute();
     }
 

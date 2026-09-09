@@ -70,6 +70,15 @@ public class PropertyService {
         this.imageUploadTaskExecutor = imageUploadTaskExecutor;
     }
 
+    private static boolean isJpegPngWebp(byte[] h) {
+        if (h.length < 12) return false;
+        boolean jpeg = (h[0] == (byte) 0xFF && h[1] == (byte) 0xD8 && h[2] == (byte) 0xFF);
+        boolean png = (h[0] == (byte) 0x89 && h[1] == 0x50 && h[2] == 0x4E && h[3] == 0x47);
+        boolean webp = (h[0] == 0x52 && h[1] == 0x49 && h[2] == 0x46 && h[3] == 0x46
+            && h[8] == 0x57 && h[9] == 0x45 && h[10] == 0x42 && h[11] == 0x50);
+        return jpeg || png || webp;
+    }
+
     @CacheEvict(cacheNames = {"propertyListings", "ownerProperties", "propertyStats"}, allEntries = true)
     public PropertyResponse create(String userId, CreatePropertyRequest request, List<MultipartFile> files) {
         Agency agency = agencyRepository.findByOwnerId(userId)
@@ -186,9 +195,10 @@ public class PropertyService {
             return List.of();
         }
 
-        List<MultipartFile> limited = files.size() > MAX_IMAGES
-            ? files.subList(0, MAX_IMAGES)
-            : files;
+        if (files.size() > MAX_IMAGES) {
+            throw new BadRequestException("property.max-images");
+        }
+        List<MultipartFile> limited = files;
 
         List<CompletableFuture<UploadResult>> futures = limited.stream()
             .map(file -> CompletableFuture.supplyAsync(
@@ -253,15 +263,23 @@ public class PropertyService {
             throw new BadRequestException("property.image-empty");
         }
         String contentType = file.getContentType();
-        if (contentType == null || !contentType.startsWith("image/")) {
+        if (contentType == null || !(contentType.equals("image/jpeg") || contentType.equals("image/png") || contentType.equals("image/webp"))) {
             throw new BadRequestException("property.image-only");
         }
+        if (file.getSize() > 10 * 1024 * 1024) {
+            throw new BadRequestException("property.image-too-large");
+        }
         try {
+            byte[] head;
+            try (var in = file.getInputStream()) {
+                head = in.readNBytes(12);
+            }
+            if (!isJpegPngWebp(head)) {
+                throw new BadRequestException("property.image-only");
+            }
             Map<String, Object> result = cloudinary.uploader().upload(
-                    file.getBytes(),
-                    Map.of(
-                            "folder", "nestorria/properties",
-                            "resource_type", "image"));
+                file.getBytes(),
+                Map.of("folder", "nestorria/properties", "resource_type", "image"));
             return new UploadResult(
                     (String) result.get("secure_url"),
                     (String) result.get("public_id"));

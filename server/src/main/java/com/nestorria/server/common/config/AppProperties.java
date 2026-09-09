@@ -51,6 +51,7 @@ public record AppProperties(
             int publicReadPerMinute,
             int searchPerMinute,
             int aiPerMinute,
+            int translatePerMinute,
             int aiToolsPerMinute,
             String trustedProxies) {
         public java.util.List<String> trustedProxiesAsList() {

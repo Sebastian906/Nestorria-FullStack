@@ -1,5 +1,8 @@
 package com.nestorria.server.common.ai;
 
+import java.util.Set;
+
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.oauth2.jwt.Jwt;
@@ -21,10 +24,8 @@ import com.nestorria.server.common.ai.dto.ModelVersionsResponse;
 import com.nestorria.server.common.ai.dto.PromoteRollbackResponse;
 import com.nestorria.server.common.ai.dto.TrainingResponse;
 import com.nestorria.server.common.ai.dto.VersionInfoResponse;
-import com.nestorria.server.modules.user.UserRole;
 import com.nestorria.server.modules.user.UserRepository;
-
-import java.util.Set;
+import com.nestorria.server.modules.user.UserRole;
 
 @RestController
 @RequestMapping("/api/ai/admin")
@@ -38,90 +39,86 @@ public class AdminAiController {
         this.userRepository = userRepository;
     }
 
-    private static final Set<UserRole> ADMIN_ROLES = Set.of(
+    private static final Set<UserRole> READ_ROLES = Set.of(
         UserRole.AGENCY_OWNER, UserRole.ADMINISTRATOR);
 
-    /**
-     * Verifica que el usuario autenticado tenga rol de administrador.
-     * Acepta AGENCY_OWNER y ADMINISTRATOR (consistente con el gate del admin panel).
-     * La verificación se hace contra la DB porque Clerk no mapea roles a Spring Security authorities.
-     */
-    private void requireAdmin() {
+    private static final Set<UserRole> WRITE_ROLES = Set.of(
+            UserRole.ADMINISTRATOR);
+
+    // Verifica que el usuario autenticado tenga el rol correspondiente.
+    private void requireRole(Set<UserRole> allowed) {
         var auth = SecurityContextHolder.getContext().getAuthentication();
         if (auth == null || !(auth.getPrincipal() instanceof Jwt jwt)) {
-            throw new ResponseStatusException(
-                org.springframework.http.HttpStatus.UNAUTHORIZED, "No autenticado");
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "No autenticado");
         }
         String userId = jwt.getSubject();
         var user = userRepository.findById(userId)
-            .orElseThrow(() -> new ResponseStatusException(
-                org.springframework.http.HttpStatus.FORBIDDEN, "Usuario no encontrado"));
-        if (!ADMIN_ROLES.contains(user.getRole())) {
-            throw new ResponseStatusException(
-                org.springframework.http.HttpStatus.FORBIDDEN, "Acceso denegado: se requiere rol de administrador");
+            .orElseThrow(() -> new ResponseStatusException(HttpStatus.FORBIDDEN, "Usuario no encontrado"));
+        if (!allowed.contains(user.getRole())) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Acceso denegado");
         }
     }
 
     @GetMapping("/models")
     public ResponseEntity<AdminModelsResponse> getModels() {
-        requireAdmin();
+        requireRole(READ_ROLES);
         return ResponseEntity.ok(adminAiService.getModels());
     }
 
     @PostMapping("/models/{modelName}/train")
     public ResponseEntity<TrainingResponse> triggerTraining(@PathVariable String modelName) {
-        requireAdmin();
+        requireRole(WRITE_ROLES);
         return ResponseEntity.ok(adminAiService.triggerTraining(modelName));
     }
 
     @GetMapping("/rag/documents")
     public ResponseEntity<AdminRagDocumentsResponse> getDocuments() {
-        requireAdmin();
+        requireRole(READ_ROLES);
         return ResponseEntity.ok(adminAiService.getDocuments());
     }
 
     @DeleteMapping("/rag/documents/{documentId}")
     public ResponseEntity<Void> deleteDocument(@PathVariable String documentId) {
-        requireAdmin();
+        requireRole(WRITE_ROLES);
         adminAiService.deleteDocument(documentId);
         return ResponseEntity.noContent().build();
     }
 
     @GetMapping("/chat/metrics")
     public ResponseEntity<AdminChatMetricsResponse> getChatMetrics() {
-        requireAdmin();
+        requireRole(READ_ROLES);
         return ResponseEntity.ok(adminAiService.getChatMetrics());
     }
 
     @GetMapping("/status")
     public ResponseEntity<AdminAiStatusResponse> getStatus() {
-        requireAdmin();
+        requireRole(READ_ROLES);
         return ResponseEntity.ok(adminAiService.getStatus());
     }
 
     @GetMapping("/models/{modelName}/versions")
     public ResponseEntity<ModelVersionsResponse> getModelVersions(@PathVariable String modelName) {
-        requireAdmin();
+        requireRole(WRITE_ROLES);
         return ResponseEntity.ok(adminAiService.getModelVersions(modelName));
     }
 
     @GetMapping("/models/{modelName}/active")
     public ResponseEntity<VersionInfoResponse> getActiveVersion(@PathVariable String modelName) {
-        requireAdmin();
+        requireRole(WRITE_ROLES);
         return ResponseEntity.ok(adminAiService.getActiveVersion(modelName));
     }
 
     @PostMapping("/models/{modelName}/promote/{version}")
     public ResponseEntity<PromoteRollbackResponse> promoteModel(
             @PathVariable String modelName, @PathVariable String version) {
-        requireAdmin();
+        requireRole(WRITE_ROLES);
         return ResponseEntity.ok(adminAiService.promoteModel(modelName, version));
     }
 
     @PostMapping("/models/{modelName}/rollback/{version}")
     public ResponseEntity<PromoteRollbackResponse> rollbackModel(
             @PathVariable String modelName, @PathVariable String version) {
-        requireAdmin();
+        requireRole(WRITE_ROLES);
         return ResponseEntity.ok(adminAiService.rollbackModel(modelName, version));
     }
 
@@ -130,7 +127,7 @@ public class AdminAiController {
             @PathVariable String modelName,
             @RequestParam String v1,
             @RequestParam String v2) {
-        requireAdmin();
+        requireRole(WRITE_ROLES);
         return ResponseEntity.ok(adminAiService.compareVersions(modelName, v1, v2));
     }
 }
