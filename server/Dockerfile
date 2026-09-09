@@ -7,6 +7,7 @@ WORKDIR /app
 COPY pom.xml .
 COPY .mvn/ .mvn/
 COPY mvnw .
+RUN chmod +x mvnw
 
 # Download dependencies (Docker layer caching)
 RUN ./mvnw dependency:go-offline -B
