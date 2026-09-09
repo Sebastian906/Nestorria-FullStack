@@ -85,12 +85,13 @@ async def search_by_image(
 
     try:
         pil_image = Image.open(io.BytesIO(image_data))
+        if pil_image.width * pil_image.height > MAX_IMAGE_PIXELS:
+            raise HTTPException(status_code=422, detail="Image dimensions too large")
         pil_image.load()
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(status_code=422, detail="Invalid image file") from e
-
-    if pil_image.width * pil_image.height > MAX_IMAGE_PIXELS:
-        raise HTTPException(status_code=422, detail="Image dimensions too large")
 
     if pil_image.format not in ("JPEG", "PNG"):
         raise HTTPException(

@@ -49,17 +49,6 @@ class ConversationManager:
         """
         self._evict_expired()
 
-        MAX_CONVERSATIONS = 5000
-
-        if len(self._conversations) >= MAX_CONVERSATIONS:
-            self._evict_expired()
-        if len(self._conversations) >= MAX_CONVERSATIONS:
-            oldest = min(
-                self._conversations,
-                key=lambda k: self._conversations[k].last_activity,
-            )
-            del self._conversations[oldest]
-
         if conversation_id and conversation_id in self._conversations:
             conv = self._conversations[conversation_id]
             if conv.user_id != user_id:
@@ -72,6 +61,17 @@ class ConversationManager:
                 raise ValueError("Conversation not found")
             conv.last_activity = time.time()
             return conv
+
+        MAX_CONVERSATIONS = 5000
+
+        if len(self._conversations) >= MAX_CONVERSATIONS:
+            self._evict_expired()
+        if len(self._conversations) >= MAX_CONVERSATIONS:
+            oldest = min(
+                self._conversations,
+                key=lambda k: self._conversations[k].last_activity,
+            )
+            del self._conversations[oldest]
 
         # Create new conversation
         import uuid

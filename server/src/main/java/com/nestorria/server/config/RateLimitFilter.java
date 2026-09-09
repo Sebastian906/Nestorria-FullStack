@@ -74,7 +74,7 @@ public class RateLimitFilter extends OncePerRequestFilter {
 
         String key = resolveKey(request);
         int limit = resolveLimit(path);
-        String bucketKey = key + ":" + limit;
+        String bucketKey = key + ":" + resolveCategory(path) + ":" + limit;
         TimedBucket tb = buckets.computeIfAbsent(bucketKey, k -> new TimedBucket(createBucket(limit)));
         tb.lastAccessNanos = System.nanoTime();
         Bucket bucket = tb.bucket;
@@ -157,6 +157,22 @@ public class RateLimitFilter extends OncePerRequestFilter {
             return rateLimitProps.searchPerMinute();
         }
         return rateLimitProps.readPerMinute();
+    }
+
+    private String resolveCategory(String uri) {
+        if (uri.equals("/api/ai/translate")) return "translate";
+        if (uri.startsWith("/api/ai/tools")) return "ai-tools";
+        if (uri.startsWith("/api/ai")) return "ai";
+        if (uri.startsWith("/api/bookings")) return "bookings-write";
+        if (uri.contains("/reviews")) return "reviews";
+        if (uri.startsWith("/api/invoices") || uri.startsWith("/api/payments/invoices")) return "invoices-write";
+        if (uri.startsWith("/api/contracts")) return "contracts-write";
+        if (uri.startsWith("/api/agencies")) return "agencies";
+        if (uri.equals("/api/properties/me")
+            || uri.startsWith("/api/properties/nearby")
+            || uri.startsWith("/api/properties/*/reviews")) return "properties-public-read";
+        if (uri.contains("/search") || uri.contains("/nearby")) return "search";
+        return "read";
     }
 
     private Bucket createBucket(int requestsPerMinute) {

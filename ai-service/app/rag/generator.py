@@ -61,9 +61,12 @@ class RAGGenerator:
 
             try:
                 result_str = await self.tool_executor.execute(tool_name, tool_args)
-                ok, _reason = self.guardrails.check_input(str(result_str)[:2000])
+                bounded_result = str(result_str)[:2000]
+                ok, _reason = self.guardrails.check_input(bounded_result)
                 if not ok:
                     result_str = "[Tool output bloqueado por guardrails]"
+                else:
+                    result_str = bounded_result
             except ToolExecutionError as e:
                 result_str = json.dumps({"error": str(e)})
                 logger.warning("tool_call_error", tool=tool_name, error=str(e))
