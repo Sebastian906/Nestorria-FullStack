@@ -74,7 +74,7 @@ public class RateLimitFilter extends OncePerRequestFilter {
 
         String key = resolveKey(request);
         int limit = resolveLimit(path);
-        String bucketKey = key + ":" + limit;
+        String bucketKey = key + ":" + resolveCategory(path) + ":" + limit;
         TimedBucket tb = buckets.computeIfAbsent(bucketKey, k -> new TimedBucket(createBucket(limit)));
         tb.lastAccessNanos = System.nanoTime();
         Bucket bucket = tb.bucket;
@@ -102,11 +102,10 @@ public class RateLimitFilter extends OncePerRequestFilter {
     }
 
     private boolean isExcluded(String uri) {
-        return uri.equals("/api/health/")
-            || uri.equals("/api/health")
+        return uri.equals("/api/health")
+            || uri.equals("/api/health/")
             || uri.equals("/actuator/health")
             || uri.startsWith("/actuator/health/")
-            || uri.equals("/actuator/prometheus")
             || uri.startsWith("/api/payments/stripe/webhook");
     }
 
@@ -137,6 +136,9 @@ public class RateLimitFilter extends OncePerRequestFilter {
     }
 
     private int resolveLimit(String uri) {
+        if (uri.equals("/api/ai/translate")) {
+            return rateLimitProps.translatePerMinute();
+        }
         if (uri.startsWith("/api/bookings")) return rateLimitProps.writePerMinute();
         if (uri.contains("/reviews")) return rateLimitProps.reviewPerMinute();
         if (uri.startsWith("/api/invoices") || uri.startsWith("/api/payments/invoices")) {
@@ -154,8 +156,23 @@ public class RateLimitFilter extends OncePerRequestFilter {
         if (uri.contains("/search") || uri.contains("/nearby")) {
             return rateLimitProps.searchPerMinute();
         }
-        // Default: read operations for authenticated users
         return rateLimitProps.readPerMinute();
+    }
+
+    private String resolveCategory(String uri) {
+        if (uri.equals("/api/ai/translate")) return "translate";
+        if (uri.startsWith("/api/ai/tools")) return "ai-tools";
+        if (uri.startsWith("/api/ai")) return "ai";
+        if (uri.startsWith("/api/bookings")) return "bookings-write";
+        if (uri.contains("/reviews")) return "reviews";
+        if (uri.startsWith("/api/invoices") || uri.startsWith("/api/payments/invoices")) return "invoices-write";
+        if (uri.startsWith("/api/contracts")) return "contracts-write";
+        if (uri.startsWith("/api/agencies")) return "agencies";
+        if (uri.equals("/api/properties/me")
+            || uri.startsWith("/api/properties/nearby")
+            || uri.startsWith("/api/properties/*/reviews")) return "properties-public-read";
+        if (uri.contains("/search") || uri.contains("/nearby")) return "search";
+        return "read";
     }
 
     private Bucket createBucket(int requestsPerMinute) {

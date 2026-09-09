@@ -94,8 +94,8 @@ services:
     ports:
       - "127.0.0.1:3000:3000"
     environment:
-      - GF_SECURITY_ADMIN_USER=admin
-      - GF_SECURITY_ADMIN_PASSWORD=nestorria # SOLO local
+      - GF_SECURITY_ADMIN_USER=${GRAFANA_ADMIN_USER:-nestorria-dev-only} # SOLO local
+      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_ADMIN_PASSWORD:-nestorria-dev-only} # SOLO local
     volumes:
       - grafana_data:/var/lib/grafana
       - ./devops/grafana/provisioning:/etc/grafana/provisioning:ro

@@ -115,17 +115,18 @@ def create_app() -> FastAPI:
     # API key auth — excludes health probes for K8s/Docker
     application.add_middleware(
         ApiKeyAuthMiddleware,
-        exclude_paths=["/health", "/ready", "/metrics"],
+        exclude_paths=["/health", "/ready"],
     )
 
     # CORS — must be before auth so preflight OPTIONS requests are allowed
     origins = [o.strip() for o in settings.cors_origins.split(",") if o.strip()]
     application.add_middleware(
-        CORSMiddleware,
+        CORSMiddleware, 
         allow_origins=origins,
-        allow_credentials=True,
-        allow_methods=["*"],
-        allow_headers=["*"],
+        allow_credentials=True, 
+        allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+        allow_headers=["Authorization", "Content-Type", "X-API-Key", "X-User-ID", "Accept-Language"],
+        max_age=3600
     )
 
     # Audit logging — reads request_id set by RequestIdMiddleware

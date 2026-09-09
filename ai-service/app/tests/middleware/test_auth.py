@@ -30,12 +30,12 @@ async def test_ready_excluded_from_auth(client):
 
 @pytest.mark.anyio
 async def test_request_without_api_key_dev_allows(client):
-    """In development (no API key configured), protected routes are allowed."""
+    """Without API key configured, protected routes fail closed (500) in any env."""
     # Default config has api_key=None and environment="development"
-    # /ai/admin/status is protected but middleware passes through in dev
+    # Fail-closed: missing key is a server misconfiguration, not a pass-through
     response = await client.get("/ai/admin/status")
-    assert response.status_code == 200
-    assert response.json()["status"] == "ok"
+    assert response.status_code == 500
+    assert response.json()["detail"] == "API key not configured"
 
 @pytest.mark.anyio
 @patch("app.middleware.auth.get_settings")

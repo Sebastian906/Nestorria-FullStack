@@ -1,8 +1,11 @@
 package com.nestorria.server.modules.payment;
 
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.util.List;
 
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.oauth2.jwt.Jwt;
@@ -31,6 +34,9 @@ public class PaymentController {
     private final PaymentService paymentService;
     private final InvoiceRepository invoiceRepository;
 
+    @Value("${stripe.webhook-secret:}")
+    private String webhookSecret;
+
     public PaymentController(PaymentService paymentService,
                              InvoiceRepository invoiceRepository) {
         this.paymentService = paymentService;
@@ -41,7 +47,12 @@ public class PaymentController {
 
     @Operation(summary = "Webhook de Stripe para confirmación de pagos (público)")
     @PostMapping("/stripe/webhook")
-    public ResponseEntity<Void> handleStripeWebhook(HttpServletRequest request) {
+    public ResponseEntity<String> handleStripeWebhook(HttpServletRequest request) {
+        if (webhookSecret == null || webhookSecret.isBlank()) {
+            return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE)
+                .body("webhook deshabilitado: sin secreto configurado");
+        }
+
         String sigHeader = request.getHeader("Stripe-Signature");
         if (sigHeader == null || sigHeader.isBlank()) {
             return ResponseEntity.badRequest().build();
@@ -49,14 +60,19 @@ public class PaymentController {
         if (request.getContentLengthLong() > MAX_WEBHOOK_PAYLOAD_BYTES) {
             return ResponseEntity.badRequest().build();
         }
+
         String payload;
         try {
             payload = new String(
-                request.getInputStream().readNBytes(MAX_WEBHOOK_PAYLOAD_BYTES),
-                java.nio.charset.StandardCharsets.UTF_8);
+                request.getInputStream().readNBytes(MAX_WEBHOOK_PAYLOAD_BYTES + 1),
+                StandardCharsets.UTF_8);
         } catch (IOException e) {
             return ResponseEntity.badRequest().build();
         }
+        if (payload.length() > MAX_WEBHOOK_PAYLOAD_BYTES) {
+            return ResponseEntity.badRequest().build();
+        }
+
         paymentService.handleStripeWebhook(payload, sigHeader);
         return ResponseEntity.ok().build();
     }

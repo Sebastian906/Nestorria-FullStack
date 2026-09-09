@@ -62,6 +62,17 @@ class ConversationManager:
             conv.last_activity = time.time()
             return conv
 
+        MAX_CONVERSATIONS = 5000
+
+        if len(self._conversations) >= MAX_CONVERSATIONS:
+            self._evict_expired()
+        if len(self._conversations) >= MAX_CONVERSATIONS:
+            oldest = min(
+                self._conversations,
+                key=lambda k: self._conversations[k].last_activity,
+            )
+            del self._conversations[oldest]
+
         # Create new conversation
         import uuid
         new_id = conversation_id or f"conv_{uuid.uuid4().hex[:12]}"
