@@ -99,7 +99,7 @@ const reverseGeocode = async (lat, lng) => {
 
 // Cargar Leaflet dinámicamente
 const loadLeaflet = () => {
-    return new Promise((resolve) => {
+    return new Promise((resolve, reject) => {
         if (window.L) {
             resolve()
             return
