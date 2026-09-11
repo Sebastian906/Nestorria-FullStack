@@ -11,6 +11,13 @@
     "a11y": {
         "language": "Idioma"
     },
+    "auth": {
+        "signInTitle": "Panel de administración",
+        "signInSubtitle": "Inicia sesión para continuar",
+        "loading": "Cargando tu perfil...",
+        "deniedTitle": "Acceso denegado",
+        "deniedMsg": "Tu cuenta no tiene permisos de administrador. Contacta al responsable del sistema."
+    },
     "ph": {
         "typeHere": "Escriba aquí..."
     }

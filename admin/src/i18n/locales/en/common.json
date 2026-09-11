@@ -11,6 +11,13 @@
     "a11y": {
         "language": "Language"
     },
+    "auth": {
+        "signInTitle": "Admin panel",
+        "signInSubtitle": "Sign in to continue",
+        "loading": "Loading your profile...",
+        "deniedTitle": "Access denied",
+        "deniedMsg": "Your account has no administrator permissions. Contact the system owner."
+    },
     "ph": {
         "typeHere": "Type here..."
     }
