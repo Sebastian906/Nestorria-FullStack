@@ -1,0 +1,38 @@
+%% Nestorria - BPMN-lite of general use cases (verified 2026-09-12)
+%% Mermaid has no pure BPMN support: flowchart with subgraphs per actor is used.
+flowchart TD
+  subgraph BK["Property booking"]
+    B1["Search in Listing + filters"] --> B2["View details + Leaflet map"]
+    B2 --> B3["Pick dates + guests"]
+    B3 --> B4{"Available - BookingService"}
+    B4 -->|yes| B5["Create PENDING Booking"]
+    B4 -->|no| B3
+    B5 --> B6["Pay with Stripe"]
+    B6 --> B7["Webhook issues Invoice"]
+    B5 --> B8["Generate Contract"]
+    B8 --> B9["Multi-role signing"]
+    B7 --> B10["Notify via STOMP"]
+    B9 --> B10
+  end
+  subgraph RG["Clerk signup"]
+    R1["Open app"] --> R2["Sign in with Clerk"]
+    R2 --> R3["Validate JWT - resource server"]
+    R3 --> R4["UserProvisioningFilter creates User"]
+    R4 --> R5["Assign USER or AGENCY_OWNER role"]
+  end
+  subgraph AI["AI chatbot"]
+    A1["Open ChatWidget"] --> A2["Send message - SSE"]
+    A2 --> A3["AiChatStreamingService"]
+    A3 --> A4["FastAPI rag + chat"]
+    A4 --> A5["Groq with RAG context"]
+    A5 --> A6["Cite sources"]
+    A5 --> A7{"ai-service down"}
+    A7 -->|yes| A8["Degraded fallback"]
+  end
+  subgraph AD["Administration - admins only"]
+    D1["Admin login :5174"] --> D2["Dashboard"]
+    D2 --> D3["Publish or edit property"]
+    D2 --> D4["Manage Categories"]
+    D2 --> D5["View Reports - POI and iText"]
+    D2 --> D6["Review AiDashboard and MlopsDashboard"]
+  end
