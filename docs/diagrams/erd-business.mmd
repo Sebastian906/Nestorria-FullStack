@@ -1,7 +1,7 @@
 %% Nestorria - Backend business ER diagram (verified 2026-09-12)
 %% Attributes read from @Entity classes under server/.../modules/*/
 %% Verified enums below. ContractType, NotificationType and PropertyType values: TODO verify.
-%% User role lives in Clerk: TODO verify mapping in User.java.
+%% Identity comes from Clerk; the app stores the role in users.role (User.java:47-48, default USER).
 %% USER-AGENCY cardinality inferred from Agency.owner field: TODO confirm with business rule.
 erDiagram
   USER {

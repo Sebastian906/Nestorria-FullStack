@@ -9,21 +9,21 @@
 3. Auth is stateless JWT via `spring-boot-starter-oauth2-resource-server` (`server/pom.xml`) with `clerk.issuer-uri` (`server/src/main/resources/application.properties:38`).
 
 ![Login screen](assets/01-login.png)
-> *Captura pendiente — el usuario debe tomarla tras levantar el sistema con `pnpm dev`.*
+> *Screenshot pending — take it after starting the system with `pnpm dev`.*
 
 ## 2. Explore properties
 
 Pages (verified `frontend/src/pages/`): `Listing`, `MapExplorer`, `Compare`, `Home`. Components: `NearbySearchPanel`, `PropertyMap` (Leaflet `^1.9.4`), `PropertyImages`.
 
 ![Listing with filters](assets/02-listing.png)
-> *Captura pendiente — el usuario debe tomarla tras levantar el sistema con `pnpm dev`.*
+> *Screenshot pending — take it after starting the system with `pnpm dev`.*
 
 ## 3. Property details + map
 
 `PropertyDetails.tsx` + `PropertyMap.tsx` + gallery. No hardcoded strings — UI text via `frontend/src/i18n/` (mandatory i18n).
 
 ![Property details + Leaflet map](assets/03-property-details.png)
-> *Captura pendiente — el usuario debe tomarla tras levantar el sistema con `pnpm dev`.*
+> *Screenshot pending — take it after starting the system with `pnpm dev`.*
 
 ## 4. Booking — start/end dates + guests (core flow)
 
@@ -33,42 +33,42 @@ Pages (verified `frontend/src/pages/`): `Listing`, `MapExplorer`, `Compare`, `Ho
 4. Overlaps are rejected server-side; scheduler handles expiry (`BookingScheduler.java`).
 
 ![Booking date and guest selector](assets/04-booking.png)
-> *Captura pendiente — el usuario debe tomarla tras levantar el sistema con `pnpm dev`.*
+> *Screenshot pending — take it after starting the system with `pnpm dev`.*
 
 ## 5. Favorites
 
 Heart toggle → `FavoriteController` (`server/.../modules/favorite/`). List visible in profile.
 
 ![Favorites toggle](assets/05-favorites.png)
-> *Captura pendiente — el usuario debe tomarla tras levantar el sistema con `pnpm dev`.*
+> *Screenshot pending — take it after starting the system with `pnpm dev`.*
 
 ## 6. Reviews
 
 `MyReviews.tsx` + `ReviewController`. Server rate limit `review-per-minute=5` (`application.properties:81`).
 
 ![Reviews](assets/06-reviews.png)
-> *Captura pendiente — el usuario debe tomarla tras levantar el sistema con `pnpm dev`.*
+> *Screenshot pending — take it after starting the system with `pnpm dev`.*
 
 ## 7. Contracts (multi-role signature)
 
 `ContractDetails.tsx` → `ContractController` (`server/.../modules/contract/`). Entities: `Contract`, `DigitalSignature`, `SignatureRole`, `ContractClause`. Signature expiry 30 days (`app.contract.signature-expiry-days=30`).
 
 ![Contract signing](assets/07-contract.png)
-> *Captura pendiente — el usuario debe tomarla tras levantar el sistema con `pnpm dev`.*
+> *Screenshot pending — take it after starting the system with `pnpm dev`.*
 
 ## 8. Payments & invoices (Stripe)
 
-Checkout → `PaymentController` (stripe-java `28.4.0`, `server/pom.xml:101`) → webhook → `Invoice`/`PaymentTransaction` (tax 18%, due 15d — `application.properties:73-75`). Webhook returns **503 until `STRIPE_WEBHOOK_SECRET` is set** — deferred by design, not a bug.
+Checkout → `BookingController.createStripePayment` (`POST /api/bookings/stripe`, stripe-java `28.4.0`, `server/pom.xml:101`) → webhook (`PaymentController`, `POST /api/payments/stripe/webhook`) → `Invoice`/`PaymentTransaction` (tax 18%, due 15d — `application.properties:73-75`). Webhook returns **503 until `STRIPE_WEBHOOK_SECRET` is set** — deferred by design, not a bug.
 
 ![Payments and invoice](assets/08-payments.png)
-> *Captura pendiente — el usuario debe tomarla tras levantar el sistema con `pnpm dev`.*
+> *Screenshot pending — take it after starting the system with `pnpm dev`.*
 
 ## 9. Push notifications (STOMP bell)
 
 `NotificationBell.tsx` + `@stomp/stompjs ^7.3.0` over Spring WebSocket (`spring-boot-starter-websocket`, `server/pom.xml:137`). Events: booking / payment / contract.
 
 ![Notifications bell](assets/09-notifications.png)
-> *Captura pendiente — el usuario debe tomarla tras levantar el sistema con `pnpm dev`.*
+> *Screenshot pending — take it after starting the system with `pnpm dev`.*
 
 ## 10. AI chat (SSE, quota 20 msg/h)
 
@@ -79,14 +79,14 @@ Checkout → `PaymentController` (stripe-java `28.4.0`, `server/pom.xml:101`) �
 5. ML models are **experimental (~85 records)** — do not present predictions as production-grade.
 
 ![AI chat widget streaming](assets/10-ai-chat.png)
-> *Captura pendiente — el usuario debe tomarla tras levantar el sistema con `pnpm dev`.*
+> *Screenshot pending — take it after starting the system with `pnpm dev`.*
 
 ## 11. Admin panel (Vue)
 
 Pages (verified `admin/src/pages/`): `Dashboard`, `ListProperty` / `AddProperty`, `Categories`, `Reports`, `AiDashboard`, `MlopsDashboard`. Port `:5174` (`admin/vite.config.js:12`).
 
 ![Admin dashboard](assets/11-admin.png)
-> *Captura pendiente — el usuario debe tomarla tras levantar el sistema con `pnpm dev`.*
+> *Screenshot pending — take it after starting the system with `pnpm dev`.*
 
 ## 12. Troubleshooting
 

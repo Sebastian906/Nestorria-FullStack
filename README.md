@@ -53,9 +53,9 @@ terminals 2-3 (hot-reload outside Docker by design)
 ```bash
 cd frontend && pnpm install && pnpm dev   # http://localhost:5173
 cd admin && pnpm install && pnpm dev      # http://localhost:5174 (check vite config)
+```
 Production (current decision: Railway + Netlify)
 server + ai-service → Railway (separate services, own domains, Postgres plugin). frontend + admin → Netlify. Stripe webhook configured post-deploy (currently 503-disabled mode without secret).
-```
 
 ## 6. Docs map
 - docs/USER_MANUAL.md — portal + admin flows.

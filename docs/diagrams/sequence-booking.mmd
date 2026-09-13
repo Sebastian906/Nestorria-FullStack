@@ -8,7 +8,7 @@ sequenceDiagram
   participant W as STOMP broker
   participant N as NotificationBell
   U->>R: select dates and guests
-  R->>S: GET availability
+  R->>S: POST /api/bookings/check-availability
   S->>V: check overlap
   V->>D: overlap query
   D-->>V: free

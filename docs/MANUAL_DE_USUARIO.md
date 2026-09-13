@@ -58,7 +58,7 @@ Toggle corazón → `FavoriteController` (`server/.../modules/favorite/`).
 
 ## 8. Pagos y facturas (Stripe)
 
-Checkout → `PaymentController` (stripe-java `28.4.0`) → webhook → `Invoice`/`PaymentTransaction` (impuesto 18%, vencimiento 15d — `application.properties:73-75`). Webhook devuelve **503 hasta configurar `STRIPE_WEBHOOK_SECRET`** — diferido consciente, no bug.
+Checkout → `BookingController.createStripePayment` (`POST /api/bookings/stripe`, stripe-java `28.4.0`) → webhook (`PaymentController`, `POST /api/payments/stripe/webhook`) → `Invoice`/`PaymentTransaction` (impuesto 18%, vencimiento 15d — `application.properties:73-75`). Webhook devuelve **503 hasta configurar `STRIPE_WEBHOOK_SECRET`** — diferido consciente, no bug.
 
 ![Pagos y factura](assets/08-payments.png)
 > *Captura pendiente — el usuario debe tomarla tras levantar el sistema con `pnpm dev`.*

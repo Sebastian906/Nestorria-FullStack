@@ -53,9 +53,9 @@ terminales 2-3 (hot-reload fuera de Docker por diseño)
 ```bash
 cd frontend && pnpm install && pnpm dev
 cd admin && pnpm install && pnpm dev
+```
 Producción (decisión vigente: Railway + Netlify)
 server + ai-service → Railway (servicios separados, dominios propios, plugin Postgres). frontend + admin → Netlify. Webhook Stripe se configura post-deploy (hoy modo 503 deshabilitado sin secreto).
-```
 
 ## 6. Mapa de docs
 - docs/USER_MANUAL.md — flujos portal + admin.

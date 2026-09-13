@@ -39,7 +39,7 @@ Backend is a **modular monolith**: bounded contexts in `server/src/main/java/com
 | Observer / Pub-Sub | STOMP bell (`NotificationBell.tsx`, `spring-boot-starter-websocket`) + `EventHandler<?>` dispatch | Booking/payment/contract events fan out to handlers and UI |
 | Strategy | `AiFallbackHandler` per-operation methods; recommendation weights (`config.py:47-49`) | Algorithm selectable without caller changes |
 | Singleton (container + cache) | Spring `@Service/@Component` singletons; `get_settings()` `@lru_cache` (`app/config.py:132`) | One settings instance; one client per container |
-| Facade | `AiServiceClient` over `/ml|/rag|/dl|/ai` endpoints | Callers see chat/predict/health, not HTTP details |
+| Facade | `AiServiceClient` over `/ml\|/rag\|/dl\|/ai` endpoints | Callers see chat/predict/health, not HTTP details |
 | Repository + DTO | `*Repository.java` + `dto/` per module | Persistence decoupled from API contracts |
 | Middleware chain | `app/main.py:75-136` (rate-limit → API-key → CORS → audit → request-id → metrics) | Ordered; request-id innermost so audit can read it |
 | Adapter (partial) | `modules/payment/StripeClient.java` (name only, body not read) | Verify before citing as pattern |

@@ -1,7 +1,7 @@
 # Nestorria — Preguntas frecuentes (FAQ)
 
 > Audiencia: cliente final. Idioma: español. Este archivo es corpus del RAG (`audience:client`, `lang:es`).
-> Respuestas cortas y literales a propósito: el retriever usa umbral de similitud 0.7 y `top_k=5`
+> Respuestas cortas y literales a propósito: el retriever usa umbral de similitud 0.5 y `top_k=5`
 > (`ai-service/app/config.py`), así que cada pregunta va en su propio `###` con respuesta de 2–4 líneas.
 
 ### ¿Cómo creo una cuenta o inicio sesión?

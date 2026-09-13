@@ -1,7 +1,7 @@
 # Nestorria — Frequently Asked Questions (FAQ)
 
 > Audience: end client. Language: English. This file is RAG corpus (`audience:client`, `lang:en`).
-> Short literal answers on purpose: the retriever uses similarity threshold 0.7 and `top_k=5`
+> Short literal answers on purpose: the retriever uses similarity threshold 0.5 and `top_k=5`
 > (`ai-service/app/config.py`), so each question gets its own `###` with a 2–4 line answer.
 
 ### How do I create an account or sign in?

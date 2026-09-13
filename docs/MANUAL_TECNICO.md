@@ -63,7 +63,7 @@ pytest
 
 Fuente: `frontend/package.json`, `frontend/vite.config.ts`, `frontend/pnpm-workspace.yaml`.
 
-React 19.2.5, Vite 8.0.10, TS ~6.0.2, Tailwind 4.2.4, `@clerk/react ^6.7.1` + `@clerk/localizations ^4.16.0` (fijar — v6 no existe), `react-router-dom ^7.15.1`, `i18next ^26.4.2`, Leaflet `^1.9.4`, STOMP `^7.3.0`, Axios `^1.18.0`, Vitest `^4.1.7` + RTL + MSW. Puerto `:5173` (`vite.config.ts:23`). Mantener `allowBuilds: @clerk/shared, msw` (`pnpm-workspace.yaml`).
+React 19.2.5, Vite 8.0.10, TS ~6.0.2, Tailwind 4.2.4, `@clerk/react ^6.7.1` + `@clerk/localizations ^4.16.0` (fijar localizations — v6 no existe para ese paquete), `react-router-dom ^7.15.1`, `i18next ^26.4.2`, Leaflet `^1.9.4`, STOMP `^7.3.0`, Axios `^1.18.0`, Vitest `^4.1.7` + RTL + MSW. Puerto `:5173` (`vite.config.ts:23`). Mantener `allowBuilds: @clerk/shared, msw` (`pnpm-workspace.yaml`).
 
 ```bash
 cd frontend

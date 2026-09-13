@@ -4,6 +4,7 @@ sequenceDiagram
   participant R as React app
   participant C as Clerk
   participant S as Spring API
+  participant B as BearerToken JWT
   participant F as UserProvisioningFilter
   participant V as UserService
   participant D as Postgres nestorria
@@ -11,9 +12,11 @@ sequenceDiagram
   R->>C: sign in
   C-->>R: JWT
   R->>S: GET profile with JWT
-  S->>F: validate via JWKS
-  F->>C: fetch JWKS if cached miss
-  C-->>F: public keys
+  S->>B: authenticate bearer token
+  B->>C: fetch JWKS if cache miss
+  C-->>B: public keys
+  B-->>S: claims authenticated
+  S->>F: provision user
   F->>V: provision user
   V->>D: upsert User
   D-->>V: ok

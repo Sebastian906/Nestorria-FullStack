@@ -27,7 +27,7 @@
 
 | Term | Meaning | Source |
 |---|---|---|
-| RAG | Similarity search over `rag_documents` (pgvector) + Groq generation; chunk 500/overlap 50, `top_k=5`, threshold 0.7, 384d `all-MiniLM-L6-v2` embeddings | `ai-service/app/config.py:63-72` |
+| RAG | Similarity search over `rag_documents` (pgvector) + Groq generation; chunk 500/overlap 50, `top_k=5`, threshold 0.5, 384d `all-MiniLM-L6-v2` embeddings | `ai-service/app/config.py:63-72` |
 | Chat quota | 20 messages per user per hour; max 10 concurrent streams | `config.py:81`, `application.properties:124` |
 | Fallback | Degraded answer when `ai-service` is unavailable (no empty stream) | `common/ai/AiFallbackHandler.java` |
 | STOMP bell | Push notifications for booking/payment/contract over WebSocket | `frontend/src/components/NotificationBell.tsx` |

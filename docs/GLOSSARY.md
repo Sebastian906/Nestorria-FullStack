@@ -27,7 +27,7 @@
 
 | Término | Significado | Fuente |
 |---|---|---|
-| RAG | Búsqueda por similitud sobre `rag_documents` (pgvector) + generación con Groq; chunk 500/overlap 50, `top_k=5`, umbral 0.7, embeddings 384d `all-MiniLM-L6-v2` | `ai-service/app/config.py:63-72` |
+| RAG | Búsqueda por similitud sobre `rag_documents` (pgvector) + generación con Groq; chunk 500/overlap 50, `top_k=5`, umbral 0.5, embeddings 384d `all-MiniLM-L6-v2` | `ai-service/app/config.py:63-72` |
 | Cuota del chat | 20 mensajes por usuario y hora; máx. 10 streams concurrentes | `config.py:81`, `application.properties:124` |
 | `API_KEY` | Clave de API para autenticación en el servicio de IA | `ai-service/.env` |
 | Fallback | Respuesta degradada cuando `ai-service` no está disponible (sin stream vacío) | `common/ai/AiFallbackHandler.java` |
