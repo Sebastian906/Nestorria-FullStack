@@ -1,0 +1,36 @@
+%% Nestorria - Architecture and stack by module (verified repo 2026-09-12)
+%% Ports: server :4000, ai-service :8000. DB image: pgvector/pgvector:pg16.
+flowchart LR
+  subgraph CLIENT["Clients"]
+    WEB["frontend - React 19 + Vite 8 - :5173"]
+    ADM["admin - Vue 3 + Vite 8 - :5174"]
+  end
+  subgraph BACK["server :4000 - Spring Boot 4.1 + Java 21"]
+    GW["Controllers + Bucket4j + Caffeine"]
+    WS["STOMP broker"]
+  end
+  subgraph AI["ai-service :8000 - FastAPI + Python 3.12"]
+    RAG["routers rag + chat - MiniLM 384d"]
+    ML["routers price + cancel + reco - sklearn exp."]
+    LLM["Groq gpt-oss-20b"]
+  end
+  subgraph DATA["nestorria-primary :5432 - pgvector pg16"]
+    PG[("Postgres + pgvector - rag_documents")]
+  end
+  subgraph OBS["Observability"]
+    PROM["Prometheus :9090"]
+    GRA["Grafana :3000 + Loki :3100 + Alloy"]
+  end
+  WEB -->|"REST + SSE"| GW
+  ADM -->|"REST"| GW
+  GW -->|"JPA"| PG
+  GW -->|"REST"| RAG
+  GW -->|"REST"| ML
+  RAG -->|"embeddings"| PG
+  RAG -->|"chat"| LLM
+  RAG -->|"tools to :4000"| GW
+  GW -->|"events"| WS
+  WS -->|"push"| WEB
+  GW -->|"metrics"| PROM
+  RAG -->|"metrics"| PROM
+  PROM --> GRA

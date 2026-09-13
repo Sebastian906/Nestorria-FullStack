@@ -1,0 +1,22 @@
+%% Nestorria - Clerk signup sequence (JWT -> provisioning)
+sequenceDiagram
+  actor U as Guest
+  participant R as React app
+  participant C as Clerk
+  participant S as Spring API
+  participant F as UserProvisioningFilter
+  participant V as UserService
+  participant D as Postgres nestorria
+  U->>R: open app
+  R->>C: sign in
+  C-->>R: JWT
+  R->>S: GET profile with JWT
+  S->>F: validate via JWKS
+  F->>C: fetch JWKS if cached miss
+  C-->>F: public keys
+  F->>V: provision user
+  V->>D: upsert User
+  D-->>V: ok
+  V-->>F: USER role
+  F-->>S: authenticated
+  S-->>R: 200 profile

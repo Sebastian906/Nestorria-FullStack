@@ -54,18 +54,17 @@ Backend is a **modular monolith**: bounded contexts in `server/src/main/java/com
 
 ## 5. Diagrams (pending — generated next)
 
-Linked sources (to be created under `docs/diagrams/`):
+Rendered diagrams (open the `.html` in a browser — archify showcase validation 9/9 plus automated browser containment/readability checks; typed JSON specs frozen per deliver):
 
-- `diagrams/architecture-stack.mmd` — containers + ports + data flow
-- `diagrams/erd-business.mmd` — JPA aggregates and relations
-- `diagrams/bpmn-processes.mmd` — booking → payment → contract → notify (BPMN-lite)
-- `diagrams/uml-use-cases.mmd` — actors ↔ use cases
-- `diagrams/flow-main.mmd` — search → book → pay → notify
-- `diagrams/sequence-booking.mmd` — React → Spring → DB → STOMP
-- `diagrams/sequence-ai-chat.mmd` — SSE via `AiChatStreamingService` → FastAPI → Groq → tools
-- `diagrams/sequence-payment.mmd` — Stripe + webhook + invoicing
-- `diagrams/sequence-contract.mmd` — multi-role signing
-- `diagrams/sequence-rag-ingest.mmd` — chunk → embed → pgvector
+- `diagrams/architecture-stack.html` (+ source `architecture-stack.mmd`) — containers + ports + data flow
+- `diagrams/bpmn-reserva-registro.html` + `diagrams/bpmn-chat-admin.html` (+ combined source `bpmn-processes.mmd`) — booking, Clerk registration, AI chatbot, admin as BPMN-lite, split in two so each fits desktop viewports
+- `diagrams/sequence-booking.html` (+ `.mmd`) — React → Spring → DB → STOMP
+- `diagrams/sequence-auth-clerk.html` (+ `.mmd`) — JWT → provisioning → role
+- `diagrams/sequence-ai-chat.html` (+ `.mmd`) — SSE via `AiChatStreamingService` → FastAPI → Groq → tools
+- `diagrams/sequence-admin.html` (+ `.mmd`) — Vue admin → reports (POI/iText) → AI dashboards
+- `diagrams/erd-business.mmd` — JPA aggregates, attributes and relations (backend only, no AI; archify has no data-model diagram type, so Mermaid stays the source — paste to https://mermaid.live)
+
+Note: authored content and viewer locale are English (`meta.locale: en`).
 
 ## 6. Strengths / risks
 

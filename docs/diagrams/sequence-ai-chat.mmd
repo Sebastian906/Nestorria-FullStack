@@ -1,0 +1,25 @@
+%% Nestorria - Streaming AI chat sequence (Spring proxy -> FastAPI -> Groq -> tools)
+sequenceDiagram
+  actor U as Guest
+  participant R as ChatWidget useChat
+  participant S as AiChatStreamingService
+  participant A as AiServiceClient
+  participant F as FastAPI chat rag
+  participant G as Groq LLM
+  participant T as AiToolController
+  U->>R: open widget send msg
+  R->>S: SSE POST chat
+  S->>A: forward prompt
+  A->>F: POST rag chat
+  F->>F: retrieve top 5 threshold 0.5
+  F->>G: prompt plus RAG context
+  alt needs live data
+    G-->>F: tool call
+    F->>T: GET api ai tools
+    T-->>F: tool result
+    F->>G: prompt plus tool result
+  end
+  G-->>F: tokens
+  F-->>A: SSE tokens plus sources
+  A-->>S: stream max 10 concurrent
+  S-->>R: render tokens and citations

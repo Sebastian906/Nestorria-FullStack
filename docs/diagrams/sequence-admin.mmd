@@ -1,0 +1,21 @@
+%% Nestorria - Administration sequence (Vue -> Spring -> reports and AI)
+sequenceDiagram
+  actor O as Admin
+  participant V as Vue admin :5174
+  participant S as ReportController
+  participant R as ReportService
+  participant D as Postgres nestorria
+  participant A as AdminAiController
+  participant F as FastAPI admin router
+  O->>V: open Dashboard
+  V->>S: GET reports bookings
+  S->>R: build dataset
+  R->>D: aggregate query
+  D-->>R: rows
+  R-->>S: Excel via POI or PDF via iText
+  S-->>V: file download
+  O->>V: open AiDashboard
+  V->>A: GET ai metrics
+  A->>F: GET ai admin stats
+  F-->>A: rag ml stats
+  A-->>V: render dashboards

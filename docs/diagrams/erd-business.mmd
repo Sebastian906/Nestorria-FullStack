@@ -1,0 +1,127 @@
+%% Nestorria - Backend business ER diagram (verified 2026-09-12)
+%% Attributes read from @Entity classes under server/.../modules/*/
+%% Verified enums below. ContractType, NotificationType and PropertyType values: TODO verify.
+%% User role lives in Clerk: TODO verify mapping in User.java.
+%% USER-AGENCY cardinality inferred from Agency.owner field: TODO confirm with business rule.
+erDiagram
+  USER {
+    string id PK
+    string username
+    string email
+    string image
+  }
+  AGENCY {
+    string id PK
+    string name
+    string address
+    string contact
+    string email
+    string city
+  }
+  PROPERTY {
+    string id PK
+    string title
+    string description
+    string city
+    string country
+    string address
+    int area
+    string propertyType
+    int price_rent
+    int price_sale
+    float latitude
+    float longitude
+    string amenities
+    string images
+    boolean isAvailable
+  }
+  CATEGORY_TREE {
+    int id PK
+    string name
+    string slug
+    string description
+  }
+  BOOKING {
+    string id PK
+    date checkInDate
+    date checkOutDate
+    long totalPrice
+    int guests
+    string status
+    string paymentMethod
+    boolean isPaid
+  }
+  INVOICE {
+    string id PK
+    string invoiceNumber
+    date issueDate
+    date dueDate
+    string status
+    string stripeSessionId
+  }
+  PAYMENT_TRANSACTION {
+    string id PK
+    string currency
+    string paymentMethod
+    string gatewayReference
+    string status
+    datetime paidAt
+    string failureMessage
+  }
+  CONTRACT {
+    string id PK
+    string contractType
+    string status
+    datetime signedByTenantAt
+    datetime signedByAgencyAt
+    datetime generatedAt
+  }
+  CONTRACT_CLAUSE {
+    string id PK
+    string title
+    string content
+  }
+  DIGITAL_SIGNATURE {
+    string id PK
+    string role
+    datetime signedAt
+    string ipAddress
+    string userAgent
+  }
+  REVIEW {
+    string id PK
+    int rating
+    string comment
+    string originalLang
+    boolean isVerified
+  }
+  FAVORITE {
+    string id PK
+  }
+  NOTIFICATION {
+    string id PK
+    string type
+    string title
+    string message
+    string referenceType
+    string referenceId
+    datetime readAt
+  }
+  USER ||--o{ BOOKING : makes
+  AGENCY ||--o{ PROPERTY : owns
+  CATEGORY_TREE ||--o{ PROPERTY : classifies
+  CATEGORY_TREE ||--o{ CATEGORY_TREE : parent_of
+  PROPERTY ||--o{ BOOKING : receives
+  AGENCY ||--o{ BOOKING : manages
+  BOOKING ||--o| INVOICE : bills
+  INVOICE ||--o{ PAYMENT_TRANSACTION : settled_by
+  BOOKING ||--o{ CONTRACT : generates
+  CONTRACT ||--o{ CONTRACT_CLAUSE : contains
+  CONTRACT ||--o{ DIGITAL_SIGNATURE : requires
+  USER ||--o{ DIGITAL_SIGNATURE : signs
+  USER ||--o{ REVIEW : writes
+  PROPERTY ||--o{ REVIEW : gets
+  USER ||--o{ FAVORITE : toggles
+  PROPERTY ||--o{ FAVORITE : saved_in
+  USER ||--o{ NOTIFICATION : receives
+  USER ||--o{ AGENCY : owns

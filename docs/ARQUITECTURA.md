@@ -54,18 +54,17 @@ El backend es un **monolito modular**: contextos acotados en `server/src/main/ja
 
 ## 5. Diagramas (pendientes — se generan después)
 
-Fuentes enlazadas (a crear bajo `docs/diagrams/`):
+Diagramas renderizados (abre el `.html` en un navegador — validación archify showcase 9/9 más chequeos automáticos de navegador; specs JSON tipados congelados por entrega):
 
-- `diagrams/architecture-stack.mmd` — contenedores + puertos + flujo de datos
-- `diagrams/erd-business.mmd` — agregados JPA y relaciones
-- `diagrams/bpmn-processes.mmd` — reserva → pago → contrato → notificación (BPMN-lite)
-- `diagrams/uml-use-cases.mmd` — actores ↔ casos de uso
-- `diagrams/flow-main.mmd` — buscar → reservar → pagar → notificar
-- `diagrams/sequence-booking.mmd` — React → Spring → DB → STOMP
-- `diagrams/sequence-ai-chat.mmd` — SSE vía `AiChatStreamingService` → FastAPI → Groq → tools
-- `diagrams/sequence-payment.mmd` — Stripe + webhook + facturación
-- `diagrams/sequence-contract.mmd` — firma multi-rol
-- `diagrams/sequence-rag-ingest.mmd` — chunk → embed → pgvector
+- `diagrams/architecture-stack.html` (+ fuente `architecture-stack.mmd`) — contenedores + puertos + flujo de datos
+- `diagrams/bpmn-reserva-registro.html` + `diagrams/bpmn-chat-admin.html` (+ fuente combinada `bpmn-processes.mmd`) — reserva, registro Clerk, chatbot IA y admin como BPMN-lite, dividido en dos para que cada uno quepa en desktop
+- `diagrams/sequence-booking.html` (+ `.mmd`) — React → Spring → DB → STOMP
+- `diagrams/sequence-auth-clerk.html` (+ `.mmd`) — JWT → provisioning → rol
+- `diagrams/sequence-ai-chat.html` (+ `.mmd`) — SSE vía `AiChatStreamingService` → FastAPI → Groq → tools
+- `diagrams/sequence-admin.html` (+ `.mmd`) — admin Vue → reportes (POI/iText) → dashboards IA
+- `diagrams/erd-business.mmd` — agregados JPA, atributos y relaciones (solo backend, sin IA; archify no tiene tipo de diagrama de datos, así que Mermaid sigue siendo la fuente — pegar en https://mermaid.live)
+
+Nota: los diagramas están en inglés con visor en inglés (`meta.locale: en`); los `.md` de esta carpeta siguen en español.
 
 ## 6. Fortalezas / riesgos
 
