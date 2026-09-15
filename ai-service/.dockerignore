@@ -6,3 +6,10 @@ tests/
 .git/
 *.md
 .dockerignore
+.env
+datasets/
+*.ipynb
+models/
+data/
+logs/
+temp/
