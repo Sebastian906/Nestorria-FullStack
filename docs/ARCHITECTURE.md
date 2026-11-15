@@ -4,7 +4,7 @@
 
 ## 1. Architecture style
 
-**Monorepo with 4 independent deployables + 1 data plane + observability sidecar.** No microservices mesh, no K8s (mem0 decision: Railway + Netlify only).
+**Monorepo with 4 independent deployables + 1 data plane + observability sidecar.** No microservices mesh, no K8s (mem0 decision: Neon + Netlify only).
 
 | Container | Stack (source) | Port | Role |
 |---|---|---|---|
