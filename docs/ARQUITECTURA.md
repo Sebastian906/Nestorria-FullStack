@@ -4,7 +4,7 @@
 
 ## 1. Estilo arquitectónico
 
-**Monorepo con 4 desplegables independientes + 1 plano de datos + sidecar de observabilidad.** Sin malla de microservicios ni K8s (decisión registrada: solo Neon + Netlify).
+**Monorepo con 4 desplegables independientes + 1 plano de datos + sidecar de observabilidad.** Sin malla de microservicios ni K8s (decisión registrada: solo Render + Neon + Netlify).
 
 | Contenedor | Stack (fuente) | Puerto | Rol |
 |---|---|---|---|

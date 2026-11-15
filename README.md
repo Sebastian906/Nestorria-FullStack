@@ -54,8 +54,8 @@ terminals 2-3 (hot-reload outside Docker by design)
 cd frontend && pnpm install && pnpm dev   # http://localhost:5173
 cd admin && pnpm install && pnpm dev      # http://localhost:5174 (check vite config)
 ```
-Production (current decision: Neon + Netlify)
-server + ai-service → Neon (separate services, own domains, Postgres plugin). frontend + admin → Netlify. Stripe webhook configured post-deploy (currently 503-disabled mode without secret).
+Production (current decision: Render + Neon + Netlify)
+server + ai-service → Render +Neon (separate services, own domains, Postgres plugin). frontend + admin → Netlify. Stripe webhook configured post-deploy (currently 503-disabled mode without secret).
 
 ## 6. Docs map
 - docs/USER_MANUAL.md — portal + admin flows.
