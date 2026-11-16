@@ -2,7 +2,7 @@ import { Link } from "react-router-dom"
 import { assets } from "../assets/data"
 import { useAppContext } from "../context/AppContext"
 import { useTranslation } from "react-i18next"
-import { formatCurrency } from "../utils/format"
+import { formatCurrencyCompact } from "../utils/format"
 import { useDisplayText } from "../hooks/useDisplayText"
 
 {/* @ts-ignore */ }
@@ -104,7 +104,9 @@ const Item = ({ property }) => {
                 <div className='flexBetween'>
                     <h5 className='bold-16 my-1'>{property.propertyType}</h5>
                     <div className='bold-15 text-secondary'>
-                        {formatCurrency(property.price.sale, currency)} | {formatCurrency(property.price.rent, currency)}<span className='text-xs'>{t('perNight')}</span>
+                        {property.price.sale != null
+                            ? formatCurrencyCompact(property.price.sale, currency)
+                            : <>{formatCurrencyCompact(property.price.rent, currency)}<span className='text-xs'>{t('perNight')}</span></>}
                     </div>
                 </div>
                 <h4 className='h4 line-clamp-1'>{title}</h4>
